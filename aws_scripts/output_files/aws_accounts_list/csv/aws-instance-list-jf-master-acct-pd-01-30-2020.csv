@@ -1,0 +1,7 @@
+AWS Account,Account Number,Name,Instance ID,AMI ID,Volumes,Private IP,Public IP,Private DNS,Region,Availability Zone,VPC ID,Type,Key Pair Name,State,Launch Date
+jf-master-acct-pd,,,i-01c8900cc035d126d,ami-0036ab7a,vol-00ae16fb685e0e817,172.31.80.5,54.173.101.156,ip-172-31-80-5.ec2.internal,,us-east-1b,vpc-68b1ff12,t2.small,sncr-timd,running,January 30 2020
+jf-master-acct-pd,,web2,i-008d124d4d6afb4f0,ami-0036ab7a,vol-0f31be885c4ea8057,172.31.80.66,54.174.121.181,ip-172-31-80-66.ec2.internal,,us-east-1b,vpc-68b1ff12,t2.small,sncr-timd,running,January 30 2020
+jf-master-acct-pd,,,i-09efae70fdb01d2a8,ami-0036ab7a,vol-0a5f8d009e1f9cf1e,172.31.80.6,3.80.129.255,ip-172-31-80-6.ec2.internal,,us-east-1b,vpc-68b1ff12,t2.small,sncr-timd,running,January 30 2020
+jf-master-acct-pd,,,i-00f308c8008e6f301,ami-0036ab7a,vol-0e8778d870872bec2,172.31.80.7,54.159.170.67,ip-172-31-80-7.ec2.internal,,us-east-1b,vpc-68b1ff12,t2.small,sncr-timd,running,January 30 2020
+jf-master-acct-pd,,web1,i-03024214b8f2874e4,ami-0036ab7a,vol-0ef924574d6deeae1,172.31.80.65,18.212.165.140,ip-172-31-80-65.ec2.internal,,us-east-1b,vpc-68b1ff12,t2.small,sncr-timd,running,January 30 2020
+jf-master-acct-pd,,web3,i-0ef6cb45d3e880d67,ami-0036ab7a,vol-018bda94dabc6d75e,172.31.80.67,52.87.248.86,ip-172-31-80-67.ec2.internal,,us-east-1b,vpc-68b1ff12,t2.small,sncr-timd,running,January 30 2020
