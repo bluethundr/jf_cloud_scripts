@@ -282,7 +282,7 @@ def list_s3_buckets(aws_account,aws_account_number, interactive, show_details, s
     # Loop through the S3 Buckets
     print(Fore.GREEN)
     s3_response = s3_client.list_buckets()
-    for bucket in s3_response ['Buckets']:
+    for bucket in s3_response['Buckets']:
         bucket_name = bucket['Name']
         count_bucket_entries = count_bucket_entries + 1
         if show_details.lower() == 'yes' or show_details.lower() == 'y':
