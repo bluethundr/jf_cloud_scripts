@@ -40,7 +40,7 @@ def write_header():
             writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
             writer.writeheader()
     except Exception as e:
-        print(f"The file could not be opened: {output_file_name}.")
+        print(Fore.GREEN, f"The file could not be opened: {output_file_name}.")
 
 def initialize():
     print(Fore.RESET)
@@ -77,6 +77,7 @@ def choose_accounts(aws_env_list):
     account_numbers = []
     my_account_name = ''
     my_account_number = ''
+    print(Fore.YELLOW)
     all_accounts_question = input("Loop through all accounts (one/some/all): ")
     if all_accounts_question.lower() == 'one':
         my_account_name = input("Enter the name of the AWS account you'll be working in: ")
@@ -103,6 +104,7 @@ def choose_accounts(aws_env_list):
         account_names, account_numbers = read_account_info(aws_env_list)
     else:
         print("That is not a valid choice.")
+    print(Fore.YELLOW)
     
     return account_names, account_numbers
 
@@ -113,7 +115,7 @@ def delete_volumes(aws_account,aws_account_number, output_file, ec2_client):
     tree = objectpath.Tree(volumes)
     volumes = set(tree.execute('$..Volumes[\'VolumeId\']'))
     volumes = list(volumes)
-
+    print(Fore.GREEN)
     if volumes:
         for volume in volumes:
             try:
@@ -129,7 +131,7 @@ def delete_volumes(aws_account,aws_account_number, output_file, ec2_client):
                         writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
                         writer.writerow({'AWS Account': aws_account, 'Account Number': aws_account_number, 'Volume ID': volume, 'Deleted At': deleted_at})
                 except Exception as e:
-                            print(f"The file could not be opened: {output_file_name}.")
+                            print(Fore.GREEN, f"The file could not be opened: {output_file_name}.")
     else:
         print(f"No volumes to delete in AWS Account: {aws_account} ({aws_account_number}).")
 
@@ -137,7 +139,7 @@ def delete_volumes(aws_account,aws_account_number, output_file, ec2_client):
         with open(output_file,'a') as csv_file:
             csv_file.close()
     except Exception as e:
-        print(f"The file could not be opened: {output_file_name}.")
+        print(Fore.GREEN, f"The file could not be opened: {output_file_name}.")
     return output_file
 
 def loop_accounts():
@@ -155,7 +157,7 @@ def loop_accounts():
             banner(message)
         else:
             print("\n")
-            message = f"Working in AWS Account: {aws_account} ({aws_account_number})"
+            message = Fore.GREEN + f"Working in AWS Account: {aws_account} ({aws_account_number})"
             banner(message)
         if 'gov' in aws_account and not 'admin' in aws_account:
             try:

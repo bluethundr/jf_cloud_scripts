@@ -9,7 +9,6 @@ import pprint
 import os
 import csv
 import re
-from init import initialize
 from aws_tag_resources import tag_instances, tag_root_volumes
 from arguments import *
 from user_input import *
