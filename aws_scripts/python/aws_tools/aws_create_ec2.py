@@ -1,6 +1,79 @@
 #!/usr/bin/env python3
 from modules import *
 
+def initialize(aws_account, region):
+    # Set the date
+    today = datetime.today()
+    today = today.strftime("%m-%d-%Y")
+    # Set the input file
+    aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_confluence_page.csv')
+    # Create the session
+    if 'gov' in aws_account and not 'admin' in aws_account:
+        try:
+            session = boto3.Session(profile_name=aws_account, region_name=region)
+        except botocore.exceptions.ProfileNotFound as e:
+            profile_missing_message = f"An exception has occurred: {e}"
+            banner(profile_missing_message)
+    else:
+        try:
+            session = boto3.Session(profile_name=aws_account, region_name=region)
+            account_found = 'yes'
+        except botocore.exceptions.ProfileNotFound as e:
+            profile_missing_message = f"An exception has occurred: {e}"
+            banner(profile_missing_message)
+    try:
+        ec2_client = session.client("ec2")
+        ec2_resource = session.resource("ec2")
+    except Exception as e:
+        print(f"An exception has occurred: {e}")
+    return today, aws_env_list, ec2_client, ec2_resource
+
+def arguments():
+    parser = argparse.ArgumentParser(description='This is a program that creates the servers in EC2')
+
+    parser.add_argument(
+    "-a",
+    "--ami_id",
+    type = str,
+    default = None,
+    nargs = '?',
+    help = "Specify the AMI ID")
+
+    parser.add_argument(
+    "-n",
+    "--account_name",
+    type = str,
+    default = None,
+    nargs = '?',
+    help = "Name of the AWS account you'll be working in")
+
+    parser.add_argument(
+    "-m",
+    "--max_count",
+    type = str,
+    help = "The number of ec2 instances you will create")
+
+    parser.add_argument(
+    "-k",
+    "--key_name",
+    type = str,
+    help = "The name of the key you want to use")
+
+    parser.add_argument(
+    "-i",
+    "--run_again",
+    type = str,
+    help = "Run again")
+
+    parser.add_argument(
+    "-v",
+    "--verbose",
+    type = str,
+    help = "Write the EC2 instances to the screen")  
+
+    options = parser.parse_args()
+    return options
+
 def create_instances(image_id, max_count, key_name, instance_type, aws_account, region, ec2_client, ec2_resource, subnet_id, name_tags, sg_id, public_ip, private_ip, private_ip_list, tenancy, monitoring_enabled, user_data):
     print(Fore.CYAN)
     # create a new EC2 instance

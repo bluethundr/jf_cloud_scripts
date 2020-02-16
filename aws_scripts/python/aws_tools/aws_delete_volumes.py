@@ -28,12 +28,6 @@ def endbanner():
     banner(message,"*")
 
 
-def banner(message, border='-'):
-    line = border * len(message)
-    print(line)
-    print(message)
-    print(line)
-
 def write_header():
     today, aws_env_list, output_file, output_file_name, fieldnames = initialize()
     try:
