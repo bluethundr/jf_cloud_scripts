@@ -2,7 +2,7 @@ import boto3
 
 tagged_instance_id_list = []
 tagged_root_volume_list = []
-def tag_instances(tag_instances_list, name_tags, ec2_client):
+def tag_instances(tag_instances_list, name_tags, ec2_client, private_ip_list):
     for instance_id, name_tag in zip(tag_instances_list, name_tags): 
         instance_id = str(instance_id).strip('[]').strip('\'')
         tagged_instance_id_list.append(instance_id)
@@ -27,7 +27,7 @@ def tag_instances(tag_instances_list, name_tags, ec2_client):
         )
     return tagged_instance_id_list
 
-def tag_root_volumes(tag_instances_list, name_tags, ec2_client, tag_volumes_list):
+def tag_root_volumes(tag_instances_list, name_tags, ec2_client, tag_volumes_list, private_ip_list):
     for instance_id, name_tag, root_volume_id in zip(tag_instances_list, name_tags, tag_volumes_list):
         instance_id = str(instance_id).strip('[]').strip('\'')
         root_volume_id = str(root_volume_id).strip('[]').strip('\'')

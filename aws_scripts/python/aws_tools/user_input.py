@@ -1,17 +1,13 @@
-import objectpath
-from init import initialize
-from find_vpcs import find_vpcs
-from arguments import arguments
-from colorama import init, Fore
+from modules import *
+from colorama import init, deinit, Fore
 from banners import *
+from find_vpcs import *
+
 
 # Initialize the color ouput with colorama
 init()
 
-  
 def user_input():
-    options = arguments()
-
     name_tags = []
     print(Fore.GREEN)
     banner('AWS Account')
@@ -25,7 +21,7 @@ def user_input():
     print(Fore.YELLOW)
     region = input("Enter the region to create EC2 in: ")
     #region = 'us-east-1'
-    today, aws_env_list, ec2_client, ec2_resource = initialize(aws_account, region)
+    today, aws_env_list, ec2_client, ec2_resource = init_create_ec2(aws_account, region)
     print(Fore.RESET)
 
     print(Fore.GREEN)

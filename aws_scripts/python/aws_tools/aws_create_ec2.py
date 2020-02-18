@@ -1,32 +1,6 @@
 #!/usr/bin/env python3
 from modules import *
 
-def initialize(aws_account, region):
-    # Set the date
-    today = datetime.today()
-    today = today.strftime("%m-%d-%Y")
-    # Set the input file
-    aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_confluence_page.csv')
-    # Create the session
-    if 'gov' in aws_account and not 'admin' in aws_account:
-        try:
-            session = boto3.Session(profile_name=aws_account, region_name=region)
-        except botocore.exceptions.ProfileNotFound as e:
-            profile_missing_message = f"An exception has occurred: {e}"
-            banner(profile_missing_message)
-    else:
-        try:
-            session = boto3.Session(profile_name=aws_account, region_name=region)
-            account_found = 'yes'
-        except botocore.exceptions.ProfileNotFound as e:
-            profile_missing_message = f"An exception has occurred: {e}"
-            banner(profile_missing_message)
-    try:
-        ec2_client = session.client("ec2")
-        ec2_resource = session.resource("ec2")
-    except Exception as e:
-        print(f"An exception has occurred: {e}")
-    return today, aws_env_list, ec2_client, ec2_resource
 
 def arguments():
     parser = argparse.ArgumentParser(description='This is a program that creates the servers in EC2')
@@ -74,17 +48,56 @@ def arguments():
     options = parser.parse_args()
     return options
 
-def create_instances(image_id, max_count, key_name, instance_type, aws_account, region, ec2_client, ec2_resource, subnet_id, name_tags, sg_id, public_ip, private_ip, private_ip_list, tenancy, monitoring_enabled, user_data):
+def create_instances(aws_account, ec2_client, ec2_resource, region, max_count, image_id, key_name, instance_type, vpc_id, subnet_id, sg_id, sg_list, subnet_ids, public_ip, private_ip_list, tenancy, monitoring_enabled, user_data, name_tags):
+    instances_list = []
     print(Fore.CYAN)
-    # create a new EC2 instance
+    # create new EC2 instance(s)
     if private_ip_list is not None:
+        for private_ip in private_ip_list:
+            try:
+                instances = ec2_resource.create_instances(
+                    ImageId=image_id,
+                    InstanceType=instance_type,
+                    KeyName=key_name,
+                    MinCount=1,
+                    MaxCount=1,
+                    DryRun=False,
+                    DisableApiTermination=True,
+                    EbsOptimized=False,
+                    UserData=user_data,
+                    Placement={
+                        'Tenancy': tenancy,
+                    },
+                    Monitoring={
+                        'Enabled': monitoring_enabled
+                    },
+                    InstanceInitiatedShutdownBehavior='stop',
+                    NetworkInterfaces=[
+                        {
+                            'AssociatePublicIpAddress': public_ip,
+                            'DeleteOnTermination': True,
+                            'DeviceIndex': 0,
+                            'PrivateIpAddress': private_ip,
+                            'SubnetId': subnet_id,
+                            'Groups': [
+                                sg_id
+                            ]
+                        }
+                    ]
+                    )
+                instances_list.append(instances)
+            except Exception as e:
+                print(f"An error has occurred: {e}")
+                main()
+    else:
+
+        try:
             instances = ec2_resource.create_instances(
                 ImageId=image_id,
                 InstanceType=instance_type,
                 KeyName=key_name,
                 MinCount=1,
-                MaxCount=1,
-                DryRun=False,
+                MaxCount=max_count,
                 DisableApiTermination=True,
                 EbsOptimized=False,
                 UserData=user_data,
@@ -100,7 +113,6 @@ def create_instances(image_id, max_count, key_name, instance_type, aws_account, 
                         'AssociatePublicIpAddress': public_ip,
                         'DeleteOnTermination': True,
                         'DeviceIndex': 0,
-                        'PrivateIpAddress': private_ip,
                         'SubnetId': subnet_id,
                         'Groups': [
                             sg_id
@@ -108,66 +120,29 @@ def create_instances(image_id, max_count, key_name, instance_type, aws_account, 
                     }
                 ]
                 )
-            print(f"Instances: {instances}")
-            time.sleep(10)
-            instance_list, root_volumes_list = list_new_instances(ec2_client, instances)
+        except Exception as e:
+            print(f"An error has occurred: {e}")
+            main()      
+
+    if private_ip_list is not None:
+        instance_list, root_volumes_list = list_new_instances(ec2_client, instances_list, private_ip_list)
     else:
-        private_ip = None
-        instances = ec2_resource.create_instances(
-        ImageId=image_id,
-        InstanceType=instance_type,
-        KeyName=key_name,
-        MinCount=1,
-        MaxCount=max_count,
-        DisableApiTermination=True,
-        EbsOptimized=False,
-        UserData=user_data,
-        Placement={
-            'Tenancy': tenancy,
-        },
-        Monitoring={
-            'Enabled': monitoring_enabled
-        },
-        InstanceInitiatedShutdownBehavior='stop',
-        NetworkInterfaces=[
-            {
-                'AssociatePublicIpAddress': public_ip,
-                'DeleteOnTermination': True,
-                'DeviceIndex': 0,
-                'SubnetId': subnet_id,
-                'Groups': [
-                    sg_id
-                ]
-            }
-        ]
-        )
-        print(f"Instances: {instances}")
-        time.sleep(10)
-        instance_list, root_volumes_list = list_new_instances(ec2_client, instances)
+        instance_list, root_volumes_list = list_new_instances(ec2_client, instances, private_ip_list)
+    
+
     return instance_list, root_volumes_list
 
 
 def main():
     welcomebanner()
-    private_ip_list = []
-    tag_instances_list = []
-    tag_volumes_list = []
     aws_account, region, max_count, image_id, key_name, instance_type, vpc_id, subnet_id, sg_id, sg_list, subnet_ids, public_ip, private_ip_list, tenancy, monitoring_enabled, user_data, name_tags = user_input()
-    today, aws_env_list, ec2_client, ec2_resource = initialize(aws_account, region)
+    today, aws_env_list, ec2_client, ec2_resource = init_create_ec2(aws_account, region)
     print(Fore.CYAN)
     banner("Creating the instance(s)", "*")
-    if private_ip_list is not None:
-        for private_ip in private_ip_list:
-            instance_list, root_volumes_list = create_instances(image_id, max_count, key_name, instance_type, aws_account, region, ec2_client, ec2_resource, subnet_id, name_tags, sg_id, public_ip, private_ip, private_ip_list, tenancy, monitoring_enabled, user_data)
-            tag_instances_list.append(instance_list)
-            tag_volumes_list.append(root_volumes_list)
-    else:
-        private_ip = None
-        instance_list, root_volumes_list = create_instances(image_id, max_count, key_name, instance_type, aws_account, region, ec2_client, ec2_resource, subnet_id, name_tags, sg_id, public_ip, private_ip, private_ip_list, tenancy, monitoring_enabled, user_data)
-        tag_instances_list.append(instance_list)
-        tag_volumes_list.append(root_volumes_list)
-    tagged_instance_id_list = tag_instances(tag_instances_list, name_tags, ec2_client)
-    tagged_root_volume_list = tag_root_volumes(tag_instances_list, name_tags, ec2_client, tag_volumes_list)
+    today, aws_env_list, ec2_client, ec2_resource = init_create_ec2(aws_account, region)
+    instance_list, root_volumes_list = create_instances(aws_account, ec2_client, ec2_resource, region, max_count, image_id, key_name, instance_type, vpc_id, subnet_id, sg_id, sg_list, subnet_ids, public_ip, private_ip_list, tenancy, monitoring_enabled, user_data, name_tags)
+    tagged_instance_id_list = tag_instances(instance_list, name_tags, ec2_client, private_ip_list)
+    tagged_root_volume_list = tag_root_volumes(instance_list, name_tags, ec2_client, root_volumes_list, private_ip_list)
     # Print the instasnce list
     if instance_list and root_volumes_list:
         for instance_id, volume_id in zip(tagged_instance_id_list, tagged_root_volume_list):

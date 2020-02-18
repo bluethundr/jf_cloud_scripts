@@ -9,15 +9,17 @@ import pprint
 import os
 import csv
 import re
+from init import *
 import collections
 from collections import defaultdict
 from aws_tag_resources import tag_instances, tag_root_volumes
 from user_input import *
-from banners import *
+from banners import welcomebanner,endbanner,banner
 from datetime import datetime
 from colorama import init, deinit, Fore
 from list_new_instances import list_new_instances
 from read_account_info import read_account_info
+from find_vpcs import find_vpcs
 
 
 # Initialize the color ouput with colorama

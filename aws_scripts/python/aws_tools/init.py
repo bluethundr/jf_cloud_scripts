@@ -1,10 +1,8 @@
-import boto3
-import botocore
+from modules import *
 from datetime import datetime
-import os
 from banners import *
 
-def initialize(aws_account, region):
+def init_create_ec2(aws_account, region):
     # Set the date
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
