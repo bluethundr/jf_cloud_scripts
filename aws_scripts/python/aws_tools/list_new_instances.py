@@ -1,7 +1,7 @@
 from modules import *
 
 def list_new_instances(ec2_client, instances):
-
+    print(f"Instances from list_new_instances: {instances}")
     instance_list = []
     root_volumes_list = []
     if instances:

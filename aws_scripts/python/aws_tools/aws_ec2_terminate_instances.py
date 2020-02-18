@@ -1,14 +1,6 @@
 #!/usr/bin/env python
+from modules import *
 
-import boto3
-import botocore
-import collections
-from collections import defaultdict
-import time
-import objectpath
-from datetime import datetime
-from colorama import init, deinit, Fore, Back, Style
-from termcolor import colored
 init()
 
 def banner(message, border='-'):
@@ -37,10 +29,12 @@ def terminate_instances():
     # Select the account
     print(Fore.YELLOW)
     aws_account = input("Enter the name of the AWS account you'll be working in: ")
-    print(Fore.YELLOW + "Okay. Working in AWS account: ", aws_account, "\n")
+    message = Fore.YELLOW + f"Okay. Working in AWS account: {aws_account}"
+    banner(message)
     # Select the region
     aws_region = input("Enter the name of the AWS region you'll be working in: ")
-    print(Fore.YELLOW + "Okay. Working in AWS region: ", aws_region, "\n")
+    message = Fore.YELLOW + f"Okay. Working in AWS region: {aws_region}"
+    banner(message)
     # Set the account and region
     try:
         session = boto3.Session(profile_name=aws_account,region_name=aws_region)
@@ -51,6 +45,7 @@ def terminate_instances():
     print(Fore.YELLOW)
     instance_id_list = input("Enter instance IDs separated by commas: ")
     instance_ids = instance_id_list.split(",")
+    check_state = input("Check the server state (y/n): ")
     print("\n")
     print(Fore.RESET + "-------------------------------------")
     print(Fore.GREEN + "Deleting the following instances: \n")
@@ -58,9 +53,8 @@ def terminate_instances():
         print(Fore.CYAN + instance_id)
     print(Fore.RESET + "-------------------------------------\n")
     for instance_id in instance_ids:
-        print(Fore.RESET + "----------------------------------------------")
-        print(Fore.CYAN + "Terminating Instance ID: ", instance_id)
-        print(Fore.RESET + "----------------------------------------------")
+        message = Fore.CYAN + f"Terminating Instance ID: {instance_id}" + Fore.RESET
+        banner(message)
         instance = ec2_client.describe_instances(
             InstanceIds=[instance_id]
             )['Reservations'][0]['Instances'][0]
@@ -99,10 +93,8 @@ def terminate_instances():
         for instance_id, instance in ec2info.items():
             for key in attributes:
                 print(Fore.GREEN + "{0}: {1}".format(key, instance[key]))
-        print()
-        print(Fore.RESET + "-------------------------------------")
-        print(Fore.YELLOW + "Modifying and deleting the instance.")
-        print(Fore.RESET + "-------------------------------------")
+        message = Fore.YELLOW + "Modifying and deleting the instance." + Fore.RESET
+        banner(message)
         try:
             ec2_client.modify_instance_attribute(InstanceId=instance_id, DisableApiTermination={'Value':False})
             ec2_client.terminate_instances(InstanceIds=[instance_id], DryRun=False)
@@ -111,27 +103,24 @@ def terminate_instances():
             print(Fore.GREEN + f"The instance id: {instance_id} has already been terminated.")
             pause = 0
         ## Check the current state
-        if pause == 1:
-            print(Fore.GREEN)
-            message = "Pausing for 60 seconds for termination."
+        if pause == 1 or ('y' or 'yes') in check_state.lower():
+            message = Fore.GREEN + "Pausing 60 seconds for termination." + Fore.RESET
             banner(message)
             time.sleep(60)
         else:
             print(Fore.GREEN)
-            message = "NOT Pausing for 60 seconds for termination."
+            message = "NOT Pausing 60 seconds for termination."
             banner(message)
-        print(Fore.RESET + "----------------------------------------")
-        print(Fore.YELLOW + "Deleting Volumes")
-        print(Fore.RESET + "----------------------------------------\n")
+        message = Fore.YELLOW + "Deleting Volumes" + Fore.RESET
+        banner(message)
         for volume_id in volume_ids:
-                print(Fore.GREEN + "Deleting volume: ", volume_id)
+                print(Fore.GREEN + f"Deleting volume: {volume_id}")
                 try:
                     delete_response = (ec2_client.delete_volume(VolumeId=volume_id)['ResponseMetadata']['HTTPStatusCode'])
                     if delete_response == 200:
                         print(Fore.GREEN + "Volume ID: %s has been deleted." % volume_id)
                 except Exception as error:
                     print(f"Volume ID: {volume_id} has been deleted.")
-
 
         try:
             instance = ec2_client.describe_instances(
@@ -140,10 +129,7 @@ def terminate_instances():
         except Exception as e:
             print("An exception has occurred: {e}")
         instance_state = instance['State']['Name']
-        print(Fore.RESET + "----------------------------------------")
-        print(Fore.YELLOW + "Current Instance State: ", instance_state)
-        print(Fore.RESET + "----------------------------------------\n")
-        time.sleep(5)
+        message = Fore.YELLOW + f"Current Instance State: {instance_state}" + Fore.RESET
                         
 def main():
     welcomebanner()

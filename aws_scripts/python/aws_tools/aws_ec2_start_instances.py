@@ -1,7 +1,4 @@
 #!/usr/bin/env python
-
-import boto3
-
 from modules import *
 
 init()
@@ -109,7 +106,7 @@ def start_instances():
                 'Private IP': instance['PrivateIpAddress'],
                 'Public IP': public_ip,
                 'Launch Time' : launch_time_friendly
-        }
+            }
             attributes = ['Instance ID', 'Type',
                     'State', 'Private IP', 'Public IP', 'Launch Time' ]
             for instance_id, instance in ec2info.items():
@@ -122,9 +119,9 @@ def start_instances():
                 ec2_client.start_instances(InstanceIds=[instance_id], DryRun=False)
             except Exception as e:
                 print(f"An error has occurred: {e}.")
-            if check_state.lower() == 'Y' or check_state.lower() == 'Yes':
+            if ('y' or 'yes') in check_state.lower():
                 ## Check the current state
-                message = Fore.GREEN + "Pausing for 60 seconds for the instance to start."
+                message = Fore.GREEN + "Pausing for 60 seconds for the instance to start." + Fore.RESET
                 banner(message)
                 time.sleep(60) 
                 instance = ec2_client.describe_instances(
@@ -143,15 +140,6 @@ def main():
     welcomebanner()
     start_instances()
     endbanner()
-
-    if options.run_again:
-        list_again = options.run_again
-    else:
-        list_again = input("List EC2 instances again (y/n): ")
-    if list_again.lower() == 'y' or list_again.lower() == 'yes':
-        main()
-    else:
-        exit_program()
 
 if __name__ == "__main__":
     main()

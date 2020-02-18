@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 from modules import *
 
 init()
@@ -27,8 +26,15 @@ def stop_instances():
     message = Fore.YELLOW + "Okay. Working in AWS region: " + aws_region
     banner(message)
     # Set the account and region
-    session = boto3.Session(profile_name=aws_account,region_name=aws_region)
-    ec2_client = session.client("ec2")
+    try:
+        session = boto3.Session(profile_name=aws_account,region_name=aws_region)
+    except Exception as e:
+        print(f"An error has occurred: {e}")
+
+    try:
+        ec2_client = session.client("ec2")
+    except Exception as e:
+        print(f"An error has occurred: {e}")
 
     print(Fore.YELLOW)
     instance_id_list = input("Enter instance IDs separated by commas: ")
@@ -88,9 +94,9 @@ def stop_instances():
                 ec2_client.stop_instances(InstanceIds=[instance_id], DryRun=False)
             except Exception as e:
                 print(f"An error has occurred: {e}.")
-            if check_state.lower() == 'Y' or check_state.lower() == 'Yes':
+            if ('y' or 'yes') in check_state.lower():
                 ## Check the current state
-                message = Fore.GREEN + "Pausing for 60 seconds for the instance to stop."
+                message = Fore.GREEN + "Pausing for 60 seconds for the instance to stop." + Fore.RESET
                 banner(message)
                 time.sleep(60) 
                 instance = ec2_client.describe_instances(

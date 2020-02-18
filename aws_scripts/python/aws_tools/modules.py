@@ -15,7 +15,7 @@ from aws_tag_resources import tag_instances, tag_root_volumes
 from user_input import *
 from banners import *
 from datetime import datetime
-from colorama import init, Fore
+from colorama import init, deinit, Fore
 from list_new_instances import list_new_instances
 from read_account_info import read_account_info
 

@@ -108,6 +108,9 @@ def create_instances(image_id, max_count, key_name, instance_type, aws_account, 
                     }
                 ]
                 )
+            print(f"Instances: {instances}")
+            time.sleep(10)
+            instance_list, root_volumes_list = list_new_instances(ec2_client, instances)
     else:
         private_ip = None
         instances = ec2_resource.create_instances(
@@ -138,7 +141,9 @@ def create_instances(image_id, max_count, key_name, instance_type, aws_account, 
             }
         ]
         )
-    instance_list, root_volumes_list = list_new_instances(ec2_client, instances)
+        print(f"Instances: {instances}")
+        time.sleep(10)
+        instance_list, root_volumes_list = list_new_instances(ec2_client, instances)
     return instance_list, root_volumes_list
 
 
