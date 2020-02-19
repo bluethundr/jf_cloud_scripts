@@ -3,12 +3,6 @@ from modules import *
 
 init()
 
-def banner(message, border='-'):
-    line = border * len(message)
-    print(line)
-    print(message)
-    print(line)
-
 def welcomebanner():
     # Print the welcome banner
     print(Fore.CYAN)
@@ -21,7 +15,6 @@ def endbanner():
     message = "* Terminate AWS Instance Operations Are Complete   *"
     banner(message, "*")
     print(Fore.RESET)
-
 
 def terminate_instances():
     private_ips_list = None
@@ -97,13 +90,17 @@ def terminate_instances():
         banner(message)
         try:
             ec2_client.modify_instance_attribute(InstanceId=instance_id, DisableApiTermination={'Value':False})
+        except Exception as e:
+            print(f"An error has occurred: {e}")
+        try:
             ec2_client.terminate_instances(InstanceIds=[instance_id], DryRun=False)
             pause = 1
         except Exception as e:
             print(Fore.GREEN + f"The instance id: {instance_id} has already been terminated.")
             pause = 0
         ## Check the current state
-        if pause == 1 or ('y' or 'yes') in check_state.lower():
+        #if pause == 1 or ('y' or 'yes') in check_state.lower():
+        if pause == 1 or check_state.lower() == 'yes' or check_state.lower() == 'y':
             message = Fore.GREEN + "Pausing 60 seconds for termination." + Fore.RESET
             banner(message)
             time.sleep(60)
@@ -129,8 +126,9 @@ def terminate_instances():
         except Exception as e:
             print("An exception has occurred: {e}")
         instance_state = instance['State']['Name']
-        message = Fore.YELLOW + f"Current Instance State: {instance_state}" + Fore.RESET + '\n'
-        banner(message)
+        message = Fore.YELLOW + f"Current Instance State: {instance_state}" + Fore.RESET
+        banner(message
+        print('\n')
                         
 def main():
     welcomebanner()
