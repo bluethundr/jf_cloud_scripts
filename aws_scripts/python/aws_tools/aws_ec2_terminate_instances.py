@@ -129,8 +129,9 @@ def terminate_instances():
         except Exception as e:
             print("An exception has occurred: {e}")
         instance_state = instance['State']['Name']
-        message = Fore.YELLOW + f"Current Instance State: {instance_state}" + Fore.RESET + '\n'
+        message = Fore.YELLOW + f"Current Instance State: {instance_state}" + Fore.RESET
         banner(message)
+        print("\n")
                         
 def main():
     welcomebanner()
@@ -140,4 +141,3 @@ def main():
     
 if __name__ == "__main__":
     main()
-    

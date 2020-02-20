@@ -25,7 +25,6 @@ def tag_instances(tag_instances_list, name_tags, ec2_client, private_ip_list):
                 },
             ],
         )
-    return tagged_instance_id_list
 
 def tag_root_volumes(tag_instances_list, name_tags, ec2_client, tag_volumes_list, private_ip_list):
     for instance_id, name_tag, root_volume_id in zip(tag_instances_list, name_tags, tag_volumes_list):
@@ -52,5 +51,4 @@ def tag_root_volumes(tag_instances_list, name_tags, ec2_client, tag_volumes_list
                 },
             ],
         )
-    return tagged_root_volume_list
 

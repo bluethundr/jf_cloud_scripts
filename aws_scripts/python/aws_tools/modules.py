@@ -20,6 +20,8 @@ from colorama import init, deinit, Fore
 from list_new_instances import list_new_instances
 from read_account_info import read_account_info
 from find_vpcs import find_vpcs
+from aws_add_sg_list import attach_sg_list
+from choose_accounts import choose_accounts
 
 
 # Initialize the color ouput with colorama
