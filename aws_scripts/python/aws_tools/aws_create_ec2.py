@@ -47,10 +47,10 @@ def arguments():
     return options
 
 def create_instances(aws_account, ec2_client, ec2_resource, region, max_count, image_id, key_name, instance_type, vpc_id, subnet_id, sg_id, sg_list, subnet_ids, public_ip, private_ip_list, tenancy, monitoring_enabled, user_data, name_tags):
-    message = Fore.CYAN + "Creating the instance(s)" + Fore.RESET
+    print(Fore.CYAN)
+    message = "Creating the instance(s)"
     banner(message, "*")
     instances_list = []
-    print(Fore.CYAN)
     # create new EC2 instance(s)
     if private_ip_list is not None:
         for private_ip in private_ip_list:
@@ -87,7 +87,8 @@ def create_instances(aws_account, ec2_client, ec2_resource, region, max_count, i
                     )
                 instances_list.append(instances)
             except Exception as e:
-                print(f"An error has occurred: {e} Instance(s) have not been created.")
+                message = Fore.YELLOW + f"An error has occurred: {e} Instance(s) have not been created." + Fore.RESET
+                print(message)
                 main()
     else:
         try:
@@ -120,7 +121,8 @@ def create_instances(aws_account, ec2_client, ec2_resource, region, max_count, i
                 ]
                 )
         except Exception as e:
-            print(f"An error has occurred: {e} Instance(s) have not been created.")
+            message = Fore.YELLOW + f"An error has occurred: {e} Instance(s) have not been created." + Fore.RESET
+            print(message)
             main()      
 
     if private_ip_list is not None:
@@ -128,11 +130,10 @@ def create_instances(aws_account, ec2_client, ec2_resource, region, max_count, i
     else:
         instance_list, root_volumes_list = list_new_instances(ec2_client, instances, private_ip_list)
     
-
     return instance_list, root_volumes_list
 
-
 def main():
+    options = arguments()
     welcomebanner()
     # Return the user input
     aws_account, region, max_count, image_id, key_name, instance_type, vpc_id, subnet_id, sg_id, sg_list, subnet_ids, public_ip, private_ip_list, tenancy, monitoring_enabled, user_data, name_tags = user_input()
@@ -141,22 +142,21 @@ def main():
     # Create the instances
     instance_list, root_volumes_list = create_instances(aws_account, ec2_client, ec2_resource, region, max_count, image_id, key_name, instance_type, vpc_id, subnet_id, sg_id, sg_list, subnet_ids, public_ip, private_ip_list, tenancy, monitoring_enabled, user_data, name_tags)
     # Tag the instances
-    tagged_instance_id_list = tag_instances(instance_list, name_tags, ec2_client, private_ip_list)
+    tag_instances(instance_list, name_tags, ec2_client, private_ip_list)
     # Tag the root volumes
-    tagged_root_volume_list = tag_root_volumes(instance_list, name_tags, ec2_client, root_volumes_list, private_ip_list)
-    # Print the instasnce list
+    tag_root_volumes(instance_list, name_tags, ec2_client, root_volumes_list, private_ip_list)
+    # Add security groups
+    if instance_list:
+        for instance_id in instance_list:
+            attach_sg_list(ec2_client, sg_list, instance_id)
+    
+    
+    # Print the instance list
+    print(Fore.CYAN)
     if instance_list and root_volumes_list:
-        for instance_id, volume_id in zip(tagged_instance_id_list, tagged_root_volume_list):
+        for instance_id, volume_id in zip(instance_list, root_volumes_list):
             print(f"Instance ID: {instance_id} has been created with volume: {volume_id}")
         
-    '''
-    print("Adding the security group list")
-    if instance_list:
-        for instance_id in tagged_instance_list:
-            attach_sg_list(ec2_client, sg_list, instance_id)
-    else:
-        pass
-    '''
     endbanner()
     
 if __name__ == "__main__":

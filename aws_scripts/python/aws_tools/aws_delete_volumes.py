@@ -1,18 +1,5 @@
 #!/usr/bin/env python3
-
-import os
-import boto3
-import botocore
-import time
-import datetime
-import dateutil
-import json
-import csv
-import objectpath
-from colorama import init, Fore
-from datetime import date, datetime, timedelta
-from botocore.exceptions import ClientError, ProfileNotFound
-from choose_accounts import choose_accounts
+from modules import *
 
 init()
 
@@ -25,6 +12,11 @@ def welcomebanner():
 def endbanner():
     print(Fore.CYAN)
     message = f"* Delete EBS Volumes Operations Are Complete   *"
+    banner(message,"*")
+
+def warningbanner():
+    print(Fore.RED)
+    message = f"* Warning! This script deletes all EBS volumes in an account. Use with caution!  *"
     banner(message,"*")
 
 
@@ -55,6 +47,7 @@ def initialize():
 
 
 def delete_volumes(aws_account,aws_account_number, output_file, ec2_client):
+    warningbanner()
     today, aws_env_list, output_file, output_file_name, fieldnames = initialize()
     volumes = ec2_client.describe_volumes()
     tree = objectpath.Tree(volumes)
@@ -70,7 +63,7 @@ def delete_volumes(aws_account,aws_account_number, output_file, ec2_client):
             if delete_volume_response == 200:
                 deleted_at = datetime.now()
                 deleted_at = deleted_at.strftime("%Y%m%d-%H:%M:%S")
-                print(f"Volume ID: {volume} has been deleted at {deleted_at}.")
+                print(f"Volume ID: {volume} has been deleted at {deleted_at}")
                 try:
                     with open(output_file,'a') as csv_file:
                         writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
