@@ -2334,10 +2334,12 @@ def create_user(password, iam_client, kms_client, secrets_client, aws_account, i
     return user_name, access_key, secret_key, user_group_list, user_secrets_list, aws_account, aws_account_number, aws_signin_url, access_type, mail_body, subject, attachment
 
 # Function 12      
-def create_console_access(password, iam_client, user_name=None):
+def create_console_access(password, iam_client, interactive, user_name=None):
+    print(f"***User name: {user_name}***")
+    time.sleep(5)
     print(user_name)
     print(Fore.CYAN)
-    print('*            Create Console Access                   *')
+    message = '*            Create Console Access                   *'
     banner(message,"*")
     if not user_name:
         user_name = get_user_name()
@@ -2853,6 +2855,7 @@ def main():
             main()
         # 15 Create Login Profile
         elif choice == '15':
+            user_name = input("Enter the user's username: ")
             create_console_access(password, iam_client, interactive, user_name)
             main()
         # 16 Delete user
