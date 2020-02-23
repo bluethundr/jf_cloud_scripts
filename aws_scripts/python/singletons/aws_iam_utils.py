@@ -2335,8 +2335,6 @@ def create_user(password, iam_client, kms_client, secrets_client, aws_account, i
 
 # Function 12      
 def create_console_access(password, iam_client, interactive, user_name=None):
-    print(f"***User name: {user_name}***")
-    time.sleep(5)
     print(user_name)
     print(Fore.CYAN)
     message = '*            Create Console Access                   *'
