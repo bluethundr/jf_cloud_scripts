@@ -2335,7 +2335,7 @@ def create_user(password, iam_client, kms_client, secrets_client, aws_account, i
 
 # Function 12      
 def create_console_access(password, iam_client, interactive, user_name=None):
-    print(user_name)
+    #print(user_name)
     print(Fore.CYAN)
     message = '*            Create Console Access                   *'
     banner(message,"*")
@@ -2853,8 +2853,8 @@ def main():
             main()
         # 15 Create Login Profile
         elif choice == '15':
-            user_name = input("Enter the user's username: ")
-            create_console_access(password, iam_client, interactive, user_name)
+
+            create_console_access(password, iam_client, interactive)
             main()
         # 16 Delete user
         elif choice == '16':
