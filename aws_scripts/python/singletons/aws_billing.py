@@ -393,7 +393,7 @@ def send_email(aws_account, aws_account_number):
     msg['Subject'] = subject
     body = MIMEText(content, 'html')
     msg.attach(body)
-    server = smtplib.SMTP('smtpout.us.kworld.company.com', 25)
+    server = smtplib.SMTP('smtpout.us.cworld.company.com', 25)
     filename = destination
     try:
         with open(filename, 'r', errors='ignore') as f:

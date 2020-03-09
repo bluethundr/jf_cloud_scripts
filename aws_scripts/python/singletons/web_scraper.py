@@ -18,14 +18,14 @@ init()
 def welcome_banner():
     print(Fore.CYAN)
     print("*****************************************************")
-    print("*             AWS Accounts KIKI Page Scraper        *")
+    print("*             AWS Accounts confluence Page Scraper        *")
     print("*****************************************************")
     print(Fore.RESET)
 
 def end_banner():
     print(Fore.CYAN)
     print("************************************************************")
-    print("*  AWS Accounts KIKI Page Scraper Operations Complete      *")
+    print("*  AWS Accounts confluence Page Scraper Operations Complete      *")
     print("************************************************************")
     print(Fore.RESET)
 
@@ -83,10 +83,10 @@ def web_scraper():
     output_dir = os.path.join( '..', '..', 'output_files', 'aws_accounts_list')
     with contextlib.redirect_stdout(io.StringIO()):
         create_work_dir(output_dir)
-    filename = 'aws_kiki_page-' + today
+    filename = 'aws_confluence_page-' + today
     destination = os.path.join(output_dir, filename + '.csv' )
-    url = 'https://kiki.us.kworld.company.com/display/6TO/AWS+Accounts'
-    message = "Log into the kiki"
+    url = 'https://confluence.us.cworld.company.com/display/6TO/AWS+Accounts'
+    message = "Log into the confluence"
     banner(message)
     auth = get_login()
     auth = str(auth).replace('(','').replace('\'','').replace(',',':').replace(')','').replace(' ','')

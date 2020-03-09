@@ -1,0 +1,14 @@
+AWS Account,Account Number,Name,Instance ID,AMI ID,Volumes,Private IP,Public IP,Private DNS,Region,Availability Zone,VPC ID,Type,Key Pair Name,State,Launch Date
+jf-master-acct-pd,565241749827,web4,i-0918a08c58e0972cf,ami-0036ab7a,vol-02499ee0e6a129f66,172.31.53.39,54.146.74.159,ip-172-31-53-39.ec2.internal,,us-east-1e,vpc-68b1ff12,t2.micro,sncr-timd,running,February 20 2020
+jf-master-acct-pd,565241749827,web5,i-0e2753117e2ec0b31,ami-0036ab7a,vol-05ce04126f65550b7,172.31.52.40,34.239.107.130,ip-172-31-52-40.ec2.internal,,us-east-1e,vpc-68b1ff12,t2.micro,sncr-timd,running,February 20 2020
+jf-master-acct-pd,565241749827,web6,i-0ebf1f52e91201d7d,ami-0036ab7a,vol-05634ae9e327c6f35,172.31.50.15,100.26.211.39,ip-172-31-50-15.ec2.internal,,us-east-1e,vpc-68b1ff12,t2.micro,sncr-timd,running,February 20 2020
+jf-master-acct-pd,565241749827,web3,i-0097a4c3858d4b40b,ami-0036ab7a,,,,,,us-east-1c,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web2,i-0fc084866da50973b,ami-0036ab7a,,,,,,us-east-1c,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web1,i-0d9c446772358e23f,ami-0036ab7a,,,,,,us-east-1c,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,,i-0af85f205bb86c886,ami-0036ab7a,,,,,,us-east-1d,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web1,i-05ce1681ca83510dd,ami-0036ab7a,vol-09cf497f399195776,172.31.37.106,,ip-172-31-37-106.ec2.internal,,us-east-1d,vpc-68b1ff12,t2.micro,sncr-timd,running,February 20 2020
+jf-master-acct-pd,565241749827,web2,i-0190cf082bdfb25ed,ami-0036ab7a,vol-0fd40296f268dd3eb,172.31.34.50,,ip-172-31-34-50.ec2.internal,,us-east-1d,vpc-68b1ff12,t2.micro,sncr-timd,running,February 20 2020
+jf-master-acct-pd,565241749827,web3,i-0a402a3e0ce2a43d9,ami-0036ab7a,vol-0c57a23745be43d70,172.31.44.112,,ip-172-31-44-112.ec2.internal,,us-east-1d,vpc-68b1ff12,t2.micro,sncr-timd,running,February 20 2020
+jf-master-acct-pd,565241749827,web11,i-060e1ce3b43204294,ami-0036ab7a,vol-0e8a16946868b7f30,172.31.45.223,54.198.143.125,ip-172-31-45-223.ec2.internal,,us-east-1d,vpc-68b1ff12,t3.small,sncr-timd,running,February 20 2020
+jf-master-acct-pd,565241749827,web9,i-0c225766e6f589a58,ami-0036ab7a,vol-07f2fc53292198a33,172.31.33.140,54.225.46.120,ip-172-31-33-140.ec2.internal,,us-east-1d,vpc-68b1ff12,t3.small,sncr-timd,running,February 20 2020
+jf-master-acct-pd,565241749827,web10,i-05936e499c760b2ec,ami-0036ab7a,vol-02954f5d1d8e95ae0,172.31.36.158,54.224.41.221,ip-172-31-36-158.ec2.internal,,us-east-1d,vpc-68b1ff12,t3.small,sncr-timd,running,February 20 2020
