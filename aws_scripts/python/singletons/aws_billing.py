@@ -27,7 +27,7 @@ from email.mime.application import MIMEApplication
 init()
 
 def connect_to_db():
-    mydb = mysql.connector.connect(user='admin', password='Duk30fZh0u',
+    mydb = mysql.connector.connect(user='admin', password='********',
                             host='127.0.0.1',
                             database='aws_bill')
     cursor = mydb.cursor()
