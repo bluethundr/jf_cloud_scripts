@@ -52,7 +52,7 @@ def initialize():
                 print("An exception has occurred: {e}")
         aws_env_list = os.path.join('..', '..', 'output_files', 'aws_accounts_list', 'aws_jokefire_page-' + today + '.csv')
     else:
-        aws_env_list = os.path.join('..', '..', 'output_files', 'aws_accounts_list', 'aws_kiki_page-' + today + '.csv')
+        aws_env_list = os.path.join('..', '..', 'output_files', 'aws_accounts_list', 'aws_confluence_page-' + today + '.csv')
         
     # Set the output file
     output_dir = os.path.join('..', '..', 'output_files', 'aws_delete_role', 'csv')

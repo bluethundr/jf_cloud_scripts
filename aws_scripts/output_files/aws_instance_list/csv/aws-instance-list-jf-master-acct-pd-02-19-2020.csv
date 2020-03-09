@@ -1,0 +1,22 @@
+AWS Account,Account Number,Name,Instance ID,AMI ID,Volumes,Private IP,Public IP,Private DNS,Region,Availability Zone,VPC ID,Type,Key Pair Name,State,Launch Date
+jf-master-acct-pd,565241749827,web9,i-00f68d51030d469cd,ami-0036ab7a,,,,,,us-east-1a,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web10,i-0d5067d115ed72532,ami-0036ab7a,,,,,,us-east-1a,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web11,i-0d207b4667b39904b,ami-0036ab7a,,,,,,us-east-1a,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web2,i-0ca50564d8ad751ba,ami-0036ab7a,,,,,,us-east-1b,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web1,i-089b2fe08930abb4e,ami-0036ab7a,,,,,,us-east-1b,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web3,i-054dbb543868b40f5,ami-0036ab7a,,,,,,us-east-1b,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web8,i-099fbd9b876217a1d,ami-0036ab7a,,,,,,us-east-1e,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web9,i-0d629fbea1fc9e234,ami-0036ab7a,,,,,,us-east-1e,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web7,i-0df24cf2fc36be27a,ami-0036ab7a,,,,,,us-east-1e,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web2,i-07cd1a4e92418df6f,ami-0036ab7a,,,,,,us-east-1c,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web3,i-045fceb73aecacfc6,ami-0036ab7a,,,,,,us-east-1c,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web1,i-0c77b31fe9bdd5d7a,ami-0036ab7a,,,,,,us-east-1c,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web5,i-0dbc38ca3734d06d1,ami-0036ab7a,,,,,,us-east-1c,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web6,i-0f48f324fc9edafac,ami-0036ab7a,,,,,,us-east-1c,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web4,i-0bc937e4f60980b48,ami-0036ab7a,,,,,,us-east-1c,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,,i-0af85f205bb86c886,ami-0036ab7a,vol-03d565c2640a2b0c9,172.31.36.253,,ip-172-31-36-253.ec2.internal,,us-east-1d,vpc-68b1ff12,t2.micro,sncr-timd,running,February 19 2020
+jf-master-acct-pd,565241749827,,i-0517505cc84f7a3e7,ami-0036ab7a,vol-06fed4bd5a308e29d,172.31.35.25,,ip-172-31-35-25.ec2.internal,,us-east-1d,vpc-68b1ff12,t2.micro,sncr-timd,running,February 19 2020
+jf-master-acct-pd,565241749827,web1,i-049388eaa8d145a82,ami-0036ab7a,vol-02f4c18726ee7eb8b,172.31.32.195,,ip-172-31-32-195.ec2.internal,,us-east-1d,vpc-68b1ff12,t2.micro,sncr-timd,running,February 19 2020
+jf-master-acct-pd,565241749827,web11,i-0f20fb2f46245afb9,ami-0036ab7a,,,,,,us-east-1f,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web13,i-089a3f6f8bcdb1b8e,ami-0036ab7a,,,,,,us-east-1f,,t2.micro,sncr-timd,terminated,February 19 2020
+jf-master-acct-pd,565241749827,web12,i-0ba7b6e6bb196b56a,ami-0036ab7a,,,,,,us-east-1f,,t2.micro,sncr-timd,terminated,February 19 2020

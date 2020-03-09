@@ -29,8 +29,8 @@ from email.mime.application import MIMEApplication
 # Initialize the color ouput with colorama
 init()
 
-BASE_URL = "https://kiki.us.kworld.company.com/rest/api/content"
-VIEW_URL = "https://kiki.us.kworld.company.com/pages/viewinfo.action?pageId="
+BASE_URL = "https://confluence.us.cworld.company.com/rest/api/content"
+VIEW_URL = "https://confluence.us.cworld.company.com/pages/viewinfo.action?pageId="
 
 def welcomebanner():
     # Print the welcome banner
@@ -351,7 +351,7 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
         part = MIMEApplication(f.read(), Name=basename(filename))
         part['Content-Disposition'] = 'attachment; filename="{}"'.format(basename(filename))
         msg.attach(part)
-    server = smtplib.SMTP('smtpout.us.kworld.company.com', 25)
+    server = smtplib.SMTP('smtpout.us.cworld.company.com', 25)
     try:
         server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
         print("Email was sent to: %s" % to_addr)

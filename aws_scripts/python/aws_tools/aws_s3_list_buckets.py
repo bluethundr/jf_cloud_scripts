@@ -248,7 +248,7 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
         part = MIMEApplication(f.read(), Name=basename(filename))
         part['Content-Disposition'] = 'attachment; filename="{}"'.format(basename(filename))
         msg.attach(part)
-    server = smtplib.SMTP('smtpout.us.kworld.syncrhonoss.com', 25)
+    server = smtplib.SMTP('smtpout.us.cworld.syncrhonoss.com', 25)
     try:
         server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
         message = f"Email was sent to: {to_addr}"
