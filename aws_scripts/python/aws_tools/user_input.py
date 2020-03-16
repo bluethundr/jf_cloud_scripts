@@ -14,6 +14,8 @@ def user_input():
     print(Fore.YELLOW)
     aws_account = input("Enter the account name: ")
     #aws_account = 'jf-master-acct-pd'
+    message = f"Ok. Working in AWS account: {aws_account}" + Fore.RESET
+    banner(message)
     print(Fore.RESET)
 
     print(Fore.GREEN)
@@ -21,6 +23,8 @@ def user_input():
     print(Fore.YELLOW)
     region = input("Enter the region to create EC2 in: ")
     #region = 'us-east-1'
+    message = f"Using region: {region}" + Fore.RESET
+    banner(message)
     today, aws_env_list, ec2_client, ec2_resource = init_create_ec2(aws_account, region)
     print(Fore.RESET)
     print(f"EC2 Client: {ec2_client}")
@@ -35,18 +39,22 @@ def user_input():
     while max_count is None:
         try:
             max_count = int(input("Enter how many EC2 Servers: "))
+            print(f"Ok. Max count set to: {max_count}")
         except Exception:
             continue
     print(Fore.CYAN)
     for count in range(max_count):
         name_tag = input(f"Please enter the name of server: {count + 1}: ")
         name_tags.append(name_tag)
+    name_tag_list = str(list(name_tags)).replace('[','').replace(']','').replace('\'','')
+    print(f"The name tags set are: {name_tag_list}")
     print(Fore.RESET)
 
     print(Fore.GREEN)
     banner("AMI ID")
     print(Fore.YELLOW)
     image_id = input("Enter an AMI ID: ")
+    print(f"The AMI ID is set to: {image_id}")
     #image_id = 'ami-00e6eeb9644429ec6'
     print(Fore.RESET)
 
@@ -54,6 +62,7 @@ def user_input():
     banner("Key Pair")
     print(Fore.YELLOW)
     key_name = input("Enter the key name to use: ")
+    print(f"Using key name: {key_name}")
     #key_name = 'sncr-timd'
     print(Fore.RESET)
 
@@ -61,6 +70,7 @@ def user_input():
     banner("Instance Type")
     print(Fore.YELLOW)
     instance_type = input("Enter the instance type: ")
+    print(f"Using instance type: {instance_type}")
     #instance_type = 't2.small'
     print(Fore.RESET)
 

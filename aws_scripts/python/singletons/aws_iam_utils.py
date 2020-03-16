@@ -32,8 +32,8 @@ from email.mime.application import MIMEApplication
 ## Standard utility functions
 # Initialize the color ouput with colorama
 init()
-BASE_URL = "https://confluence.synchronoss.net:8443/rest/api/content"
-VIEW_URL = "https://confluence.synchronoss.net:8443/pages/viewpage.action?pageId="
+BASE_URL = "https://confluence.jf.net:8443/rest/api/content"
+VIEW_URL = "https://confluence.jf.net:8443/pages/viewpage.action?pageId="
 
 ## Provide session info to the functions based on AWS account
 def initialize():
@@ -205,7 +205,7 @@ def aws_account_iterator(aws_accounts_question, aws_account, aws_account_number,
         outfile = os.path.join('output_files', 'aws_access_keys', 'aws-access-keys-list-all-accounts.csv')
         first_name = ''
         subject = 'AWS Access Keys List ' + today
-        mail_body='<font size=2 face=Verdana color=black>Hello ' +  first_name + ', <br><br>Here is a list of AWS access keys in all Synchronoss AWS accounts.<br><br>See attached!<br><br>Regards,<br>Cloud Ops</font>'
+        mail_body='<font size=2 face=Verdana color=black>Hello ' +  first_name + ', <br><br>Here is a list of AWS access keys in all jf AWS accounts.<br><br>See attached!<br><br>Regards,<br>Cloud Ops</font>'
         attachment = outfile
         send_email(subject, mail_body, attachment)
     elif choice == '9':
@@ -273,59 +273,59 @@ def create_work_dir(work_dir):
 
 def aws_accounts_to_account_numbers(aws_account):
     switcher = {
-        'Synchronoss-lab': '486469900423',
-        'Synchronoss-bill': '188087670762',
-        'Synchronoss-stage': '051170381115',
-        'Synchronoss-dlab': '287093337099',
-        'Synchronoss-nonprod': '832839043616',
-        'Synchronoss-prod': '560044853747',
-        'Synchronoss-ksr-a': '764210188035',
-        'Synchronoss-ksr-b': '991163571593',
-        'Synchronoss-dsg-logging-admin': '962923862227',
-        'Synchronoss-dsg-logging-gov': '900653850120',
-        'Synchronoss-dsg-security-admin': '219577256432',
-        'Synchronoss-dsg-security-gov': '902541738353',
-        'Synchronoss-master': '419585237664',
-        'Synchronoss-main-hub1': '303779310401',
-        'Synchronoss-transit-hub3': '154101686306',
-        'Synchronoss-transit-hub4': '664008221807',
-        'Synchronoss-security': '193256904289',
-        'Synchronoss-shared-services': '300944922012',
-        'Synchronoss-logging': '826254699822',
-        'Synchronoss-spoke-acct1': '103440952267',
-        'Synchronoss-spoke-acct2': '288378600023',
-        'Synchronoss-spoke-acct3': '872950281716',
-        'Synchronoss-spoke-acct4': '167031866369',
-        'Synchronoss-spoke-acct6': '067621579922',
-        'Synchronoss-spoke-acct7': '580036671366',
-        'Synchronoss-spoke-acct9': '806534465904',
-        'Synchronoss-spoke-acct10': '421544879922',
-        'Synchronoss-spoke-acct11': '795959353786',
-        'Synchronoss-spoke-acct12': '353390891816',
-        'Synchronoss-ab-nonprod': '151528745488',
-        'Synchronoss-ab-prod': '155775729998',
-        'Synchronoss-govcloud-ab-admin-nonprod': '675966588449',
-        'Synchronoss-govcloud-ab-nonprod': '654077510425',
-        'Synchronoss-govcloud-ab-admin-prod': '863351155240',
-        'Synchronoss-govcloud-ab-prod': '654360223973',
-        'Synchronoss-govcloud-ab-mc-admin-nonprod': '818951881696',
-        'Synchronoss-govcloud-ab-mc-nonprod': '026715570499',
-        'Synchronoss-govcloud-ab-mc-admin-prod': '609094545271',
-        'Synchronoss-govcloud-ab-mc-prod': '028074947530',
-        'Synchronoss-govcloud-admin-ab-dsg-logmon-nonprod': '913530316654',
-        'Synchronoss-govcloud-ab-dsg-logmon-nonprod': '042821237378',
-        'Synchronoss-govcloud-admin-ab-dsg-logmon-prod': '849740718434',
-        'Synchronoss-govcloud-ab-dsg-logmon-prod': '042489471961',
-        'Synchronoss-govcloud-admin-ab-dsg-logmon-nonprod2': '142490000192',
-        'Synchronoss-govcloud-ab-dsg-logmon-nonprod2': '155207289643',
-        'Synchronoss-govcloud-admin-ab-dsg-logmon-prod2': '260416396087',
-        'Synchronoss-govcloud-ab-dsg-logmon-prod2': '155216231062',
-        'Synchronoss-dsg-security-lab': '059345717693',
-        'Synchronoss-us-aws-adv-ab-sandbox': '788139706897',
-        'Synchronoss-govcloud-ab-hippa-admin-np': '061929239435',
-        'Synchronoss-govcloud-ab-hippa-np': '242658374974',
-        'Synchronoss-govcloud-ab-hippa-admin-pd': '231667950558',
-        'Synchronoss-govcloud-ab-hippa-pd': '22433837123',
+        'jf-lab': '486469900423',
+        'jf-bill': '188087670762',
+        'jf-stage': '051170381115',
+        'jf-dlab': '287093337099',
+        'jf-nonprod': '832839043616',
+        'jf-prod': '560044853747',
+        'jf-ksr-a': '764210188035',
+        'jf-ksr-b': '991163571593',
+        'jf-dsg-logging-admin': '962923862227',
+        'jf-dsg-logging-gov': '900653850120',
+        'jf-dsg-security-admin': '219577256432',
+        'jf-dsg-security-gov': '902541738353',
+        'jf-master': '419585237664',
+        'jf-main-hub1': '303779310401',
+        'jf-transit-hub3': '154101686306',
+        'jf-transit-hub4': '664008221807',
+        'jf-security': '193256904289',
+        'jf-shared-services': '300944922012',
+        'jf-logging': '826254699822',
+        'jf-spoke-acct1': '103440952267',
+        'jf-spoke-acct2': '288378600023',
+        'jf-spoke-acct3': '872950281716',
+        'jf-spoke-acct4': '167031866369',
+        'jf-spoke-acct6': '067621579922',
+        'jf-spoke-acct7': '580036671366',
+        'jf-spoke-acct9': '806534465904',
+        'jf-spoke-acct10': '421544879922',
+        'jf-spoke-acct11': '795959353786',
+        'jf-spoke-acct12': '353390891816',
+        'jf-ab-nonprod': '151528745488',
+        'jf-ab-prod': '155775729998',
+        'jf-govcloud-ab-admin-nonprod': '675966588449',
+        'jf-govcloud-ab-nonprod': '654077510425',
+        'jf-govcloud-ab-admin-prod': '863351155240',
+        'jf-govcloud-ab-prod': '654360223973',
+        'jf-govcloud-ab-mc-admin-nonprod': '818951881696',
+        'jf-govcloud-ab-mc-nonprod': '026715570499',
+        'jf-govcloud-ab-mc-admin-prod': '609094545271',
+        'jf-govcloud-ab-mc-prod': '028074947530',
+        'jf-govcloud-admin-ab-dsg-logmon-nonprod': '913530316654',
+        'jf-govcloud-ab-dsg-logmon-nonprod': '042821237378',
+        'jf-govcloud-admin-ab-dsg-logmon-prod': '849740718434',
+        'jf-govcloud-ab-dsg-logmon-prod': '042489471961',
+        'jf-govcloud-admin-ab-dsg-logmon-nonprod2': '142490000192',
+        'jf-govcloud-ab-dsg-logmon-nonprod2': '155207289643',
+        'jf-govcloud-admin-ab-dsg-logmon-prod2': '260416396087',
+        'jf-govcloud-ab-dsg-logmon-prod2': '155216231062',
+        'jf-dsg-security-lab': '059345717693',
+        'jf-us-aws-adv-ab-sandbox': '788139706897',
+        'jf-govcloud-ab-hippa-admin-np': '061929239435',
+        'jf-govcloud-ab-hippa-np': '242658374974',
+        'jf-govcloud-ab-hippa-admin-pd': '231667950558',
+        'jf-govcloud-ab-hippa-pd': '22433837123',
         'jf-python-dev': '369812892824',
         'jf-python-dev-gov': '894300395449',
         'jf-master-acct': '993905884429',
@@ -336,60 +336,60 @@ def aws_accounts_to_account_numbers(aws_account):
 
 def aws_accounts_to_url(aws_account):
     switcher = {
-        'Synchronoss-lab': 'https://Synchronoss-lab.signin.aws.amazon.com/console',
-        'Synchronoss-bill': 'https://Synchronoss-bill.signin.aws.amazon.com/console',
-        'Synchronoss-stage': 'https://Synchronoss-us-aws-ktech-nonprod-slab.signin.aws.amazon.com/console',
-        'Synchronoss-dlab': 'https://Synchronoss-us-aws-ktech-nonprod-dlab.signin.aws.amazon.com/console',
-        'Synchronoss-nonprod': 'https://Synchronoss-us-aws-ktech-nonprod.signin.aws.amazon.com/console',
-        'Synchronoss-prod': 'https://Synchronoss-us-aws-ktech-prod.signin.aws.amazon.com/console',
-        'Synchronoss-ksr-a': 'https://Synchronoss-us-aws-ktech-ksr-a.signin.aws.amazon.com/console',
-        'Synchronoss-ksr-b': 'https://Synchronoss-us-aws-ktech-ksr-b.signin.aws.amazon.com/console',
-        'Synchronoss-dsg-logging-admin': 'https://dsg-security-admin.signin.aws.amazon.com/console',
-        'Synchronoss-dsg-logging-gov': 'https://dsg-logging-gov.signin.amazonaws-us-gov.com/console',
-        'Synchronoss-dsg-security-admin': 'https://dsg-security-admin.signin.aws.amazon.com/console',
-        'Synchronoss-dsg-security-gov': 'https://dsg-security-admin.signin.aws.amazon.com/console',
-        'Synchronoss-master': 'https://us-ktech-aws-master-acct.signin.aws.amazon.com/console',
-        'Synchronoss-transit-hub1': 'https://303779310401.signin.aws.amazon.com/console',
-        'Synchronoss-transit-hub3': 'https://transithub3-lab.signin.aws.amazon.com/console',
-        'Synchronoss-transit-hub4': 'https://Synchronoss-transit-hub4-prod.signin.aws.amazon.com/console',
-        'Synchronoss-security': 'https://193256904289.signin.aws.amazon.com/console',
-        'Synchronoss-shared-services': 'https://300944922012.signin.aws.amazon.com/console',
-        'Synchronoss-logging': 'https://826254699822.signin.aws.amazon.com/console',
-        'Synchronoss-spoke-acct1': 'https://block-chain.signin.aws.amazon.com/console',
-        'Synchronoss-spoke-acct2': 'https://lakenonadev.signin.aws.amazon.com/console',
-        'Synchronoss-spoke-acct3': 'https://lakehouseqa.signin.aws.amazon.com/console',
-        'Synchronoss-spoke-acct4': 'https://cloud-hsm.signin.aws.amazon.com/console',
-        'Synchronoss-spoke-acct6': 'https://lakenona-load-test.signin.aws.amazon.com/console',
-        'Synchronoss-spoke-acct7': 'https://us-ktawsspk7acct.signin.aws.amazon.com/console',
-        'Synchronoss-spoke-acct9': 'https://cloud-hsm-prod.signin.aws.amazon.com/console',
-        'Synchronoss-spoke-acct10': 'https://lakehouseuat.signin.aws.amazon.com/console',
-        'Synchronoss-spoke-acct11': 'https://cloud-hsm.signin.aws.amazon.com/console',
-        'Synchronoss-spoke-acct12': 'https://lakehouseint.signin.aws.amazon.com/console',
-        'Synchronoss-ab-nonprod': 'https://Synchronoss-ab-nonprod.signin.aws.amazon.com/console/',
-        'Synchronoss-ab-prod': 'https://Synchronoss-ab-prod.signin.aws.amazon.com/console/',
-        'Synchronoss-govcloud-ab-admin-nonprod': 'https://Synchronoss-govcloud-ab-admin-nonprod.signin.aws.amazon.com/console',
-        'Synchronoss-govcloud-ab-nonprod': 'https://Synchronoss-govcloud-ab-nonprod.signin.amazonaws-us-gov.com/console',
-        'Synchronoss-govcloud-ab-admin-prod': 'https://Synchronoss-govcloud-ab-admin-prod.signin.aws.amazon.com/console',
-        'Synchronoss-govcloud-ab-prod': 'https://Synchronoss-govcloud-ab-prod.signin.amazonaws-us-gov.com/console',
-        'Synchronoss-govcloud-ab-mc-admin-nonprod': 'https://Synchronoss-us-aws-adv-ab-mc-govcloud-admin-nonprod.signin.aws.amazon.com/console',
-        'Synchronoss-govcloud-ab-mc-nonprod': 'https://Synchronoss-us-aws-adv-ab-mc-govcloud-nonprod.signin.amazonaws-us-gov.com/console',
-        'Synchronoss-govcloud-ab-mc-admin-prod': 'https://Synchronoss-us-aws-adv-ab-mc-govcloud-admin-prod.signin.aws.amazon.com/console',
-        'Synchronoss-govcloud-ab-mc-prod': 'https://Synchronoss-us-aws-adv-ab-mc-govcloud-prod.signin.amazonaws-us-gov.com/console',
-        'Synchronoss-govcloud-admin-ab-dsg-logmon-nonprod': 'https://Synchronoss-us-aws-adv-ab-dsg-govcloud-admin-nonprod.signin.aws.amazon.com/console',
-        'Synchronoss-govcloud-ab-dsg-logmon-nonprod': 'https://Synchronoss-us-aws-adv-ab-dsg-govcloud-nonprod.signin.amazonaws-us-gov.com/console',
-        'Synchronoss-govcloud-admin-ab-dsg-logmon-prod': 'https://Synchronoss-us-aws-adv-ab-dsg-govcloud-admin-prod.signin.aws.amazon.com/console',
-        'Synchronoss-govcloud-ab-dsg-logmon-prod': 'https://Synchronoss-govcloud-ab-dsg-logmon-prod.signin.amazonaws-us-gov.com/console',
-        'Synchronoss-govcloud-admin-ab-dsg-logmon-nonprod2': 'https://Synchronoss-us-aws-adv-ab-dsg-govcloud-admin-nonprod2.signin.aws.amazon.com/console',
-        'Synchronoss-govcloud-ab-dsg-logmon-nonprod2': 'https://Synchronoss-govcloud-ab-dsg-logmon-nonprod2.signin.amazonaws-us-gov.com/console',
-        'Synchronoss-govcloud-admin-ab-dsg-logmon-prod2': 'https://Synchronoss-govcloud-admin-ab-dsg-logmon-prod2.signin.aws.amazon.com/console',
-        'Synchronoss-govcloud-ab-dsg-logmon-prod2': 'https://Synchronoss-govcloud-ab-dsg-logmon-prod2.signin.amazonaws-us-gov.com/console',
-        'Synchronoss-dsg-security-admin': 'https://dsg-security-admin.signin.aws.amazon.com/console',
-        'Synchronoss-us-aws-adv-ab-sandbox': 'https://Synchronoss-ab-sandbox.signin.aws.amazon.com/console',
+        'jf-lab': 'https://jf-lab.signin.aws.amazon.com/console',
+        'jf-bill': 'https://jf-bill.signin.aws.amazon.com/console',
+        'jf-stage': 'https://jf-us-aws-ktech-nonprod-slab.signin.aws.amazon.com/console',
+        'jf-dlab': 'https://jf-us-aws-ktech-nonprod-dlab.signin.aws.amazon.com/console',
+        'jf-nonprod': 'https://jf-us-aws-ktech-nonprod.signin.aws.amazon.com/console',
+        'jf-prod': 'https://jf-us-aws-ktech-prod.signin.aws.amazon.com/console',
+        'jf-ksr-a': 'https://jf-us-aws-ktech-ksr-a.signin.aws.amazon.com/console',
+        'jf-ksr-b': 'https://jf-us-aws-ktech-ksr-b.signin.aws.amazon.com/console',
+        'jf-dsg-logging-admin': 'https://dsg-security-admin.signin.aws.amazon.com/console',
+        'jf-dsg-logging-gov': 'https://dsg-logging-gov.signin.amazonaws-us-gov.com/console',
+        'jf-dsg-security-admin': 'https://dsg-security-admin.signin.aws.amazon.com/console',
+        'jf-dsg-security-gov': 'https://dsg-security-admin.signin.aws.amazon.com/console',
+        'jf-master': 'https://us-ktech-aws-master-acct.signin.aws.amazon.com/console',
+        'jf-transit-hub1': 'https://303779310401.signin.aws.amazon.com/console',
+        'jf-transit-hub3': 'https://transithub3-lab.signin.aws.amazon.com/console',
+        'jf-transit-hub4': 'https://jf-transit-hub4-prod.signin.aws.amazon.com/console',
+        'jf-security': 'https://193256904289.signin.aws.amazon.com/console',
+        'jf-shared-services': 'https://300944922012.signin.aws.amazon.com/console',
+        'jf-logging': 'https://826254699822.signin.aws.amazon.com/console',
+        'jf-spoke-acct1': 'https://block-chain.signin.aws.amazon.com/console',
+        'jf-spoke-acct2': 'https://lakenonadev.signin.aws.amazon.com/console',
+        'jf-spoke-acct3': 'https://lakehouseqa.signin.aws.amazon.com/console',
+        'jf-spoke-acct4': 'https://cloud-hsm.signin.aws.amazon.com/console',
+        'jf-spoke-acct6': 'https://lakenona-load-test.signin.aws.amazon.com/console',
+        'jf-spoke-acct7': 'https://us-ktawsspk7acct.signin.aws.amazon.com/console',
+        'jf-spoke-acct9': 'https://cloud-hsm-prod.signin.aws.amazon.com/console',
+        'jf-spoke-acct10': 'https://lakehouseuat.signin.aws.amazon.com/console',
+        'jf-spoke-acct11': 'https://cloud-hsm.signin.aws.amazon.com/console',
+        'jf-spoke-acct12': 'https://lakehouseint.signin.aws.amazon.com/console',
+        'jf-ab-nonprod': 'https://jf-ab-nonprod.signin.aws.amazon.com/console/',
+        'jf-ab-prod': 'https://jf-ab-prod.signin.aws.amazon.com/console/',
+        'jf-govcloud-ab-admin-nonprod': 'https://jf-govcloud-ab-admin-nonprod.signin.aws.amazon.com/console',
+        'jf-govcloud-ab-nonprod': 'https://jf-govcloud-ab-nonprod.signin.amazonaws-us-gov.com/console',
+        'jf-govcloud-ab-admin-prod': 'https://jf-govcloud-ab-admin-prod.signin.aws.amazon.com/console',
+        'jf-govcloud-ab-prod': 'https://jf-govcloud-ab-prod.signin.amazonaws-us-gov.com/console',
+        'jf-govcloud-ab-mc-admin-nonprod': 'https://jf-us-aws-adv-ab-mc-govcloud-admin-nonprod.signin.aws.amazon.com/console',
+        'jf-govcloud-ab-mc-nonprod': 'https://jf-us-aws-adv-ab-mc-govcloud-nonprod.signin.amazonaws-us-gov.com/console',
+        'jf-govcloud-ab-mc-admin-prod': 'https://jf-us-aws-adv-ab-mc-govcloud-admin-prod.signin.aws.amazon.com/console',
+        'jf-govcloud-ab-mc-prod': 'https://jf-us-aws-adv-ab-mc-govcloud-prod.signin.amazonaws-us-gov.com/console',
+        'jf-govcloud-admin-ab-dsg-logmon-nonprod': 'https://jf-us-aws-adv-ab-dsg-govcloud-admin-nonprod.signin.aws.amazon.com/console',
+        'jf-govcloud-ab-dsg-logmon-nonprod': 'https://jf-us-aws-adv-ab-dsg-govcloud-nonprod.signin.amazonaws-us-gov.com/console',
+        'jf-govcloud-admin-ab-dsg-logmon-prod': 'https://jf-us-aws-adv-ab-dsg-govcloud-admin-prod.signin.aws.amazon.com/console',
+        'jf-govcloud-ab-dsg-logmon-prod': 'https://jf-govcloud-ab-dsg-logmon-prod.signin.amazonaws-us-gov.com/console',
+        'jf-govcloud-admin-ab-dsg-logmon-nonprod2': 'https://jf-us-aws-adv-ab-dsg-govcloud-admin-nonprod2.signin.aws.amazon.com/console',
+        'jf-govcloud-ab-dsg-logmon-nonprod2': 'https://jf-govcloud-ab-dsg-logmon-nonprod2.signin.amazonaws-us-gov.com/console',
+        'jf-govcloud-admin-ab-dsg-logmon-prod2': 'https://jf-govcloud-admin-ab-dsg-logmon-prod2.signin.aws.amazon.com/console',
+        'jf-govcloud-ab-dsg-logmon-prod2': 'https://jf-govcloud-ab-dsg-logmon-prod2.signin.amazonaws-us-gov.com/console',
+        'jf-dsg-security-admin': 'https://dsg-security-admin.signin.aws.amazon.com/console',
+        'jf-us-aws-adv-ab-sandbox': 'https://jf-ab-sandbox.signin.aws.amazon.com/console',
         'jf-python-dev': 'https://jf-python-dev.signin.aws.amazon.com/console',
-        'Synchronoss-govcloud-ab-hippa-admin-np': 'https://Synchronoss-us-aws-adv-ab-hippa-govcloud-admin-np.signin.aws.amazon.com/console',
-        'Synchronoss-govcloud-ab-hippa-np': 'https://Synchronoss-us-aws-adv-ab-hippa-govcloud-np.signin.amazonaws-us-gov.com/console',
-        'Synchronoss-govcloud-ab-hippa-admin-pd': 'https://Synchronoss-us-aws-adv-ab-hippa-govcloud-admin-pd.signin.aws.amazon.com/console',
-        'Synchronoss-govcloud-ab-hippa-pd': 'https://Synchronoss-us-aws-adv-ab-hippa-govcloud-pd.signin.amazonaws-us-gov.com/console',
+        'jf-govcloud-ab-hippa-admin-np': 'https://jf-us-aws-adv-ab-hippa-govcloud-admin-np.signin.aws.amazon.com/console',
+        'jf-govcloud-ab-hippa-np': 'https://jf-us-aws-adv-ab-hippa-govcloud-np.signin.amazonaws-us-gov.com/console',
+        'jf-govcloud-ab-hippa-admin-pd': 'https://jf-us-aws-adv-ab-hippa-govcloud-admin-pd.signin.aws.amazon.com/console',
+        'jf-govcloud-ab-hippa-pd': 'https://jf-us-aws-adv-ab-hippa-govcloud-pd.signin.amazonaws-us-gov.com/console',
         'jf-python-dev-gov': 'https://jf-python-dev-gov.signin.amazonaws-us-gov.com/console',
         'jf-master-acct': 'https://us-jokefire-aws-master-acct.signin.aws.amazon.com/console',
         'jf-spoke-acct5': 'https://us-jokefire=spoke5-acct.signin.aws.amazon.com/console',
@@ -1293,7 +1293,7 @@ def create_pol_region_restriction(group_name, aws_account, aws_account_number, g
         print("Policy already exists.")
     time.sleep(5)
 
-def create_pol_rl_Synchronoss_admin():
+def create_pol_rl_jf_admin():
     policy_doc = {
   "Version": "2012-10-17",
   "Statement": [
@@ -1338,7 +1338,7 @@ def create_pol_rl_netops():
     return policy_doc
 
 
-def create_pol_rl_Synchronoss_read_only():
+def create_pol_rl_jf_read_only():
     policy_doc = json.dumps({
   "Version": "2012-10-17",
   "Statement": [
@@ -1381,7 +1381,7 @@ def create_kms_key(aws_account, user_name, kms_client):
                 alias_name_exists = False
     
     if alias_name_exists == False:
-        alias_name = 'alias/Synchronoss-kms-key-' + user_name
+        alias_name = 'alias/jf-kms-key-' + user_name
         try:
             kms_key_id = (kms_client.create_key()['KeyMetadata']['KeyId'])
             if kms_key_id:
@@ -1409,8 +1409,8 @@ def send_email(subject, mail_body, attachment= None):
     ## Get the user's first name
     #first_name = input("Enter the recipient's first name: ")
     to_addr = input("Enter the recipient's email address: ")
-    from_addr = 'cloudops@noreply.Synchronoss.com'
-    cc = ['tdunphy@Synchronoss.com']
+    from_addr = 'cloudops@noreply.jf.com'
+    cc = ['tdunphy@jf.com']
     bcc = ['bluethundr@gmail.com']
     to_addrs = [to_addr] + cc + bcc
     content = mail_body
@@ -1420,7 +1420,7 @@ def send_email(subject, mail_body, attachment= None):
     msg['Subject'] = subject
     body = MIMEText(content, 'html')
     msg.attach(body)
-    server = smtplib.SMTP('smtpout.us.kworld.Synchronoss.com', 25)
+    server = smtplib.SMTP('smtpout.us.cworld.jf.com', 25)
     if attachment is None:
         try:
             server.send_message(msg, from_addr=from_addr, to_addrs=to_addrs)
@@ -2033,17 +2033,17 @@ def create_roles(iam_client, aws_account):
     print(f'             Create New AWS Role in {aws_account}    ')
     print('******************************************************\n')
     role_name = input("Enter the role name: ")
-    if role_name == 'rl-Synchronoss-admin':
-        policy_doc = create_pol_rl_Synchronoss_admin()
-        role_description = 'rl-Synchronoss-admin gives users admin access to the account.'
+    if role_name == 'rl-jf-admin':
+        policy_doc = create_pol_rl_jf_admin()
+        role_description = 'rl-jf-admin gives users admin access to the account.'
         policy_arn = 'arn:aws:iam::aws:policy/AdministratorAccess'
     elif role_name == 'rl-netops':
         policy_doc = create_pol_rl_netops()
         role_description = 'rl-netops gives users read only access to the account.'
         policy_arn = 'arn:aws:iam::aws:policy/ReadOnlyAccess'
-    elif role_name == 'rl-Synchronoss-read-only':
-        policy_doc = create_pol_rl_Synchronoss_read_only()
-        role_description = 'rl-Synchronoss-read-only gives users read only access to the account.'
+    elif role_name == 'rl-jf-read-only':
+        policy_doc = create_pol_rl_jf_read_only()
+        role_description = 'rl-jf-read-only gives users read only access to the account.'
         policy_arn = 'arn:aws:iam::aws:policy/ReadOnlyAccess'
     try:    
         create_role_response = (iam_client.create_role(RoleName=role_name,AssumeRolePolicyDocument=policy_doc, Description=role_description)['ResponseMetadata']['HTTPStatusCode'])
@@ -2081,14 +2081,14 @@ def delete_roles(iam_client, aws_account):
     print('******************************************************\n')
     detach_role_response = ''
     role_name = input("Enter the role name: ")
-    if role_name == 'rl-Synchronoss-admin':
-        policy_doc = create_pol_rl_Synchronoss_admin()
+    if role_name == 'rl-jf-admin':
+        policy_doc = create_pol_rl_jf_admin()
         policy_arn = 'arn:aws:iam::aws:policy/AdministratorAccess'
     elif role_name == 'rl-netops':
         policy_doc = create_pol_rl_netops()
         policy_arn = 'arn:aws:iam::aws:policy/ReadOnlyAccess'
-    elif role_name == 'rl-Synchronoss-read-only':
-        policy_doc = create_pol_rl_Synchronoss_read_only()
+    elif role_name == 'rl-jf-read-only':
+        policy_doc = create_pol_rl_jf_read_only()
         policy_arn = 'arn:aws:iam::aws:policy/ReadOnlyAccess'
     try:    
         detach_role_response = ((iam_client.detach_role_policy(PolicyArn=policy_arn,RoleName=role_name)['ResponseMetadata']['HTTPStatusCode']))
@@ -2122,17 +2122,17 @@ def update_roles(iam_client, aws_account):
     print(f'             Update AWS Role in {aws_account}    ')
     print('******************************************************\n')
     role_name = input("Enter the role name: ")
-    if role_name == 'rl-Synchronoss-admin':
-        policy_doc = create_pol_rl_Synchronoss_admin()
-        role_description = 'rl-Synchronoss-admin gives users admin access to the account.'
+    if role_name == 'rl-jf-admin':
+        policy_doc = create_pol_rl_jf_admin()
+        role_description = 'rl-jf-admin gives users admin access to the account.'
         policy_arn = 'arn:aws:iam::aws:policy/AdministratorAccess'
     elif role_name == 'rl-netops':
         policy_doc = create_pol_rl_netops()
         role_description = 'rl-netops gives users read only access to the account.'
         policy_arn = 'arn:aws:iam::aws:policy/ReadOnlyAccess'
-    elif role_name == 'rl-Synchronoss-read-only':
-        policy_doc = create_pol_rl_Synchronoss_read_only()
-        role_description = 'rl-Synchronoss-read-only gives users read only access to the account.'
+    elif role_name == 'rl-jf-read-only':
+        policy_doc = create_pol_rl_jf_read_only()
+        role_description = 'rl-jf-read-only gives users read only access to the account.'
         policy_arn = 'arn:aws:iam::aws:policy/ReadOnlyAccess'
     
     try:    
@@ -2309,20 +2309,20 @@ def create_user(password, iam_client, kms_client, secrets_client, aws_account, i
         # Mail for access key access
         elif key_access.lower() == "yes" or key_access.lower() == "y":
             access_type = 'key_access'
-        kiki_mfa_url = '<a href="https://kiki.us.kworld.Synchronoss.com/display/6TO/Enable+MFA+in+AWS">Enable MFA in AWS</a>'
+        confluence_mfa_url = '<a href="https://confluence.us.cworld.jf.com/display/6TO/Enable+MFA+in+AWS">Enable MFA in AWS</a>'
         ## Get the user's first name
         if interactive == 1:
             first_name = input("Enter the recipient's first name: ")
             subject = 'Welcome To AWS Account: ' + aws_account + ' (' + aws_account_number + ')'
             # Mail for console access and access key access
             if access_type == 'console_key_access':
-                mail_body="<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>You have been given access to this AWS account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>You can get started by using the sign-in information provided below.<br><br>-------------------------------------------------<br><br>Sign-in URL: " + aws_signin_url + "<br>User name: " + user_name + "<br>Password: "  + password + "<br><br>-------------------------------------------------<br><br>When you sign in for the first time, you must change your password.<br><br>The user name " +  user_name + " belongs to these groups: <br><br>" + user_group_list + "<br><br>You have been issued new AWS access keys for this account. You will find them in the secrets manager of the same AWS account.<br><br>Please refer to the following secret for access to your keys:<br><br> " + user_secrets_list +  "<br><br>Please note: YOU MUST ENABLE MFA BEFORE USING THESE RESOURCES.<br><br>Refer to this url for MFA instructions: " + kiki_mfa_url + "<br><br>Regards,<br>Cloud Ops</font>"
+                mail_body="<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>You have been given access to this AWS account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>You can get started by using the sign-in information provided below.<br><br>-------------------------------------------------<br><br>Sign-in URL: " + aws_signin_url + "<br>User name: " + user_name + "<br>Password: "  + password + "<br><br>-------------------------------------------------<br><br>When you sign in for the first time, you must change your password.<br><br>The user name " +  user_name + " belongs to these groups: <br><br>" + user_group_list + "<br><br>You have been issued new AWS access keys for this account. You will find them in the secrets manager of the same AWS account.<br><br>Please refer to the following secret for access to your keys:<br><br> " + user_secrets_list +  "<br><br>Please note: YOU MUST ENABLE MFA BEFORE USING THESE RESOURCES.<br><br>Refer to this url for MFA instructions: " + confluence_mfa_url + "<br><br>Regards,<br>Cloud Ops</font>"
             # Mail for console access
             elif access_type == 'console_access':
-                mail_body="<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>You have been given access to this AWS account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>You can get started by using the sign-in information provided below.<br><br>-------------------------------------------------<br><br>Sign-in URL: " + aws_signin_url + "<br>User name: " + user_name + "<br>Password: "  + password + "<br><br>-------------------------------------------------<br><br>When you sign in for the first time, you must change your password.<br><br>The user name " +  user_name + " belongs to these groups: <br><br>" + user_group_list + "<br><br>Please note: YOU MUST ENABLE MFA BEFORE USING THESE RESOURCES.<br><br>Refer to this url for MFA instructions: " + kiki_mfa_url + "<br><br>Regards,<br>Cloud Ops</font>"
+                mail_body="<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>You have been given access to this AWS account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>You can get started by using the sign-in information provided below.<br><br>-------------------------------------------------<br><br>Sign-in URL: " + aws_signin_url + "<br>User name: " + user_name + "<br>Password: "  + password + "<br><br>-------------------------------------------------<br><br>When you sign in for the first time, you must change your password.<br><br>The user name " +  user_name + " belongs to these groups: <br><br>" + user_group_list + "<br><br>Please note: YOU MUST ENABLE MFA BEFORE USING THESE RESOURCES.<br><br>Refer to this url for MFA instructions: " + confluence_mfa_url + "<br><br>Regards,<br>Cloud Ops</font>"
             # Mail for access key access
             elif access_type == 'key_access':
-                mail_body="<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>You have been given access to this AWS account: " + aws_account + " (" + aws_account_number + ")" + "<br><br>The user name " +  user_name + " belongs to these groups: <br><br>" + user_group_list + ".<br><br>You have been issued new AWS access keys for this account. You will find them in the secrets manager of the same AWS Account.<br><br>Please refer to the following secret for access to your keys:<br><br> " + user_secrets_list + "<br><br>Please note: YOU MUST ENABLE MFA BEFORE USING THESE RESOURCES.<br><br>Refer to this url for MFA instructions: " + kiki_mfa_url + "<br><br>Regards,<br>Cloud Ops</font>"
+                mail_body="<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>You have been given access to this AWS account: " + aws_account + " (" + aws_account_number + ")" + "<br><br>The user name " +  user_name + " belongs to these groups: <br><br>" + user_group_list + ".<br><br>You have been issued new AWS access keys for this account. You will find them in the secrets manager of the same AWS Account.<br><br>Please refer to the following secret for access to your keys:<br><br> " + user_secrets_list + "<br><br>Please note: YOU MUST ENABLE MFA BEFORE USING THESE RESOURCES.<br><br>Refer to this url for MFA instructions: " + confluence_mfa_url + "<br><br>Regards,<br>Cloud Ops</font>"
         else:
             #aws_account = aws_account.append(aws_account)
             mail_body = 'tbd'

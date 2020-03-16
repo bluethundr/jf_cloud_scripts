@@ -42,7 +42,7 @@ def initialize():
     if test_account_answer.lower() == 'y' or test_account_answer.lower() == 'yes':
         aws_env_list = os.path.join('..', '..', 'output_files', 'aws_accounts_list', 'aws_jokefire_page-' + today + '.csv')
     else:
-        aws_env_list = os.path.join('..', '..', 'output_files', 'aws_accounts_list', 'aws_kiki_page-' + today + '.csv')
+        aws_env_list = os.path.join('..', '..', 'output_files', 'aws_accounts_list', 'aws_confluence_page-' + today + '.csv')
         
     # Set the output file
     output_dir = os.path.join('..', '..', 'output_files', 'aws_create_role', 'csv')
@@ -195,7 +195,7 @@ def send_email(aws_accounts_question,aws_account,aws_account_number):
         part = MIMEApplication(f.read(), Name=basename(filename))
         part['Content-Disposition'] = 'attachment; filename="{}"'.format(basename(filename))
         msg.attach(part)
-    server = smtplib.SMTP('smtpout.us.kworld.company.com', 25)
+    server = smtplib.SMTP('smtpout.us.cworld.company.com', 25)
     try:
         server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
         print("Email was sent to: %s" % to_addr)

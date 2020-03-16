@@ -18,13 +18,13 @@ init()
 
 def welcome_banner():
     print(Fore.CYAN)
-    message = "*             AWS Accounts KIKI Page Scraper        *"
+    message = "*             AWS Accounts Confluence Page Scraper        *"
     banner(message, '*')
     print(Fore.RESET)
 
 def end_banner():
     print(Fore.CYAN)
-    message = "*  AWS Accounts KIKI Page Scraper Operations Complete      *"
+    message = "*  AWS Accounts Confluence Page Scraper Operations Complete      *"
     banner(message, '*')
     print(Fore.RESET)
 
@@ -78,7 +78,7 @@ def remove_file(output_file, output_file_name):
         print("File not removed.")
 
 def arguments():
-    parser = argparse.ArgumentParser(description='This program scrapes the kiki page to build a list of AWS accounts referenced in other modules.')
+    parser = argparse.ArgumentParser(description='This program scrapes the confluence page to build a list of AWS accounts referenced in other modules.')
 
     parser.add_argument(
     "-u",
@@ -99,7 +99,7 @@ def web_scraper(options):
     output_dir = os.path.join( '..', '..', 'output_files', 'aws_accounts_list')
     with contextlib.redirect_stdout(io.StringIO()):
         create_work_dir(output_dir)
-    filename = 'aws_kiki_page-' + today
+    filename = 'aws_confluence_page-' + today
     destination = os.path.join(output_dir, filename + '.csv' )
     url = 'https://confluence.synchronoss.net:8443/display/~tdun0002/AWS+Accounts+Access'
     message = "Log into confluence"
