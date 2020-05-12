@@ -81,11 +81,11 @@ def initialize(interactive, aws_account):
         htmlfile = 'aws-hostname-list-' + today +'.csv'
     return today, aws_env_list, output_dir, output_file, output_file_name, html_dir, htmlfile, htmlfile_name, fieldnames
 
-def create_outputdir(output_dir):
+def create_csvoutputdir(output_dir):
     if not os.path.exists(output_dir):
          os.makedirs(output_dir)
 
-def create_htmldir(html_dir):
+def create_htmloutputdir(html_dir):
     if not os.path.exists(html_dir):
          os.makedirs(html_dir)
 
@@ -563,8 +563,12 @@ def main():
         # Grab variables from initialize
         today, aws_env_list, output_dir, output_file, output_file_name, html_dir, htmlfile, htmlfile_name, fieldnames = initialize(interactive, aws_account)
 
-        # Create output directory
-        create_outputdir(output_dir)
+        # Create CSV output directory
+        create_csvoutputdir(output_dir)
+
+        # Create HTML output directory
+        create_htmloutputdir(html_dir)
+
         # Get the list of the accounts from the aws confluence page
         account_names, account_numbers = read_account_info(aws_env_list)
         print(Fore.YELLOW)
@@ -619,6 +623,16 @@ def main():
 
     else:
         aws_account = 'all'
+
+        # Grab variables from initialize
+        today, aws_env_list, output_dir, output_file, output_file_name, html_dir, htmlfile, htmlfile_name, fieldnames = initialize(interactive, aws_account)
+
+        # Create CSV output directory
+        create_csvoutputdir(output_dir)
+
+        # Create HTML output directory
+        create_htmloutputdir(html_dir)
+
         today, aws_env_list, output_dir, output_file, output_file_name, html_dir, htmlfile, htmlfile_name, fieldnames = initialize(interactive, aws_account)
         with open(output_file, mode='w+') as csv_file:
             writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
