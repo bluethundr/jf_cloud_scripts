@@ -67,17 +67,27 @@ def initialize(interactive, aws_account):
     fieldnames = [ 'AWS Account', 'Account Number', 'Name', 'Instance ID', 'AMI ID', 'Volumes', 'Private IP', 'Public IP', 'Private DNS', 'Availability Zone', 'VPC ID', 'Type', 'Key Pair Name', 'State', 'Launch Date']
     # Set the input file
     aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_accounts_list.csv')
-    #aws_env_list = r"C:\Users\tdun0002\OneDrive - Synchronoss Technologies\Desktop\important_folders\Synchronoss\git\cloud_scripts\aws_scripts\source_files\aws_accounts_list\aws_confluence_page.csv"
     # Set the output file
-    output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
+    output_dir = os.path.join('..', '..', 'output_files', 'aws_hostname_list', 'csv', '')
+    html_dir = os.path.join('..', '..', 'output_files', 'aws_hostname_list', 'html', '')
+    htmlfile = os.path.join(output_dir, 'aws-hostname-list-list-' + today + '.html')
+    htmlfile_name = 'aws-hostname-list-list-' + today +'.html'
     if interactive == 1:
-        output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
+        output_file = os.path.join(output_dir, 'aws-hostname-list-' + aws_account + '-' + today +'.csv')
         output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.csv'
     else:
-        output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
+        output_file = os.path.join(output_dir, 'aws-hostname-list-' + today +'.csv')
+        output_file_name = 'aws-hostname-list-' + today +'.csv'
+        htmlfile = 'aws-hostname-list-' + today +'.csv'
+    return today, aws_env_list, output_dir, output_file, output_file_name, html_dir, htmlfile, htmlfile_name, fieldnames
 
-        output_file_name = 'aws-instance-master-list-' + today +'.csv'
-    return today, aws_env_list, output_file, output_file_name, fieldnames
+def create_outputdir(output_dir):
+    if not os.path.exists(output_dir):
+         os.makedirs(output_dir)
+
+def create_htmldir(html_dir):
+    if not os.path.exists(html_dir):
+         os.makedirs(html_dir)
 
 def exit_program():
     endbanner()
@@ -116,7 +126,6 @@ def report_gov_or_comm(aws_account, account_found):
         message = "This is a commercial account."
         banner(message)
 
-
 def set_regions(aws_account):
     print(Fore.GREEN)
     message = f"Getting the regions in {aws_account} "
@@ -135,7 +144,7 @@ def set_regions(aws_account):
 
 
 def list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details):
-    today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
+    today, aws_env_list, output_dir, output_file, output_file_name, html_dir, htmlfile, htmlfile_name, fieldnames = initialize(interactive, aws_account)
     options = arguments()
     instance_list = ''
     session = ''
@@ -296,17 +305,7 @@ def list_instances(aws_account,aws_account_number, interactive, regions, fieldna
     #breakpoint()
     return output_file
 
-def convert_csv_to_html_table(output_file, today, interactive, aws_account):
-    output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html')
-    if interactive == 1:
-        htmlfile = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.html')
-        #htmlfile = r"C:\Users\tdun0002\OneDrive - Synchronoss Technologies\Desktop\important_folders\Synchronoss\git\cloud_scripts\aws_scripts\output_files\aws_instance_list\html" + aws_account + '-' + today +'.html'
-        htmlfile_name = 'aws-instance-list-' + aws_account + '-' + today + '.html'
-    else:
-        htmlfile = os.path.join(output_dir, 'aws-instance-master-list-' + today + '.html')
-        #htmlfile = r"C:\Users\tdun0002\OneDrive - Synchronoss Technologies\Desktop\important_folders\Synchronoss\git\cloud_scripts\aws_scripts\output_files\aws_instance_list\html" + today +'.html'
-        htmlfile_name = 'aws-instance-master-list-' + today +'.html'
-    remove_htmlfile = htmlfile
+def convert_csv_to_html_table(output_file, htmlfile, today, interactive, aws_account):
     count = 0
     html = ''
     with open(output_file,'r') as CSVFILE:
@@ -327,7 +326,6 @@ def convert_csv_to_html_table(output_file, today, interactive, aws_account):
         html += "</tbody></table>"
     with open(htmlfile,'w+') as HTMLFILE:
         HTMLFILE.write(html)
-    return htmlfile, htmlfile_name, remove_htmlfile
 
 
 def get_page_ancestors(auth, pageid):
@@ -563,8 +561,10 @@ def main():
             print(Fore.RESET)
 
         # Grab variables from initialize
-        today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
+        today, aws_env_list, output_dir, output_file, output_file_name, html_dir, htmlfile, htmlfile_name, fieldnames = initialize(interactive, aws_account)
 
+        # Create output directory
+        create_outputdir(output_dir)
         # Get the list of the accounts from the aws confluence page
         account_names, account_numbers = read_account_info(aws_env_list)
         print(Fore.YELLOW)
@@ -586,7 +586,7 @@ def main():
         # Set the regions and run the program
         regions = set_regions(aws_account)
         output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
-        htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account)
+        htmlfile_name = convert_csv_to_html_table(output_file, htmlfile, today, interactive, aws_account)
  
 
         with open(htmlfile, 'r') as htmlfile:
@@ -619,7 +619,7 @@ def main():
 
     else:
         aws_account = 'all'
-        today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
+        today, aws_env_list, output_dir, output_file, output_file_name, html_dir, htmlfile, htmlfile_name, fieldnames = initialize(interactive, aws_account)
         with open(output_file, mode='w+') as csv_file:
             writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
             writer.writeheader()
@@ -638,7 +638,7 @@ def main():
                 # Set the regions
                 regions = set_regions(aws_account)
                 output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
-                htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file,today, interactive, aws_account)
+                htmlfile_name = convert_csv_to_html_table(output_file, htmlfile, today, interactive, aws_account)
 
 
         with open(htmlfile, 'r') as htmlfile:
@@ -656,8 +656,6 @@ def main():
             user = options.user
             password = options.password
             auth = (user, password)
-            #auth = str(auth).replace('(','').replace('\'','').replace(',',':').replace(')','').replace(' ','')
-            #kerberos_auth = HTTPKerberosAuth(mutual_authentication="DISABLED",principal=auth)
             try:
                 write_data_to_confluence(auth, html, pageid, title)
             except Exception as e:
@@ -675,10 +673,6 @@ def main():
                 message = "Okay. Not writing to confluence."
                 banner(message)
             print(Fore.RESET)
-       
-
-    #remove_file(output_file, output_file_name)
-    #remove_file(remove_htmlfile, htmlfile_name)
     
     print(Fore.GREEN)
     if options.run_again:
