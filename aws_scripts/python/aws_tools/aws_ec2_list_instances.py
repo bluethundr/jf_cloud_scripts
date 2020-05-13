@@ -421,8 +421,8 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
     else:
         to_addr = input("Enter the recipient's email address: ")
 
-    from_addr = 'cloudops@noreply.company.com'
-    subject = "company AWS Instance Master List " + today
+    from_addr = 'cloudops@noreply.sncr.com'
+    subject = "SNCR AWS Instance Master List " + today
     if aws_accounts_question == 'one':
         content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>Cloud Ops</font>"
     else:
@@ -438,9 +438,14 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
     with open(filename, 'r') as f:
         part = MIMEApplication(f.read(), Name=basename(filename))
         part['Content-Disposition'] = 'attachment; filename="{}"'.format(basename(filename))
-        msg.attach(part)
-    server = smtplib.SMTP('smtpout.us.cworld.company.com', 25)
+        msg.attach(part) 
     try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.ehlo()
+        server.starttls()
+        gmail_user = 'sncr.noreply@gmail.com'
+        gmail_password = 'ehhloWorld12345'
+        server.login(gmail_user, gmail_password)
         server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
         message = f"Email was sent to:{to_addr}"
         banner(message)

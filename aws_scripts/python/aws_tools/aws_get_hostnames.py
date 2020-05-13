@@ -18,6 +18,7 @@ import requests
 import itertools
 import codecs
 import pandas
+import paramiko
 from html import escape
 from botocore.exceptions import ValidationError
 from web_scraper import web_scraper
@@ -141,6 +142,19 @@ def set_regions(aws_account):
         ec2_client = session.client('ec2')
         regions = [reg['RegionName'] for reg in ec2_client.describe_regions()['Regions']]
     return regions
+
+
+    def get_memory_stats():
+        ssh = paramiko.SSHClient()
+
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+        ssh.connect('<hostname>', username='<username>', key_filename='<path/to/openssh-private-key-file>')
+
+        stdin, stdout, stderr = ssh.exec_command('ls')
+        print stdout.readlines()
+        ssh.close()
+
 
 
 def list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details):
