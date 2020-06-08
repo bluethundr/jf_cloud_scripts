@@ -1,4 +1,4 @@
-#i!/usr/bin/env python3
+#!/usr/bin/env python3
 
 # Import modules
 import boto3
@@ -13,7 +13,6 @@ import json
 import codecs
 import pandas as pd
 import paramiko
-import psutil as pu
 import fileinput
 import platform
 import smtplib
@@ -107,6 +106,7 @@ def get_memory(hosts_list, aws_account,key_file, csv_path, text_path):
     fields = ['Name']
     df = pd.read_csv(hosts_list, skipinitialspace=True, usecols=fields)
     list_names = df['Name'].tolist()
+    #message = f"Connecting to hosts in AWS Account: {aws_account}"
     message = f"Connecting to hosts in AWS Account: {aws_account}"
     banner(message)
     k = paramiko.RSAKey.from_private_key_file(key_file)
@@ -171,9 +171,11 @@ def convert_to_csv(csv_path,text_path,hosts_list, aws_account, aws_account_numbe
 
     try: 
         final_df.to_csv(csv_output, index=False)
+        final_df.fillna(0)
     except Exception as e:
         print(f"An error has occurred: {e}")
     return csv_output
+
 
 
 def send_email(aws_account,aws_account_number, memory_report, today):
@@ -320,16 +322,17 @@ def list_instances(aws_account,aws_account_number, fieldnames):
                     'Name': name,
                     'PrivateIP': private_ips_list,
                 }
-                with open(output_file,'a') as csv_file:
-                    writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
-                    writer.writerow({'Name': name, 'PrivateIP': private_ips_list})
-                ec2_info_items = ec2info.items
-                reservation = {}
-                instance = {}
-                ec2_info_items = {}
-                ec2info = {}
-                with open(output_file,'a') as csv_file:
-                    csv_file.close()
+                if 'mmp' in name.lower():
+                    with open(output_file,'a') as csv_file:
+                        writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
+                        writer.writerow({'Name': name, 'PrivateIP': private_ips_list})
+                    ec2_info_items = ec2info.items
+                    reservation = {}
+                    instance = {}
+                    ec2_info_items = {}
+                    ec2info = {}
+                    with open(output_file,'a') as csv_file:
+                        csv_file.close()
     except Exception as e:
         print(f"An exception has occurred: {e}")
     if profile_missing_message == '*':
@@ -394,6 +397,7 @@ def main():
     options = arguments()
     # Display the welcome banner
     welcomebanner()
+    print(Fore.YELLOW)
     aws_account = input("Enter the AWS Account to use: ")
     aws_account_number = ''
 
