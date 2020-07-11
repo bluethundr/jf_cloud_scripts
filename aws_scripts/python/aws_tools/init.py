@@ -13,18 +13,25 @@ def init_create_ec2(aws_account, region):
         try:
             session = boto3.Session(profile_name=aws_account, region_name=region)
         except botocore.exceptions.ProfileNotFound as e:
-            profile_missing_message = f"An exception has occurred: {e}"
+            profile_missing_message = f"An exception has occurred: {e}. Please try again!"
             banner(profile_missing_message)
+            ec2_client = None
+            ec2_resource = None
+            
     else:
         try:
             session = boto3.Session(profile_name=aws_account, region_name=region)
             account_found = 'yes'
         except botocore.exceptions.ProfileNotFound as e:
-            profile_missing_message = f"An exception has occurred: {e}"
+            profile_missing_message = f"An exception has occurred: {e}. Please try again!"
             banner(profile_missing_message)
+
+
     try:
         ec2_client = session.client("ec2")
         ec2_resource = session.resource("ec2")
     except Exception as e:
         print(f"An exception has occurred: {e}")
+        ec2_client = None
+        ec2_resource = None
     return today, aws_env_list, ec2_client, ec2_resource
