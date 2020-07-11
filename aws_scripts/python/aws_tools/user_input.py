@@ -27,7 +27,6 @@ def user_input():
     banner(message)
     today, aws_env_list, ec2_client, ec2_resource = init_create_ec2(aws_account, region)
     print(Fore.RESET)
-    print(f"EC2 Client: {ec2_client}")
     time.sleep(5)
     if ec2_client is None:
         init_create_ec2(aws_account, region)

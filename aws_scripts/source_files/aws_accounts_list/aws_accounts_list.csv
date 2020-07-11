@@ -6,7 +6,8 @@ ccmi-mx-stg,697814175949,https://signin.aws.amazon.com/switchrole?account=ccmi-m
 ccmi-pac-lab,742215071658,https://signin.aws.amazon.com/switchrole?account=ccmi-pac-lab&roleName=ccmi-pac-lab_admin
 ccmi-sprint-lab,771501756991,https://signin.aws.amazon.com/switchrole?account=ccmi-sprint-lab&roleName=ccmi-sprint-lab_admin
 ccmi-tmo-lab,691848290388,https://signin.aws.amazon.com/switchrole?account=ccmi-tmo-lab&roleName=ccmi-sprint-lab_admin
-ccmi-verizon-lab,046480487130,https://signin.aws.amazon.com/switchrole?account=ccmi-verizon-lab&roleName=ccmi-verizon-lab_admin
+ccmi-verizon-lab,046480487130,https://signin.aws.amazon.com/switchrole?account=ccmi-tmo-lab&roleName=ccmi-verizon-lab_admin
+ccmi-sd-lab-dev,594516551367,https://signin.aws.amazon.com/switchrole?account=core-mx-lab-lab&roleName=core-mx-lab_admin
 core-mx-lab,311600198949,https://signin.aws.amazon.com/switchrole?account=core-mx-lab-lab&roleName=core-mx-lab_admin
 france-cloud-lab,696722235731,https://signin.aws.amazon.com/switchrole?account=france-cloud-lab&roleName=france-cloud-lab_admin
 mmp-kube-dev,424546976472,https://signin.aws.amazon.com/switchrole?account=mmp-kube-dev&roleName=mmp-kube-dev_admin
@@ -16,5 +17,4 @@ scv-sandbox,062541756289,https://signin.aws.amazon.com/switchrole?account=scv-sa
 tmo-mx-dev,794081766429,https://signin.aws.amazon.com/switchrole?account=tmo-mx-dev&roleName=tmo-mx-dev_admin
 tmo-mx-prod,629890620112,https://signin.aws.amazon.com/switchrole?account=tmo-mx-prod&roleName=tmo-mx-prod_admin
 tmo-mx-stg,004103171578,https://signin.aws.amazon.com/switchrole?account=tmo-mx-stg&roleName=tmo-mx-stg_admin
-jf-master-acct-pd,565241749827,https://jf-master-acct-pd.signin.aws.amazon.com/console
-jf-master-acct-prd-gov,802296853414,https://jf-master-acct-prd-gov.signin.amazonaws-us-gov.com/console
+jf-master-pd,565241749827,https://jokefiresso.awsapps.com/start#/
