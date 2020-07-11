@@ -1,4 +1,4 @@
-#i!/usr/bin/env python3
+#!/usr/bin/env python3
 
 # Import modules
 import boto3
@@ -21,7 +21,7 @@ from os import listdir
 from os.path import isfile, join
 from botocore.exceptions import ValidationError
 from datetime import datetime
-from colorama import init, Fore 
+from colorama import init, Fore
 from os.path import basename
 from subprocess import check_output,CalledProcessError,PIPE
 from shutil import copyfile
@@ -60,7 +60,7 @@ def initialize(aws_account):
 
     # Set private key
     key_file = "/home/tdun0002/.ssh/id_rsa"
-    
+
     # Set output files
     text_path = "/home/tdun0002/stash/cloud_scripts/aws_scripts/output_files/memory_stats/text/"
     csv_path = "/home/tdun0002/stash/cloud_scripts/aws_scripts/output_files/memory_stats/csv/"
@@ -147,7 +147,7 @@ def convert_to_csv(csv_path,text_path,hosts_list, aws_account, aws_account_numbe
     filelist = os.listdir(text_path)
     pd.options.display.max_rows
 
-    # Read the servers into the DF                  
+    # Read the servers into the DF
     fields = ["Name", "PrivateIP"]
     hosts_df = pd.read_csv(hosts_list, skipinitialspace=True, usecols=fields)
 
@@ -162,14 +162,14 @@ def convert_to_csv(csv_path,text_path,hosts_list, aws_account, aws_account_numbe
         temp_df = pd.read_csv(filename, delim_whitespace=True, names=column_names)
         memory_df = memory_df.append(temp_df)
     print("\n")
-    
+
     # Set the memory type for the memory DF
     memory_df.Memory = memory_df.Memory.astype("int32")
 
     # Create the final frame
     final_df = pd.concat([hosts_df, memory_df.reset_index(drop=True)], axis=1)
 
-    try: 
+    try:
         final_df.to_csv(csv_output, index=False)
     except Exception as e:
         print(f"An error has occurred: {e}")
@@ -275,8 +275,7 @@ def list_instances(aws_account,aws_account_number, fieldnames):
     with open(output_file, mode='w+') as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
         writer.writeheader()
-    print(Fore.CYAN)      
-    print(Fore.RESET)
+    print(Fore.CYAN)
     account_found = 'yes'
     try:
          session = boto3.Session(profile_name=aws_account,region_name='us-east-1')
@@ -423,13 +422,13 @@ def main():
             aws_account_number = my_aws_account_number
         if not aws_account_number:
             aws_account_number = 'Null'
-       
+
     output_file = list_instances(aws_account,aws_account_number, fieldnames)
     hosts_list = copy_outputfile(output_file, aws_account)
     get_memory(hosts_list, aws_account, key_file, csv_path, text_path)
     memory_report = convert_to_csv(csv_path,text_path,hosts_list, aws_account, aws_account_number, today)
     send_email(aws_account,aws_account_number, memory_report, today)
-    
+
     print(Fore.GREEN)
     if options.run_again:
         list_again = options.run_again
@@ -440,6 +439,6 @@ def main():
     else:
         exit_program()
     print(Fore.RESET)
-     
+
 if __name__ == "__main__":
     main()

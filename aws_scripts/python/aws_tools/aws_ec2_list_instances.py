@@ -15,9 +15,6 @@ import sys
 import json
 import keyring
 import requests
-import itertools
-import codecs
-import pandas
 from html import escape
 from botocore.exceptions import ValidationError
 from web_scraper import web_scraper
@@ -175,9 +172,15 @@ def list_instances(aws_account,aws_account_number, interactive, regions, fieldna
             ec2 = session.client("ec2")
         except Exception as e:
             print(f"An exception has occurred: {e}")
+<<<<<<< HEAD
         print(Fore.GREEN)
         message = f"* Region: {region} in {aws_account}: ({aws_account_number}) *"
         banner(message, "*")
+=======
+        message = f"  Region: {region} in {aws_account}: ({aws_account_number})  "
+        banner(message)
+        
+>>>>>>> master
         print(Fore.RESET)
         # Loop through the instances
         try:
@@ -411,12 +414,20 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
         to_addr = input("Enter the recipient's email address: ")
 
     from_addr = 'cloudops@noreply.sncr.com'
+<<<<<<< HEAD
     if aws_accounts_question == 'one':
         subject = "SNCR AWS Instance List: " + aws_account + " (" + aws_account_number + ") " + today
         content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The SD Team</font>"
     else:
         subject = "SNCR AWS Instance Master List " + today
         content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all company AWS accounts.<br><br>Regards,<br>The SD Team</font>"    
+=======
+    subject = "SNCR AWS Instance Master List " + today
+    if aws_accounts_question == 'one':
+        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The SD Team</font>"
+    else:
+        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all SNCR CCMI AWS accounts.<br><br>Regards,<br>The SD Team</font>"    
+>>>>>>> master
     msg = MIMEMultipart()
     msg['From'] = from_addr
     msg['To'] = to_addr
@@ -437,7 +448,7 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
         gmail_password = 'ehhloWorld12345'
         server.login(gmail_user, gmail_password)
         server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
-        message = f"Email was sent to:{to_addr}"
+        message = f"Email was sent to: {to_addr}"
         banner(message)
     except Exception as error:
         message = f"Exception: {error}\nEmail was not sent."
@@ -657,9 +668,10 @@ def main():
         with open(htmlfile, 'r') as htmlfile:
             html = htmlfile.read()
 
-        message = "* Write to Confluence *"
         print(Fore.CYAN)
+        message = "* Write to Confluence *"
         banner(message, "*")
+        
         print(Fore.RESET)
         if options.write_confluence:
             confluence_answer = options.write_confluence
@@ -742,8 +754,6 @@ def main():
             user = options.user
             password = options.password
             auth = (user, password)
-            #auth = str(auth).replace('(','').replace('\'','').replace(',',':').replace(')','').replace(' ','')
-            #kerberos_auth = HTTPKerberosAuth(mutual_authentication="DISABLED",principal=auth)
             try:
                 write_data_to_confluence(auth, html, pageid, title)
             except Exception as e:
@@ -760,7 +770,11 @@ def main():
                 message = "Okay. Not writing to confluence."
                 banner(message)
             print(Fore.RESET)
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> master
     print(Fore.GREEN)
     if options.run_again:
         list_again = options.run_again
