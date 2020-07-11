@@ -26,6 +26,7 @@ from subprocess import check_output,CalledProcessError,PIPE
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
+from ec2_mongo import insert_col,set_db
 
 # Initialize the color ouput with colorama
 init()
@@ -241,9 +242,11 @@ def list_instances(aws_account,aws_account_number, interactive, regions, fieldna
                         'State': instance['State']['Name'],
                         'Launch Date': launch_time_friendly
                     }
+                    instance_dict = {'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly}
+                    insert_col(mycol,instance_dict)
                     with open(output_file,'a') as csv_file:
                         writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
-                        writer.writerow({'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly})
+                        writer.writerow(instance_dict)
                     ec2_info_items = ec2info.items
                     if show_details == 'y' or show_details == 'yes':
                         for instance_id, instance in ec2_info_items():
@@ -268,8 +271,6 @@ def list_instances(aws_account,aws_account_number, interactive, regions, fieldna
                                 ]:
                                     print(Fore.GREEN + f"{key}: {instance.get(key)}")
                                 print(Fore.RESET + "-------------------------------------")
-                        else:
-                            pass
                     reservation = {}
                     instance = {}
                     ec2_info_items = {}
@@ -283,7 +284,6 @@ def list_instances(aws_account,aws_account_number, interactive, regions, fieldna
     print(Fore.GREEN)
     report_instance_stats(instance_count, aws_account, account_found)
     print(Fore.RESET + '\n')
-    #breakpoint()
     return output_file
 
 def convert_csv_to_html_table(output_file, today, interactive, aws_account):
@@ -630,6 +630,7 @@ def main():
 
         # Set the regions and run the program
         regions = set_regions(aws_account)
+        myclient, mydb, mycol = set_db()
         output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
         htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account)
 
