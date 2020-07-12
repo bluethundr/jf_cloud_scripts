@@ -1,13 +1,18 @@
 # Import modules
 import pymongo
 from bson.objectid import ObjectId
+from datetime import datetime
 from colorama import init, Fore
+from pprint import pprint
 init()
 
 def set_db():
+    today = datetime.today()
+    today = today.strftime("%m-%d-%Y")
     myclient = pymongo.MongoClient("mongodb://localhost:27017/")
     mydb = myclient["aws_ec2_list"]
-    instance_col = mydb["ec2_instances"]
+    instance_col_date = 'aws_ec2_list-' + today
+    instance_col = mydb[instance_col_date]
     return myclient, mydb, instance_col
 
 def set_test_dict():
@@ -36,7 +41,6 @@ def banner(message, border='-'):
     print(message)
     print(line)
 
-
 def exit_program():
     endbanner()
     exit()
@@ -50,21 +54,29 @@ def insert_col(instance_col,mydict):
 def print_db(instance_col):
     x = instance_col.find()
     for data in x:
-        print(data)
+        pprint(data)
 
-def delete_db(instance_col):
+def clear_db(instance_col):
     try:
         x = instance_col.delete_many({})
     except Exception as e:
         print(f"An error has occurred: {e}")
     print(x.deleted_count, " documents deleted.")
 
+def print_collections(my_db,instance_col):
+    print(f"DB Collections: ")
+    col_list = my_db.list_collection_names()
+    for col_name in col_list:
+        print(col_name)
+
 def menu():
     print(Fore.GREEN)
-    print("1. Insert to the DB")
-    print("2. Delete from the DB")
+    print("1. Do a test insert to the DB")
+    print("2. Clear the DB")
     print("3. Print the DB")
-    print("4. Exit ec2 mongo")
+    print("4. Print collections")
+    print("5. Exit ec2 mongo")
+
 
 def main():
     welcomebanner()
@@ -78,13 +90,17 @@ def main():
         x = insert_col(instance_col,mydict)
         main()
     elif option == '2':
-        delete_db(instance_col)
+        clear_db(instance_col)
         main()
     elif option == '3':
         print_db(instance_col)
         main()
     elif option == '4':
-       exit_program() 
+       print_collections(mydb,instance_col)
+       main()
+    elif option == '5':
+        exit_program()
+
     else:
         print("That is not a valid option.")
         main()
