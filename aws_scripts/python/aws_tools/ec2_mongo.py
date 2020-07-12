@@ -1,5 +1,6 @@
 # Import modules
 import pymongo
+from pymongo import MongoClient, errors
 from bson.objectid import ObjectId
 from datetime import datetime
 from colorama import init, Fore
@@ -10,9 +11,10 @@ def set_db():
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
     myclient = pymongo.MongoClient("mongodb://localhost:27017/")
-    mydb = myclient["aws_ec2_list"]
+    mydb = myclient['aws_ec2_list']
     instance_col_date = 'aws_ec2_list-' + today
     instance_col = mydb[instance_col_date]
+    #database_names = mydb.list_database_names()
     return myclient, mydb, instance_col
 
 def set_test_dict():
@@ -45,18 +47,30 @@ def exit_program():
     endbanner()
     exit()
 
-def insert_col(instance_col,mydict):
+def insert_doc(instance_col,mydict):
+    message = f"* Insert MongoDB Document *"
+    print(Fore.GREEN)
+    banner(message, border='*')
+    print("This command inserts a test document.\n")
     mydict['_id'] = ObjectId()
     x = instance_col.insert_one(mydict)
     print(f"MongoDB record inserted: {x.inserted_id}")
     return x
 
 def print_db(instance_col):
+    message = f"* Print DB Documents *"
+    print(Fore.GREEN)
+    banner(message, border='*')
+    print('\n')
     x = instance_col.find()
     for data in x:
-        pprint(data)
+        print(data)
 
 def clear_db(instance_col):
+    message = f"* Clear the DB *"
+    print(Fore.GREEN)
+    banner(message, border='*')
+    print(f"This command empties the database.\n")
     try:
         x = instance_col.delete_many({})
     except Exception as e:
@@ -64,7 +78,10 @@ def clear_db(instance_col):
     print(x.deleted_count, " documents deleted.")
 
 def print_collections(my_db,instance_col):
-    print(f"DB Collections: ")
+    message = f"* Print DB Collections *"
+    print(Fore.GREEN)
+    banner(message, border='*')
+    print(f"This command prints the database collection names: \n")
     col_list = my_db.list_collection_names()
     for col_name in col_list:
         print(col_name)
@@ -87,7 +104,7 @@ def main():
     option = input("Enter the option: ")
     print(f"Option is: {option}")
     if option  == '1':
-        x = insert_col(instance_col,mydict)
+        x = insert_doc(instance_col,mydict)
         main()
     elif option == '2':
         clear_db(instance_col)
