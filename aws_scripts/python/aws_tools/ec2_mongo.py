@@ -1,4 +1,5 @@
 import pymongo
+from bson.objectid import ObjectId
 
 def set_db():
     myclient = pymongo.MongoClient("mongodb://localhost:27017/")
@@ -14,6 +15,7 @@ def set_test_dict():
     return mydict
 
 def insert_col(instance_col,mydict):
+    mydict['_id'] = ObjectId()
     x = instance_col.insert_one(mydict)
     print(f"MongoDB record inserted: {x.inserted_id}")
     return x
