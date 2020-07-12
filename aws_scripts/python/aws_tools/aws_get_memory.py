@@ -271,7 +271,6 @@ def list_instances(aws_account,aws_account_number, fieldnames):
     # Set the ec2 dictionary
     ec2info = {}
     # Write the file headers
-
     with open(output_file, mode='w+') as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
         writer.writeheader()

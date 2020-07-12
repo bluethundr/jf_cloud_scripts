@@ -26,6 +26,7 @@ from subprocess import check_output,CalledProcessError,PIPE
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
+from ec2_mongo import insert_col,set_db
 
 # Initialize the color ouput with colorama
 init()
@@ -129,10 +130,11 @@ def set_regions(aws_account):
     return regions
 
 
-def list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details):
+def list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details, instance_col):
     today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
     options = arguments()
     instance_list = ''
+    insance_dict = {}
     session = ''
     ec2 = ''
     account_found = ''
@@ -181,109 +183,106 @@ def list_instances(aws_account,aws_account_number, interactive, regions, fieldna
             instance_list = ec2.describe_instances()
         except Exception as e:
             print(f"An exception has occurred: {e}")
-        try:
-            for reservation in instance_list["Reservations"]:
-                for instance in reservation.get("Instances", []):
-                    instance_count = instance_count + 1
-                    launch_time = instance["LaunchTime"]
-                    launch_time_friendly = launch_time.strftime("%B %d %Y")
-                    tree = objectpath.Tree(instance)
-                    block_devices = set(tree.execute('$..BlockDeviceMappings[\'Ebs\'][\'VolumeId\']'))
-                    if block_devices:
-                        block_devices = list(block_devices)
-                        block_devices = str(block_devices).replace('[','').replace(']','').replace('\'','')
-                    else:
-                        block_devices = None
-                    private_ips =  set(tree.execute('$..PrivateIpAddress'))
-                    if private_ips:
-                        private_ips_list = list(private_ips)
-                        private_ips_list = str(private_ips_list).replace('[','').replace(']','').replace('\'','')
-                    else:
-                        private_ips_list = None
-                    public_ips =  set(tree.execute('$..PublicIp'))
-                    if len(public_ips) == 0:
-                        public_ips = None
-                    if public_ips:
-                        public_ips_list = list(public_ips)
-                        public_ips_list = str(public_ips_list).replace('[','').replace(']','').replace('\'','')
-                    else:
-                        public_ips_list = None
-                    name = None
-                    if 'Tags' in instance:
-                        try:
-                            tags = instance['Tags']
-                            name = None
-                            for tag in tags:
-                                if tag["Key"] == "Name":
-                                    name = tag["Value"]
-                                if tag["Key"] == "Engagement" or tag["Key"] == "Engagement Code":
-                                    engagement = tag["Value"]
-                        except ValueError:
-                            # print("Instance: %s has no tags" % instance_id)
-                            raise
-                    key_name = instance['KeyName'] if instance['KeyName'] else None
-                    vpc_id = instance.get('VpcId') if instance.get('VpcId') else None
-                    private_dns = instance['PrivateDnsName'] if instance['PrivateDnsName'] else None
-                    ec2info[instance['InstanceId']] = {
-                        'AWS Account': aws_account,
-                        'Account Number': aws_account_number,
-                        'Name': name,
-                        'Instance ID': instance['InstanceId'],
-                        'AMI ID': instance['ImageId'],
-                        'Volumes': block_devices,
-                        'Private IP': private_ips_list,
-                        'Public IP': public_ips_list,
-                        'Private DNS': private_dns,
-                        'Availability Zone': instance['Placement']['AvailabilityZone'],
-                        'VPC ID': vpc_id,
-                        'Type': instance['InstanceType'],
-                        'Key Pair Name': key_name,
-                        'State': instance['State']['Name'],
-                        'Launch Date': launch_time_friendly
-                    }
-                    with open(output_file,'a') as csv_file:
-                        writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
-                        writer.writerow({'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly})
-                    ec2_info_items = ec2info.items
-                    if show_details == 'y' or show_details == 'yes':
-                        for instance_id, instance in ec2_info_items():
-                            if account_found == 'yes':
-                                print(Fore.RESET + "-------------------------------------")
-                                for key in [
-                                    'AWS Account',
-                                    'Account Number',
-                                    'Name',
-                                    'Instance ID',
-                                    'AMI ID',
-                                    'Volumes',
-                                    'Private IP',
-                                    'Public IP',
-                                    'Private DNS',
-                                    'Availability Zone',
-                                    'VPC ID',
-                                    'Type',
-                                    'Key Pair Name',
-                                    'State',
-                                    'Launch Date'
-                                ]:
-                                    print(Fore.GREEN + f"{key}: {instance.get(key)}")
-                                print(Fore.RESET + "-------------------------------------")
-                        else:
-                            pass
-                    reservation = {}
-                    instance = {}
-                    ec2_info_items = {}
-                    ec2info = {}
-                    with open(output_file,'a') as csv_file:
-                        csv_file.close()
-        except Exception as e:
-            print(f"An exception has occurred: {e}")
+        for reservation in instance_list["Reservations"]:
+            for instance in reservation.get("Instances", []):
+                instance_count = instance_count + 1
+                launch_time = instance["LaunchTime"]
+                launch_time_friendly = launch_time.strftime("%B %d %Y")
+                tree = objectpath.Tree(instance)
+                block_devices = set(tree.execute('$..BlockDeviceMappings[\'Ebs\'][\'VolumeId\']'))
+                if block_devices:
+                    block_devices = list(block_devices)
+                    block_devices = str(block_devices).replace('[','').replace(']','').replace('\'','')
+                else:
+                    block_devices = None
+                private_ips =  set(tree.execute('$..PrivateIpAddress'))
+                if private_ips:
+                    private_ips_list = list(private_ips)
+                    private_ips_list = str(private_ips_list).replace('[','').replace(']','').replace('\'','')
+                else:
+                    private_ips_list = None
+                public_ips =  set(tree.execute('$..PublicIp'))
+                if len(public_ips) == 0:
+                    public_ips = None
+                if public_ips:
+                    public_ips_list = list(public_ips)
+                    public_ips_list = str(public_ips_list).replace('[','').replace(']','').replace('\'','')
+                else:
+                    public_ips_list = None
+                name = None
+                if 'Tags' in instance:
+                    try:
+                        tags = instance['Tags']
+                        name = None
+                        for tag in tags:
+                            if tag["Key"] == "Name":
+                                name = tag["Value"]
+                            if tag["Key"] == "Engagement" or tag["Key"] == "Engagement Code":
+                                engagement = tag["Value"]
+                    except ValueError:
+                        # print("Instance: %s has no tags" % instance_id)
+                        raise
+                key_name = instance['KeyName'] if instance['KeyName'] else None
+                vpc_id = instance.get('VpcId') if instance.get('VpcId') else None
+                private_dns = instance['PrivateDnsName'] if instance['PrivateDnsName'] else None
+                ec2info[instance['InstanceId']] = {
+                    'AWS Account': aws_account,
+                    'Account Number': aws_account_number,
+                    'Name': name,
+                    'Instance ID': instance['InstanceId'],
+                    'AMI ID': instance['ImageId'],
+                    'Volumes': block_devices,
+                    'Private IP': private_ips_list,
+                    'Public IP': public_ips_list,
+                    'Private DNS': private_dns,
+                    'Availability Zone': instance['Placement']['AvailabilityZone'],
+                    'VPC ID': vpc_id,
+                    'Type': instance['InstanceType'],
+                    'Key Pair Name': key_name,
+                    'State': instance['State']['Name'],
+                    'Launch Date': launch_time_friendly
+                }
+                instance_dict = {'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly}
+                mongo_instance_dict = {'_id': '', 'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly}
+                insert_col(instance_col,mongo_instance_dict)
+                with open(output_file,'a') as csv_file:
+                    writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
+                    writer.writerow(instance_dict)
+                ec2_info_items = ec2info.items
+                if show_details == 'y' or show_details == 'yes':
+                    for instance_id, instance in ec2_info_items():
+                        if account_found == 'yes':
+                            print(Fore.RESET + "-------------------------------------")
+                            for key in [
+                                'AWS Account',
+                                'Account Number',
+                                'Name',
+                                'Instance ID',
+                                'AMI ID',
+                                'Volumes',
+                                'Private IP',
+                                'Public IP',
+                                'Private DNS',
+                                'Availability Zone',
+                                'VPC ID',
+                                'Type',
+                                'Key Pair Name',
+                                'State',
+                                'Launch Date'
+                            ]:
+                                print(Fore.GREEN + f"{key}: {instance.get(key)}")
+                            print(Fore.RESET + "-------------------------------------")
+                reservation = {}
+                instance = {}
+                ec2_info_items = {}
+                ec2info = {}
+                with open(output_file,'a') as csv_file:
+                    csv_file.close()
     if profile_missing_message == '*':
         banner(profile_missing_message)
     print(Fore.GREEN)
     report_instance_stats(instance_count, aws_account, account_found)
     print(Fore.RESET + '\n')
-    #breakpoint()
     return output_file
 
 def convert_csv_to_html_table(output_file, today, interactive, aws_account):
@@ -552,7 +551,7 @@ def arguments():
     "-v",
     "--verbose",
     type = str,
-    help = "Write the EC2 instances to the screen")    
+    help = "Write the EC2 instances to the screen")
 
     options = parser.parse_args()
     return options
@@ -630,7 +629,8 @@ def main():
 
         # Set the regions and run the program
         regions = set_regions(aws_account)
-        output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
+        myclient, mydb, instance_col = set_db()
+        output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details, instance_col)
         htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account)
 
         print(Fore.YELLOW)
@@ -703,7 +703,7 @@ def main():
                 print(Fore.RESET)
                 # Set the regions
                 regions = set_regions(aws_account)
-                output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
+                output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details, instance_col)
                 htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file,today, interactive, aws_account)
 
         message = " Send an Email "
