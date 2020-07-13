@@ -11,8 +11,8 @@ def set_db():
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
     myclient = pymongo.MongoClient("mongodb://localhost:27017/")
-    mydb = myclient['aws_ec2_list']
-    instance_col_date = 'aws_ec2_list-' + today
+    mydb = myclient['aws_inventories']
+    instance_col_date = 'ec2_list-' + today
     instance_col = mydb[instance_col_date]
     #database_names = mydb.list_database_names()
     return myclient, mydb, instance_col
@@ -48,13 +48,13 @@ def exit_program():
     exit()
 
 def insert_doc(instance_col,mydict):
-    message = f"* Insert MongoDB Document *"
-    print(Fore.GREEN)
-    banner(message, border='*')
-    print("This command inserts a test document.\n")
     mydict['_id'] = ObjectId()
     x = instance_col.insert_one(mydict)
-    print(f"MongoDB record inserted: {x.inserted_id}")
+    if __name__ == '__main__':
+        message = "* MongoDB Insert Document *"
+        banner(message, "*")
+        message = f"MongoDB record inserted: {x.inserted_id}"
+        banner(message)
     return x
 
 def print_db(instance_col):
@@ -102,7 +102,7 @@ def main():
     menu()
     print(Fore.GREEN)
     option = input("Enter the option: ")
-    print(f"Option is: {option}")
+    print(f"Option is: {option}\n")
     if option  == '1':
         x = insert_doc(instance_col,mydict)
         main()
