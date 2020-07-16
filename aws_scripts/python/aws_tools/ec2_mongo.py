@@ -54,8 +54,7 @@ def set_db():
             mydb = myclient[database_names[choice]]
             mydb_name = database_names[choice]
             print(f"You've selected: {database_names[choice]}\n")
-    else:
-        if __name__ == '__main__':
+        else:
             print("Must enter a digit. Try again.\n")
         mydb = myclient["aws_inventories"]
         mydb_name = 'aws_inventories'
