@@ -53,13 +53,16 @@ def set_db():
             choice = choice - 1
             mydb = myclient[database_names[choice]]
             mydb_name = database_names[choice]
+            instance_col = 'ec2_list-' + today
+            instance_col = mydb[instance_col]
             print(f"You've selected: {database_names[choice]}\n")
         else:
             print("Must enter a digit. Try again.\n")
+    else:
         mydb = myclient["aws_inventories"]
         mydb_name = 'aws_inventories'
-    instance_col = 'ec2_list-' + today
-    instance_col = mydb[instance_col]
+        instance_col = 'ec2_list-' + today
+        instance_col = mydb[instance_col]
     return mydb, mydb_name, instance_col
 
 def set_test_dict():
