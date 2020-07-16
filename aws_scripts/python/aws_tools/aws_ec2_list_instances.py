@@ -244,7 +244,7 @@ def list_instances(aws_account,aws_account_number, interactive, regions, fieldna
                 }
                 instance_dict = {'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly}
                 mongo_instance_dict = {'_id': '', 'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly}
-                insert_doc(instance_col,mongo_instance_dict)
+                insert_doc(mongo_instance_dict)
                 with open(output_file,'a') as csv_file:
                     writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
                     writer.writerow(instance_dict)
@@ -629,7 +629,7 @@ def main():
 
         # Set the regions and run the program
         regions = set_regions(aws_account)
-        myclient, mydb, instance_col = set_db()
+        mydb, mydb_name, instance_col = set_db()
         output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details, instance_col)
         htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account)
 
