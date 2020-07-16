@@ -28,37 +28,40 @@ def connect_db():
 
 def set_db():
     myclient = connect_db()
-    message = "Select Database"
-    banner(message)
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
-    print(Fore.CYAN + "Available MongoDB Databases:")
-    if myclient != None:
-        # the list_database_names() method returns a list of strings
-        database_names = myclient.list_database_names()
-        counter = 1
-        for db in database_names:
-            message = str(counter) + '. ' + db
-            print(message)
-            counter = counter + 1
-    print ("There are", len(database_names), "databases.\n")
-    print(f"Please select a database. Enter a number 1 through {len(database_names)}.")
-    choice = input("Enter a number: ")
-    if is_digit(choice) == True:
-        if int(choice) > counter:
-            print("Wrong selection.")
-            set_db()
-        choice = int(choice)
-        choice = choice - 1
-        mydb = database_names[choice]
-        print(f"You've selected: {mydb}\n")
+    if __name__ == '__main__':
+        message = "Select Database"
+        banner(message)
+        print(Fore.CYAN + "Available MongoDB Databases:")
+        if myclient != None:
+            # the list_database_names() method returns a list of strings
+            database_names = myclient.list_database_names()
+            counter = 1
+            for db in database_names:
+                message = str(counter) + '. ' + db
+                print(message)
+                counter = counter + 1
+        print ("There are", len(database_names), "databases.\n")
+        print(f"Please select a database. Enter a number 1 through {len(database_names)}.")
+        choice = input("Enter a number: ")
+        if is_digit(choice) == True:
+            if int(choice) > counter:
+                print("Wrong selection.")
+                set_db()
+            choice = int(choice)
+            choice = choice - 1
+            mydb = myclient[database_names[choice]]
+            mydb_name = database_names[choice]
+            print(f"You've selected: {database_names[choice]}\n")
     else:
-        print("Must enter a digit. Try again.\n")
-        set_db()
-    mydb = myclient['aws_ec2_list']
+        if __name__ == '__main__':
+            print("Must enter a digit. Try again.\n")
+        mydb = myclient["aws_inventories"]
+        mydb_name = 'aws_inventories'
     instance_col = 'ec2_list-' + today
     instance_col = mydb[instance_col]
-    return mydb, instance_col
+    return mydb, mydb_name, instance_col
 
 def set_test_dict():
     mydict = { "AWS Account": "ccmi-verizon-lab", "Account Number": "046480487130", "Name": "bastion001",
@@ -91,7 +94,7 @@ def exit_program():
     exit()
 
 def insert_doc(mydict):
-    mydb, instance_col = set_db()
+    mydb, mydb_name, instance_col = set_db()
     mydict['_id'] = ObjectId()
     x = instance_col.insert_one(mydict)
     if __name__ == '__main__':
@@ -102,19 +105,24 @@ def insert_doc(mydict):
     return x
 
 def mongo_select_all():
-    mydb, instance_col = set_db()
-    instance_list = instance_col.find()
+    mydb, mydb_name, instance_col = set_db()
+    instance_list = list(instance_col.find())
     if __name__ == '__main__':
-        message = f"* Print DB Documents *"
+        message = f"* Print DB Documents in {mydb_name} *"
         banner(message, border='*')
         print('\n')
-        for data in instance_list:
-            print(data)
+        if not instance_list:
+            message = f"The database: {mydb_name} has no entries."
+            banner(message)
+        else:
+            message = f"The databse: {mydb_name} has {len(instance_list)} entries."
+            for data in instance_list:
+                print(data)
     print("\n")
     return instance_list
 
 def clear_db():
-    mydb, instance_col = set_db()
+    mydb, mydb_name, instance_col = set_db()
     message = f"* Clear the DB *"
     banner(message, border='*')
     print(f"This command empties the database.\n")
@@ -122,7 +130,7 @@ def clear_db():
         x = instance_col.delete_many({})
     except Exception as e:
         print(f"An error has occurred: {e}")
-    print(x.deleted_count, "documents deleted.\n")
+    print(x.deleted_count, "documents deleted.")
 
 def print_db_names():
     myclient = connect_db()
@@ -197,7 +205,8 @@ def main():
     elif option == '6':
         exit_program()
     else:
-        print("That is not a valid option.")
+        message = "That is not a valid option."
+        banner(message)
         main()
 
 if __name__ == "__main__":
