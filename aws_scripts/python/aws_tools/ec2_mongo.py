@@ -102,13 +102,13 @@ def set_db():
 def insert_doc(mydict):
     mydb, mydb_name, instance_col = set_db()
     mydict['_id'] = ObjectId()
-    x = instance_col.insert_one(mydict)
+    instance_doc = instance_col.insert_one(mydict)
     if __name__ == '__main__':
         message = "* MongoDB Insert Document *"
         banner(message, "*")
-        message = f"MongoDB record inserted: {x.inserted_id}"
+        message = f"MongoDB record inserted: {instance_doc.inserted_id}"
         banner(message)
-    return x
+    return instance_doc
 
 def mongo_select_all():
     mydb, mydb_name, instance_col = set_db()
