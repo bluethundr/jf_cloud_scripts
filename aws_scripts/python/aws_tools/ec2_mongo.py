@@ -95,6 +95,20 @@ def exit_program():
     endbanner()
     exit()
 
+def create_mongodb(mydict):
+    myclient = connect_db()
+    message = "* Create MongoDB Database *"
+    banner(message, "*")
+    newdb = input("Enter a new database name: ")
+    if myclient != None:
+        dblist = myclient.list_database_names()
+        if newdb in dblist:
+            print("The database exists.")
+        else:
+            mydb = myclient[newdb]
+            collection = mydb['test-collection']
+            x = collection.insert_one(mydict)
+
 def insert_doc(mydict):
     mydb, mydb_name, instance_col = set_db()
     mydict['_id'] = ObjectId()
@@ -168,12 +182,13 @@ def menu():
     message = "Main Menu"
     banner(message)
     print(Fore.CYAN + "Your available actions: ")
-    print("1. Do a test insert to the DB")
-    print("2. Clear the DB")
-    print("3. Print the DB")
-    print("4. Print DB Names")
-    print("5. Print collections")
-    print("6. Exit ec2 mongo")
+    print("1. Create a MongoDB Database")
+    print("2. Do a test insert to the DB")
+    print("3. Clear the DB")
+    print("4. Print the DB")
+    print("5. Print DB Names")
+    print("6. Print collections")
+    print("7. Exit ec2 mongo")
     print("\n")
 
 
@@ -183,28 +198,30 @@ def main():
     menu()
     option = input("Enter the option: ")
     print(f"Option is: {option}\n")
+    if option == '1':
+        create_mongodb(mydict)
     # 1. Do a test insert to the DB
-    if option  == '1':
+    elif option  == '2':
         x = insert_doc(mydict)
         main()
     # 2. Clear the DB"
-    elif option == '2':
+    elif option == '3':
         clear_db()
         main()
     # 3. Print the DB
-    elif option == '3':
+    elif option == '4':
         mongo_select_all()
         main()
     # 4. Print DB Names
-    elif option == '4':
+    elif option == '5':
        print_db_names()
        main()
     # 5. Print collections
-    elif option == '5':
+    elif option == '6':
        print_collections()
        main()
     # 6. Exit ec2 mongo
-    elif option == '6':
+    elif option == '7':
         exit_program()
     else:
         message = "That is not a valid option."
