@@ -3,6 +3,7 @@
 # Import modules
 import time
 import pymongo
+import pandas
 from pymongo import MongoClient, errors
 from bson.objectid import ObjectId
 from datetime import datetime
@@ -10,10 +11,40 @@ from colorama import init, Fore
 from pprint import pprint
 init()
 
+def welcomebanner():
+    # Print the welcome banner
+    print(Fore.CYAN)
+    message = "*             EC2 MongoDB                     *"
+    banner(message, "*")
+    print(Fore.RESET)
+
+def endbanner():
+    print(Fore.CYAN)
+    message = "* EC2 MongoDB Operations Are Complete *"
+    banner(message, "*")
+    print(Fore.RESET)
+
+def banner(message, border='-'):
+    line = border * len(message)
+    print(line)
+    print(message)
+    print(line)
+
+def exit_program():
+    endbanner()
+    exit()
+
 def is_digit(check_input):
     if check_input.isdigit():
         return True
     return False
+
+def set_test_dict():
+    mydict = { "AWS Account": "ccmi-verizon-lab", "Account Number": "046480487130", "Name": "bastion001",
+"Instance ID": "i-07aaef3b7167d592a", "AMI ID": "ami-07fd81f1ecf6cf387", "Volumes": "vol-09d6d898db4af132a",
+"Private IP": "10.238.3.165", "Public IP": "3.227.224.221", "Private DNS": "ip-10-238-3-165.ec2.internal",
+"Availability Zone": "us-east-1a", "VPC ID": "vpc-00de11103235ec567", "Type": "t3.small", "Key Pair Name": "ccmi-vzn-int01", "Instance State": "running", "Launch Date": "September 10 2019"}
+    return mydict
 
 def connect_db():
     try:
@@ -66,36 +97,6 @@ def set_db():
         instance_col = 'ec2_list-' + today
         instance_col = mydb[instance_col]
     return mydb, mydb_name, instance_col
-
-def set_test_dict():
-    mydict = { "AWS Account": "ccmi-verizon-lab", "Account Number": "046480487130", "Name": "bastion001",
-"Instance ID": "i-07aaef3b7167d592a", "AMI ID": "ami-07fd81f1ecf6cf387", "Volumes": "vol-09d6d898db4af132a",
-"Private IP": "10.238.3.165", "Public IP": "3.227.224.221", "Private DNS": "ip-10-238-3-165.ec2.internal",
-"Availability Zone": "us-east-1a", "VPC ID": "vpc-00de11103235ec567", "Type": "t3.small", "Key Pair Name": "ccmi-vzn-int01", "Instance State": "running", "Launch Date": "September 10 2019"}
-    return mydict
-
-def welcomebanner():
-    # Print the welcome banner
-    print(Fore.CYAN)
-    message = "*             EC2 MongoDB                     *"
-    banner(message, "*")
-    print(Fore.RESET)
-
-def endbanner():
-    print(Fore.CYAN)
-    message = "* EC2 MongoDB Operations Are Complete *"
-    banner(message, "*")
-    print(Fore.RESET)
-
-def banner(message, border='-'):
-    line = border * len(message)
-    print(line)
-    print(message)
-    print(line)
-
-def exit_program():
-    endbanner()
-    exit()
 
 def create_mongodb(mydict):
     myclient = connect_db()
@@ -180,13 +181,13 @@ def drop_mongodb():
 def insert_doc(mydict):
     mydb, mydb_name, instance_col = set_db()
     mydict['_id'] = ObjectId()
-    x = instance_col.insert_one(mydict)
+    instance_doc = instance_col.insert_one(mydict)
     if __name__ == '__main__':
         message = "* MongoDB Insert Document *"
         banner(message, "*")
-        message = f"MongoDB record inserted: {x.inserted_id}"
+        message = f"MongoDB record inserted: {instance_doc.inserted_id}"
         banner(message)
-    return x
+    return instance_doc
 
 def mongo_select_all():
     mydb, mydb_name, instance_col = set_db()
