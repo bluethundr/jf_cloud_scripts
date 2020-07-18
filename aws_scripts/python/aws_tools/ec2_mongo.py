@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#-*- coding: utf-8 -*-
 # Import modules
 import time
 import pymongo
@@ -254,13 +256,15 @@ def print_db_names():
     myclient = connect_db()
     message = f"* Print DB Names *"
     banner(message, border='*')
-    print(f"This command prints the database names.\n")
     print("The database names are:")
     if myclient != None:
         # the list_database_names() method returns a list of strings
         database_names = myclient.list_database_names()
+        counter = 1
         for db in database_names:
-            print(db)
+            message = str(counter) + '. ' + db
+            print(message)
+            counter = counter + 1
         print ("There are", len(database_names), "databases.")
 
 def print_collections():
@@ -301,24 +305,30 @@ def main():
     interactive = 1
     option = input("Enter the option: ")
     print(f"Option is: {option}\n")
+    if option == '1':
+        create_mongodb(mydict)
+        main()
+    elif option == '2':
+        drop_mongodb()
+        main()
     # 1. Do a test insert to the DB
-    if option  == '1':
+    elif option  == '3':
         x = insert_doc(mydict)
         main()
     # 2. Clear the DB"
-    elif option == '2':
+    elif option == '4':
         clear_db()
         main()
     # 3. Print the DB
-    elif option == '3':
+    elif option == '5':
         mongo_select_all()
         main()
     # 4. Print DB Names
-    elif option == '4':
+    elif option == '6':
        print_db_names()
        main()
     # 5. Print collections
-    elif option == '5':
+    elif option == '7':
        print_collections()
        main()
     elif option == '6':
