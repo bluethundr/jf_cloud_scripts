@@ -200,6 +200,7 @@ def main():
     print(f"Option is: {option}\n")
     if option == '1':
         create_mongodb(mydict)
+        main()
     # 1. Do a test insert to the DB
     elif option  == '2':
         x = insert_doc(mydict)
