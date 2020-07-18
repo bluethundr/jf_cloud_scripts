@@ -4,6 +4,7 @@
 import time
 import pymongo
 import pandas
+import os
 from pymongo import MongoClient, errors
 from bson.objectid import ObjectId
 from datetime import datetime
@@ -98,86 +99,6 @@ def set_db():
         instance_col = mydb[instance_col]
     return mydb, mydb_name, instance_col
 
-def create_mongodb(mydict):
-    myclient = connect_db()
-    message = "* Create MongoDB Database *"
-    banner(message, "*")
-    newdb = input("Enter a new database name: ")
-    if myclient != None:
-        dblist = myclient.list_database_names()
-        if newdb in dblist:
-            print("The database exists.")
-        else:
-            try:
-                mydb = myclient[newdb]
-                collection = mydb['test-collection']
-                x = collection.insert_one(mydict)
-            except Exception as e:
-                print(Fore.RED + f"Database not created: {newdb} due to: {e}")
-                main()
-
-    print("The current list of database names is:")
-    if myclient != None:
-        # the list_database_names() method returns a list of strings
-        database_names = myclient.list_database_names()
-        counter = 1
-        for db in database_names:
-            message = str(counter) + '. ' + db
-            print(message)
-            counter = counter + 1
-        print ("There are", len(database_names), "databases.")
-
-def drop_mongodb():
-    myclient = connect_db()
-    message = "* Drop MongoDB Database *"
-    banner(message, "*")
-    # get all of the database names
-    db_names_before_drop = myclient.list_database_names()
-    print ("db count BEFORE drop:", len(db_names_before_drop))
-    message = "Select Database"
-    banner(message)
-    print(Fore.CYAN + "Available MongoDB Databases:")
-    if myclient != None:
-        # the list_database_names() method returns a list of strings
-        database_names = myclient.list_database_names()
-        counter = 1
-        for db in database_names:
-            message = str(counter) + '. ' + db
-            print(message)
-            counter = counter + 1
-    print ("There are", len(database_names), "databases.\n")
-    print(f"Please select a database. Enter a number 1 through {len(database_names)}.")
-    choice = input("Enter a number: ")
-    if is_digit(choice) == True:
-        if int(choice) > counter:
-            print("Wrong selection.")
-            set_db()
-        choice = int(choice)
-        choice = choice - 1
-        dropdb = myclient[database_names[choice]]
-        dropdb_name = database_names[choice]
-        print(f"You've selected: {database_names[choice]}\n")
-    else:
-        print("Must enter a digit. Try again.\n")
-    try:
-        db = myclient.newdb
-    except Exception as e:
-        print(f"A pymongo error has occurred: {e}")
-
-    # check the collection names on the database
-    col_list = db.list_collection_names()
-    print ("collections on the unwanted db:", col_list)
-
-    # call MongoDB client object's drop_database() method to delete a db
-    myclient.drop_database(dropdb) # pass db name as string
-
-    # get all of the database names
-    db_names_after_drop = myclient.list_database_names()
-    print ("db count AFTER drop:", len(db_names_before_drop))
-
-    diff = len(db_names_before_drop) - len(db_names_after_drop)
-    print ("difference:", diff)
-
 def insert_doc(mydict):
     mydb, mydb_name, instance_col = set_db()
     mydict['_id'] = ObjectId()
@@ -205,6 +126,120 @@ def mongo_select_all():
                 print(data)
     print("\n")
     return instance_list
+
+def mongo_export_to_file(interactive, aws_account):
+    today = datetime.today()
+    today = today.strftime("%m-%d-%Y")
+    mydb, mydb_name, instance_col = set_db()
+    if __name__ == '__main__':
+            message = f"* Export MongoDB to  *"
+            banner(message, border='*')
+    # start time of script
+    start_time = time.time()
+
+    # make an API call to the MongoDB server
+    cursor = instance_col.find()
+    # extract the list of documents from cursor obj
+    mongo_docs = list(cursor)
+
+    if __name__ == '__main__':
+        print ("total docs:", len(mongo_docs))
+
+    # create an empty DataFrame for storing documents
+    docs = pandas.DataFrame(columns=[])
+
+    # iterate over the list of MongoDB dict documents
+    for num, doc in enumerate(mongo_docs):
+        # convert ObjectId() to str
+        doc["_id"] = str(doc["_id"])
+
+        # get document _id from dict
+        doc_id = doc["_id"]
+
+        # create a Series obj from the MongoDB dict
+        series_obj = pandas.Series( doc, name=doc_id )
+
+         # append the MongoDB Series obj to the DataFrame obj
+        docs = docs.append(series_obj)
+
+        # get document _id from dict
+        doc_id = doc["_id"]
+
+        if __name__ == '__main__':
+            print (type(doc))
+            print (type(doc["_id"]))
+            print (num, "--", doc, "\n")
+
+        '''
+        EXPORT THE MONGODB DOCUMENTS
+        TO DIFFERENT FILE FORMATS
+        '''
+        if __name__ == '__main__':
+            print ("\nexporting Pandas objects to different file types.")
+            print ("DataFrame len:", len(docs))
+
+        # Output to JSON
+        if interactive == 1:
+            output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'json', '')
+            output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.json')
+            output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.json'
+        else:
+            output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'json', '')
+            output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.json')
+
+        # export the MongoDB documents as a JSON file
+        docs.to_json(output_file)
+
+        # have Pandas return a JSON string of the documents
+        json_export = docs.to_json() # return JSON data
+        if __name__ == '__main__':
+            print ("\nJSON data:", json_export)
+
+        # Export to CSV
+        if interactive == 1:
+            output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
+            output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
+            output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.csv'
+        else:
+            # Set the output file
+            output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
+            output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
+
+        # export MongoDB documents to a CSV file
+        docs.to_csv(output_file, ",") # CSV delimited by commas
+
+        # export MongoDB documents to CSV
+        csv_export = docs.to_csv(sep=",") # CSV delimited by commas
+        if __name__ == '__main__':
+            print ("\nCSV data:", csv_export)
+
+        # create IO HTML string
+        import io
+        html_str = io.StringIO()
+
+        # export as HTML
+        docs.to_html(
+        buf=html_str,
+        classes='table table-striped'
+        )
+
+        if __name__ == '__main__':
+            # print out the HTML table
+            print (html_str.getvalue())
+
+        # Output to HTML
+        if interactive == 1:
+            output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html', '')
+            output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.html')
+            output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.html'
+        else:
+            output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html', '')
+            output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.html')
+
+        # save the MongoDB documents as an HTML table
+        docs.to_html(output_file)
+        if __name__ == '__main__':
+            print ("\n\ntime elapsed:", time.time()-start_time)
 
 def clear_db():
     mydb, mydb_name, instance_col = set_db()
@@ -253,14 +288,13 @@ def menu():
     message = "Main Menu"
     banner(message)
     print(Fore.CYAN + "Your available actions: ")
-    print("1. Create new MongoDB Database")
-    print("2. Drop MongoDB Database")
-    print("3. Do a test insert to the DB")
-    print("4. Clear the DB")
-    print("5. Print the DB")
-    print("6. Print DB Names")
-    print("7. Print collections")
-    print("8. Exit ec2 mongo")
+    print("1. Do a test insert to the DB")
+    print("2. Clear the DB")
+    print("3. Print the DB")
+    print("4. Print DB Names")
+    print("5. Print collections")
+    print("6. Export MongoDB to file")
+    print("7. Exit ec2 mongo")
     print("\n")
 
 
@@ -268,6 +302,7 @@ def main():
     welcomebanner()
     mydict = set_test_dict()
     menu()
+    interactive = 1
     option = input("Enter the option: ")
     print(f"Option is: {option}\n")
     if option == '1':
@@ -296,8 +331,11 @@ def main():
     elif option == '7':
        print_collections()
        main()
+    elif option == '6':
+        mongo_export_to_file(interactive, aws_account)
+        main()
     # 6. Exit ec2 mongo
-    elif option == '8':
+    elif option == '7':
         exit_program()
     else:
         message = "That is not a valid option."
