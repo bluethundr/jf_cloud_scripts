@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 #-*- coding: utf-8 -*-
 # Import modules
+import os
 import time
 import pymongo
 import pandas
-import os
 from pymongo import MongoClient, errors
 from bson.objectid import ObjectId
 from datetime import datetime
 from colorama import init, Fore
-from pprint import pprint
+from collections import OrderedDict
 init()
 
 def welcomebanner():
@@ -41,9 +41,9 @@ def is_digit(check_input):
     return False
 
 def set_test_dict():
-    mydict = { "AWS Account": "ccmi-verizon-lab", "Account Number": "046480487130", "Name": "bastion001",
+    mydict = { "AWS Account": "company-lab", "Account Number": "123456789101", "Name": "bastion001",
 "Instance ID": "i-07aaef3b7167d592a", "AMI ID": "ami-07fd81f1ecf6cf387", "Volumes": "vol-09d6d898db4af132a",
-"Private IP": "10.238.3.165", "Public IP": "3.227.224.221", "Private DNS": "ip-10-238-3-165.ec2.internal",
+"Private IP": "10.238.3.165", "Public IP": "x.xxx.xxx.xxx", "Private DNS": "ip-10-238-3-165.ec2.internal",
 "Availability Zone": "us-east-1a", "VPC ID": "vpc-00de11103235ec567", "Type": "t3.small", "Key Pair Name": "ccmi-vzn-int01", "Instance State": "running", "Launch Date": "September 10 2019"}
     return mydict
 
@@ -99,6 +99,83 @@ def set_db():
         instance_col = mydb[instance_col]
     return mydb, mydb_name, instance_col
 
+def create_mongodb(mydict):
+    myclient = connect_db()
+    if __name__ == '__main__':
+        message = f"* Create new MongoDB *"
+        banner(message, border='*')
+        print('\n')
+    newdb = input("Enter the name of a new mongo database: ")
+    dblist = myclient.list_database_names()
+    if newdb in dblist:
+        print("The database exists.")
+        main()
+    else:
+        mydb = myclient[newdb]
+        mycol = mydb["test_column"]
+        x = mycol.insert_one(mydict)
+
+def drop_mongodb():
+    myclient = connect_db()
+    mydb, mydb_name, instance_col = set_db()
+    today = datetime.today()
+    today = today.strftime("%m-%d-%Y")
+    if __name__ == '__main__':
+        message = f"* Drop a MongoDB Database*"
+        banner(message, border='*')
+        print('\n')
+        print(Fore.CYAN + "Available MongoDB Databases:")
+        if myclient != None:
+            # the list_database_names() method returns a list of strings
+            database_names = myclient.list_database_names()
+            counter = 1
+            for db in database_names:
+                message = str(counter) + '. ' + db
+                print(message)
+                counter = counter + 1
+        print ("There are", len(database_names), "databases.\n")
+        print(f"Please select a database. Enter a number 1 through {len(database_names)}.")
+        choice = input("Enter a number: ")
+        if is_digit(choice) == True:
+            if int(choice) > counter:
+                print("Wrong selection.")
+                set_db()
+            choice = int(choice)
+            choice = choice - 1
+            mydb = myclient[database_names[choice]]
+            mydb_name = database_names[choice]
+            instance_col = 'ec2_list-' + today
+            instance_col = mydb[instance_col]
+            print(f"You've selected: {database_names[choice]}\n")
+        else:
+            print("Must enter a digit. Try again.\n")
+    # access a database on a MongoDB server
+    db = myclient[mydb]
+
+    # check if a collection exists
+    col_exists = instance_col in db.list_collection_names()
+    print ("'Some Collection' exists:", col_exists) # will print True or False
+
+    # use the database_name.some_collection.drop() method call
+    if col_exists == True:
+        # get the collection object if it exists
+        col = db[instance_col]
+
+    # drop the collection
+    col.drop()
+
+    # call the drop_collection() method and return dict response
+    response = db.drop_collection(mydb)
+
+    print ("\n", "drop_collection() response:", response)
+
+    # evaluate the dict object returned by API call
+    if 'errmsg' in response:
+        # e.g. 'ns not found'
+        print ("drop_collection() ERROR:", response['errmsg'])
+    elif 'ns' in response:
+        print ("the collection:", response['ns'], "is dropped.")
+
 def insert_doc(mydict):
     mydb, mydb_name, instance_col = set_db()
     mydict['_id'] = ObjectId()
@@ -150,6 +227,8 @@ def mongo_export_to_file(interactive, aws_account):
 
     # iterate over the list of MongoDB dict documents
     for num, doc in enumerate(mongo_docs):
+        # Keep the original order
+        doc = OrderedDict(doc)
         # convert ObjectId() to str
         doc["_id"] = str(doc["_id"])
 
@@ -206,7 +285,8 @@ def mongo_export_to_file(interactive, aws_account):
             output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
 
         # export MongoDB documents to a CSV file
-        docs.to_csv(output_file, ",") # CSV delimited by commas
+        fieldnames = [ 'AWS Account', 'Account Number', 'Name', 'Instance ID', 'AMI ID', 'Volumes', 'Private IP', 'Public IP', 'Private DNS', 'Availability Zone', 'VPC ID', 'Type', 'Key Pair Name', 'State', 'Launch Date']
+        docs.to_csv(output_file, columns=fieldnames, sep=",", index=False) # CSV delimited by commas
 
         # export MongoDB documents to CSV
         csv_export = docs.to_csv(sep=",") # CSV delimited by commas
@@ -288,13 +368,15 @@ def menu():
     message = "Main Menu"
     banner(message)
     print(Fore.CYAN + "Your available actions: ")
-    print("1. Do a test insert to the DB")
-    print("2. Clear the DB")
-    print("3. Print the DB")
-    print("4. Print DB Names")
-    print("5. Print collections")
-    print("6. Export MongoDB to file")
-    print("7. Exit ec2 mongo")
+    print("1. Create new MongoDB Database")
+    print("2. Drop MongoDB Database")
+    print("3. Do a test insert to the DB")
+    print("4. Clear the DB")
+    print("5. Print the DB")
+    print("6. Print DB Names")
+    print("7. Print collections")
+    print("8. Export MongoDB to file")
+    print("9. Exit ec2 mongo")
     print("\n")
 
 
@@ -305,38 +387,44 @@ def main():
     interactive = 1
     option = input("Enter the option: ")
     print(f"Option is: {option}\n")
+    # 1. Create a MongoDB database
     if option == '1':
         create_mongodb(mydict)
         main()
+    # 2. Drop a MongoDB Database
     elif option == '2':
         drop_mongodb()
         main()
-    # 1. Do a test insert to the DB
+    # 3. Do a test insert to the DB
     elif option  == '3':
         x = insert_doc(mydict)
         main()
-    # 2. Clear the DB"
+    # 4. Clear the DB"
     elif option == '4':
         clear_db()
         main()
-    # 3. Print the DB
+    # 5. Print the DB
     elif option == '5':
         mongo_select_all()
         main()
-    # 4. Print DB Names
+    # 6. Print DB Names
     elif option == '6':
        print_db_names()
        main()
-    # 5. Print collections
+    # 7. Print collections
     elif option == '7':
        print_collections()
        main()
-    elif option == '6':
+    # 8. Export MongoDB to file
+    elif option == '8':
+        if __name__ == '__main':
+            aws_account = None
         mongo_export_to_file(interactive, aws_account)
         main()
-    # 6. Exit ec2 mongo
-    elif option == '7':
+    # 9. Exit ec2 mongo
+    elif option == '9':
         exit_program()
+    # Invalid Input
     else:
         message = "That is not a valid option."
         banner(message)
