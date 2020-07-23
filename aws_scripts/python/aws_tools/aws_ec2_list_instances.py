@@ -61,6 +61,8 @@ def initialize(interactive, aws_account):
     # Set the date
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
+    # Set the fieldnames for the CSV and for the confluence page
+    fieldnames = [ 'AWS Account', 'Account Number', 'Name', 'Instance ID', 'AMI ID', 'Volumes', 'Private IP', 'Public IP', 'Private DNS', 'Region', 'Availability Zone', 'VPC ID', 'Type', 'Key Pair Name', 'State', 'Launch Date']
     # Set the input file
     aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_accounts_list.csv')
     # Set the output file
@@ -71,7 +73,7 @@ def initialize(interactive, aws_account):
     else:
         output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
         output_file_name = 'aws-instance-master-list-' + today +'.csv'
-    return aws_env_list, output_file, today
+    return today, aws_env_list, output_file, output_file_name, fieldnames
 
 def exit_program():
     endbanner()
@@ -128,11 +130,10 @@ def set_regions(aws_account):
     return regions
 
 
-def list_instances(aws_account,aws_account_number, interactive, regions, show_details, instance_col):
-    aws_env_list, output_file, today = initialize(interactive, aws_account)
+def list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details):
+    today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
     options = arguments()
     instance_list = ''
-    insance_dict = {}
     session = ''
     ec2 = ''
     account_found = ''
@@ -144,6 +145,11 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
     region = ''
     # Set the ec2 dictionary
     ec2info = {}
+    # Write the file headers
+    if interactive == 1:
+        with open(output_file, mode='w+') as csv_file:
+            writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
+            writer.writeheader()
     print(Fore.CYAN)
     report_gov_or_comm(aws_account, account_found)
     print(Fore.RESET)
@@ -155,123 +161,134 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
             except botocore.exceptions.ProfileNotFound as e:
                 profile_missing_message = f"An exception has occurred: {e}"
                 account_found = 'no'
-                raise
+                pass
         else:
             try:
                 session = boto3.Session(profile_name=aws_account, region_name=region)
                 account_found = 'yes'
             except botocore.exceptions.ProfileNotFound as e:
                 profile_missing_message = f"An exception has occurred: {e}"
-                raise
+                pass
         try:
             ec2 = session.client("ec2")
         except Exception as e:
             print(f"An exception has occurred: {e}")
         message = f"  Region: {region} in {aws_account}: ({aws_account_number})  "
         banner(message)
-
         print(Fore.RESET)
         # Loop through the instances
         try:
             instance_list = ec2.describe_instances()
         except Exception as e:
             print(f"An exception has occurred: {e}")
-        for reservation in instance_list["Reservations"]:
-            for instance in reservation.get("Instances", []):
-                instance_count = instance_count + 1
-                launch_time = instance["LaunchTime"]
-                launch_time_friendly = launch_time.strftime("%B %d %Y")
-                tree = objectpath.Tree(instance)
-                block_devices = set(tree.execute('$..BlockDeviceMappings[\'Ebs\'][\'VolumeId\']'))
-                if block_devices:
-                    block_devices = list(block_devices)
-                    block_devices = str(block_devices).replace('[','').replace(']','').replace('\'','')
-                else:
-                    block_devices = None
-                private_ips =  set(tree.execute('$..PrivateIpAddress'))
-                if private_ips:
-                    private_ips_list = list(private_ips)
-                    private_ips_list = str(private_ips_list).replace('[','').replace(']','').replace('\'','')
-                else:
-                    private_ips_list = None
-                public_ips =  set(tree.execute('$..PublicIp'))
-                if len(public_ips) == 0:
-                    public_ips = None
-                if public_ips:
-                    public_ips_list = list(public_ips)
-                    public_ips_list = str(public_ips_list).replace('[','').replace(']','').replace('\'','')
-                else:
-                    public_ips_list = None
-                name = None
-                if 'Tags' in instance:
-                    try:
-                        tags = instance['Tags']
-                        name = None
-                        for tag in tags:
-                            if tag["Key"] == "Name":
-                                name = tag["Value"]
-                            if tag["Key"] == "Engagement" or tag["Key"] == "Engagement Code":
-                                engagement = tag["Value"]
-                    except ValueError:
-                        # print("Instance: %s has no tags" % instance_id)
-                        raise
-                key_name = instance['KeyName'] if instance['KeyName'] else None
-                vpc_id = instance.get('VpcId') if instance.get('VpcId') else None
-                private_dns = instance['PrivateDnsName'] if instance['PrivateDnsName'] else None
-                ec2info[instance['InstanceId']] = {
-                    'AWS Account': aws_account,
-                    'Account Number': aws_account_number,
-                    'Name': name,
-                    'Instance ID': instance['InstanceId'],
-                    'AMI ID': instance['ImageId'],
-                    'Volumes': block_devices,
-                    'Private IP': private_ips_list,
-                    'Public IP': public_ips_list,
-                    'Private DNS': private_dns,
-                    'Availability Zone': instance['Placement']['AvailabilityZone'],
-                    'VPC ID': vpc_id,
-                    'Type': instance['InstanceType'],
-                    'Key Pair Name': key_name,
-                    'State': instance['State']['Name'],
-                    'Launch Date': launch_time_friendly
-                }
-                instance_dict = {'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly}
-                mongo_instance_dict = {'_id': '', 'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly}
-                insert_doc(mongo_instance_dict)
-                ec2_info_items = ec2info.items
-                if show_details == 'y' or show_details == 'yes':
-                    for instance_id, instance in ec2_info_items():
-                        if account_found == 'yes':
-                            print(Fore.RESET + "-------------------------------------")
-                            for key in [
-                                'AWS Account',
-                                'Account Number',
-                                'Name',
-                                'Instance ID',
-                                'AMI ID',
-                                'Volumes',
-                                'Private IP',
-                                'Public IP',
-                                'Private DNS',
-                                'Availability Zone',
-                                'VPC ID',
-                                'Type',
-                                'Key Pair Name',
-                                'State',
-                                'Launch Date'
-                            ]:
-                                print(Fore.GREEN + f"{key}: {instance.get(key)}")
-                            print(Fore.RESET + "-------------------------------------")
-                reservation = {}
-                instance = {}
-                ec2_info_items = {}
-                ec2info = {}
+        try:
+            for reservation in instance_list["Reservations"]:
+                for instance in reservation.get("Instances", []):
+                    instance_count = instance_count + 1
+                    launch_time = instance["LaunchTime"]
+                    launch_time_friendly = launch_time.strftime("%B %d %Y")
+                    tree = objectpath.Tree(instance)
+                    block_devices = set(tree.execute('$..BlockDeviceMappings[\'Ebs\'][\'VolumeId\']'))
+                    if block_devices:
+                        block_devices = list(block_devices)
+                        block_devices = str(block_devices).replace('[','').replace(']','').replace('\'','')
+                    else:
+                        block_devices = None
+                    private_ips =  set(tree.execute('$..PrivateIpAddress'))
+                    if private_ips:
+                        private_ips_list = list(private_ips)
+                        private_ips_list = str(private_ips_list).replace('[','').replace(']','').replace('\'','')
+                    else:
+                        private_ips_list = None
+                    public_ips =  set(tree.execute('$..PublicIp'))
+                    if len(public_ips) == 0:
+                        public_ips = None
+                    if public_ips:
+                        public_ips_list = list(public_ips)
+                        public_ips_list = str(public_ips_list).replace('[','').replace(']','').replace('\'','')
+                    else:
+                        public_ips_list = None
+                    name = None
+                    if 'Tags' in instance:
+                        try:
+                            tags = instance['Tags']
+                            name = None
+                            for tag in tags:
+                                if tag["Key"] == "Name":
+                                    name = tag["Value"]
+                                if tag["Key"] == "Engagement" or tag["Key"] == "Engagement Code":
+                                    engagement = tag["Value"]
+                        except ValueError:
+                            # print("Instance: %s has no tags" % instance_id)
+                            pass
+                    key_name = instance['KeyName'] if instance['KeyName'] else None
+                    vpc_id = instance.get('VpcId') if instance.get('VpcId') else None
+                    #if 'VpcId' in instance:
+                    #    vpc_id = instance['VpcId']
+                    #else:
+                    #    vpc_id = None
+                    private_dns = instance['PrivateDnsName'] if instance['PrivateDnsName'] else None
+                    ec2info[instance['InstanceId']] = {
+                        'AWS Account': aws_account,
+                        'Account Number': aws_account_number,
+                        'Name': name,
+                        'Instance ID': instance['InstanceId'],
+                        'AMI ID': instance['ImageId'],
+                        'Volumes': block_devices,
+                        'Private IP': private_ips_list,
+                        'Public IP': public_ips_list,
+                        'Private DNS': private_dns,
+                        'Availability Zone': instance['Placement']['AvailabilityZone'],
+                        'VPC ID': vpc_id,
+                        'Type': instance['InstanceType'],
+                        'Key Pair Name': key_name,
+                        'State': instance['State']['Name'],
+                        'Launch Date': launch_time_friendly
+                    }
+                    instance_dict = {'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly}
+                    mongo_instance_dict = {'_id': '', 'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly}
+                    insert_doc(mongo_instance_dict)
+                    ec2_info_items = ec2info.items
+                    if show_details == 'y' or show_details == 'yes':
+                        for instance_id, instance in ec2_info_items():
+                            if account_found == 'yes':
+                                print(Fore.RESET + "-------------------------------------")
+                                for key in [
+                                    'AWS Account',
+                                    'Account Number',
+                                    'Name',
+                                    'Instance ID',
+                                    'AMI ID',
+                                    'Volumes',
+                                    'Private IP',
+                                    'Public IP',
+                                    'Private DNS',
+                                    'Availability Zone',
+                                    'VPC ID',
+                                    'Type',
+                                    'Key Pair Name',
+                                    'State',
+                                    'Launch Date'
+                                ]:
+                                    print(Fore.GREEN + f"{key}: {instance.get(key)}")
+                                print(Fore.RESET + "-------------------------------------")
+                        else:
+                            pass
+                    reservation = {}
+                    instance = {}
+                    ec2_info_items = {}
+                    ec2info = {}
+                    with open(output_file,'a') as csv_file:
+                        csv_file.close()
+        except Exception as e:
+            print(f"An exception has occurred: {e}")
     if profile_missing_message == '*':
         banner(profile_missing_message)
     print(Fore.GREEN)
     report_instance_stats(instance_count, aws_account, account_found)
     print(Fore.RESET + '\n')
     mongo_export_to_file(interactive, aws_account)
+    return output_file
 
 def convert_csv_to_html_table(output_file, today, interactive, aws_account):
     output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html')
@@ -380,7 +397,7 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
     options = arguments()
     to_addr = ''
     # Get the variables from intitialize
-    aws_env_list, output_file, today = initialize(interactive, aws_account)
+    today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
     if options.first_name:
         ## Get the address to send to
         print(Fore.YELLOW)
@@ -395,11 +412,12 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
         to_addr = input("Enter the recipient's email address: ")
 
     from_addr = 'cloudops@noreply.sncr.com'
-    subject = "SNCR AWS Instance Master List " + today
     if aws_accounts_question == 'one':
-        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The SD Team</font>"
+        subject = "SNCR AWS Instance List: " + aws_account + " (" + aws_account_number + ") " + today
+        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The SD Team</font>"
     else:
-        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all SNCR CCMI AWS accounts.<br><br>Regards,<br>The SD Team</font>"
+        subject = "SNCR AWS Instance Master List " + today
+        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all company AWS accounts.<br><br>Regards,<br>The SD Team</font>"    
     msg = MIMEMultipart()
     msg['From'] = from_addr
     msg['To'] = to_addr
@@ -515,7 +533,7 @@ def arguments():
     "-r",
     "--email_recipient",
     type = str,
-    help = "Who will receive the email")  
+    help = "Who will receive the email")
 
     parser.add_argument(
     "-g",
@@ -595,14 +613,14 @@ def main():
             print(Fore.RESET)
 
         # Grab variables from initialize
-        aws_env_list, output_file, today = initialize(interactive, aws_account)
+        today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
 
         # Get the list of the accounts from the aws confluence page
         account_names, account_numbers = read_account_info(aws_env_list)
         print(Fore.YELLOW)
         message = "Work in one or all accounts"
         banner(message)
-        if str(options.all_accounts).lower() == 'one':
+        if str(options.all_accounts).lower == 'one':
             message = f"Working in {options.all_accounts} account."
         else:
             message = f"Working in {options.all_accounts} accounts."
@@ -614,13 +632,10 @@ def main():
         for (my_aws_account, my_aws_account_number) in zip(account_names, account_numbers):
             if my_aws_account == aws_account:
                 aws_account_number = my_aws_account_number
-
         # Set the regions and run the program
         regions = set_regions(aws_account)
-        mydb, mydb_name, instance_col = set_db()
-        list_instances(aws_account,aws_account_number, interactive, regions, show_details, instance_col)
+        output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
         htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account)
-
         print(Fore.YELLOW)
         message = "Send an Email"
         banner(message)
@@ -673,7 +688,10 @@ def main():
             show_details = input("Show server details (y/n): ")
             print(Fore.RESET)
         aws_account = 'all'
-        aws_env_list, output_file, today = initialize(interactive, aws_account)
+        today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
+        with open(output_file, mode='w+') as csv_file:
+            writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
+            writer.writeheader()
         account_names, account_numbers = read_account_info(aws_env_list)
         for (aws_account, aws_account_number) in zip(account_names, account_numbers):
             try:
@@ -688,7 +706,7 @@ def main():
                 print(Fore.RESET)
                 # Set the regions
                 regions = set_regions(aws_account)
-                output_file = list_instances(aws_account,aws_account_number, interactive, regions, show_details, instance_col)
+                output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
                 htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file,today, interactive, aws_account)
 
         message = " Send an Email "
@@ -727,6 +745,7 @@ def main():
                 write_data_to_confluence(auth, html, pageid, title)
             except Exception as e:
                 print(f"An exception has occurred: {e}")
+
         else:
             if confluence_answer.lower() == 'yes' or confluence_answer.lower() == 'y':
                 if options.user:
@@ -739,6 +758,7 @@ def main():
                 message = "Okay. Not writing to confluence."
                 banner(message)
             print(Fore.RESET)
+
     print(Fore.GREEN)
     if options.run_again:
         list_again = options.run_again

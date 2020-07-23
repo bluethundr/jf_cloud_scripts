@@ -41,9 +41,9 @@ def is_digit(check_input):
     return False
 
 def set_test_dict():
-    mydict = { "AWS Account": "company-lab", "Account Number": "123456789101", "Name": "bastion001",
+    mydict = { "AWS Account": "company-lab", "Account Number": "12345678910", "Name": "bastion001",
 "Instance ID": "i-07aaef3b7167d592a", "AMI ID": "ami-07fd81f1ecf6cf387", "Volumes": "vol-09d6d898db4af132a",
-"Private IP": "10.238.3.165", "Public IP": "x.xxx.xxx.xxx", "Private DNS": "ip-10-238-3-165.ec2.internal",
+"Private IP": "10.238.3.165", "Public IP": "xx.xx.xx.xx", "Private DNS": "ip-10-238-3-165.ec2.internal",
 "Availability Zone": "us-east-1a", "VPC ID": "vpc-00de11103235ec567", "Type": "t3.small", "Key Pair Name": "ccmi-vzn-int01", "Instance State": "running", "Launch Date": "September 10 2019"}
     return mydict
 
@@ -111,70 +111,56 @@ def create_mongodb(mydict):
         print("The database exists.")
         main()
     else:
-        mydb = myclient[newdb]
-        mycol = mydb["test_column"]
-        x = mycol.insert_one(mydict)
+        try:
+            mydb = myclient[newdb]
+            mycol = mydb["test_column"]
+            x = mycol.insert_one(mydict)
+            message = f"Succeeded in creating: {newdb}"
+            banner(message)
+        except Exception as e:
+            print(f"MongoDB Database creation failed with: {e}")
 
 def drop_mongodb():
     myclient = connect_db()
-    mydb, mydb_name, instance_col = set_db()
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
-    if __name__ == '__main__':
-        message = f"* Drop a MongoDB Database*"
-        banner(message, border='*')
-        print('\n')
-        print(Fore.CYAN + "Available MongoDB Databases:")
-        if myclient != None:
-            # the list_database_names() method returns a list of strings
-            database_names = myclient.list_database_names()
-            counter = 1
-            for db in database_names:
-                message = str(counter) + '. ' + db
-                print(message)
-                counter = counter + 1
-        print ("There are", len(database_names), "databases.\n")
-        print(f"Please select a database. Enter a number 1 through {len(database_names)}.")
-        choice = input("Enter a number: ")
-        if is_digit(choice) == True:
-            if int(choice) > counter:
-                print("Wrong selection.")
-                set_db()
-            choice = int(choice)
-            choice = choice - 1
-            mydb = myclient[database_names[choice]]
-            mydb_name = database_names[choice]
-            instance_col = 'ec2_list-' + today
-            instance_col = mydb[instance_col]
-            print(f"You've selected: {database_names[choice]}\n")
-        else:
-            print("Must enter a digit. Try again.\n")
-    # access a database on a MongoDB server
-    db = myclient[mydb]
-
+    if myclient != None:
+        # the list_database_names() method returns a list of strings
+        database_names = myclient.list_database_names()
+        counter = 1
+        for db in database_names:
+            message = str(counter) + '. ' + db
+            print(message)
+            counter = counter + 1
+    print ("There are", len(database_names), "databases.\n")
+    db_names_before_drop = myclient.list_database_names()
+    print ("db count BEFORE drop:", len(db_names_before_drop))
+    print(f"Please select a database. Enter a number 1 through {len(database_names)}.")
+    choice = input("Enter a number: ")
+    if is_digit(choice) == True:
+        if int(choice) > counter:
+            print("Wrong selection.")
+            set_db()
+        choice = int(choice)
+        choice = choice - 1
+        dropdb = myclient[database_names[choice]]
+        print(dropdb)
+        dropdb_name = database_names[choice]
+        instance_col = 'ec2_list-' + today
+        instance_col = dropdb[instance_col]
+        print(f"You've selected: {database_names[choice]}\n")
+    else:
+        print("Must enter a digit. Try again.\n")
     # check if a collection exists
-    col_exists = instance_col in db.list_collection_names()
-    print ("'Some Collection' exists:", col_exists) # will print True or False
-
-    # use the database_name.some_collection.drop() method call
-    if col_exists == True:
-        # get the collection object if it exists
-        col = db[instance_col]
-
-    # drop the collection
-    col.drop()
-
-    # call the drop_collection() method and return dict response
-    response = db.drop_collection(mydb)
-
-    print ("\n", "drop_collection() response:", response)
-
-    # evaluate the dict object returned by API call
-    if 'errmsg' in response:
-        # e.g. 'ns not found'
-        print ("drop_collection() ERROR:", response['errmsg'])
-    elif 'ns' in response:
-        print ("the collection:", response['ns'], "is dropped.")
+    col_exists = instance_col in dropdb.list_collection_names()
+    print ("Some Collection exists:", col_exists) # will print True or False
+    # call MongoDB client object's drop_database() method to delete a db
+    myclient.drop_database(dropdb) # pass db name as string
+    # get all of the database names
+    db_names_after_drop = myclient.list_database_names()
+    print ("db count AFTER drop:", len(db_names_before_drop))
+    diff = len(db_names_before_drop) - len(db_names_after_drop)
+    print ("difference:", diff)
 
 def insert_doc(mydict):
     mydb, mydb_name, instance_col = set_db()
@@ -205,49 +191,50 @@ def mongo_select_all():
     return instance_list
 
 def mongo_export_to_file(interactive, aws_account):
+    if __name__ == '__main__':
+        print("Available formats:")
+        print("1. JSON")
+        print("2. CSV")
+        print("3. HTML")
+        choice = input("Please select a number 1-3: ")
+    else:
+        choice = '2'
+    if is_digit(choice) == True:
+        if int(choice) > 3:
+            print("Wrong selection.")
+            #mongo_export_to_file(interactive, aws_account)
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
-    mydb, mydb_name, instance_col = set_db()
+    #mydb, mydb_name, instance_col = set_db()
+    _, _, instance_col = set_db()
     if __name__ == '__main__':
-            message = f"* Export MongoDB to  *"
+            message = f"* Export MongoDB to File *"
             banner(message, border='*')
     # start time of script
     start_time = time.time()
 
     # make an API call to the MongoDB server
-    cursor = instance_col.find()
+    #cursor = instance_col.find()
     # extract the list of documents from cursor obj
-    mongo_docs = list(cursor)
+    #mongo_docs = list(cursor)
+    mongo_docs = instance_col.find()
 
     if __name__ == '__main__':
-        print ("total docs:", len(mongo_docs))
+        print ("total docs:", len(list(mongo_docs)))
 
-    # create an empty DataFrame for storing documents
-    docs = pandas.DataFrame(columns=[])
+
 
     # iterate over the list of MongoDB dict documents
     for num, doc in enumerate(mongo_docs):
         # Keep the original order
-        doc = OrderedDict(doc)
         # convert ObjectId() to str
-        doc["_id"] = str(doc["_id"])
 
-        # get document _id from dict
-        doc_id = doc["_id"]
+        # create an empty DataFrame for storing documents
+        #docs = pandas.DataFrame(columns=[])
+        docs = pandas.DataFrame(mongo_docs)
 
-        # create a Series obj from the MongoDB dict
-        series_obj = pandas.Series( doc, name=doc_id )
-
-         # append the MongoDB Series obj to the DataFrame obj
-        docs = docs.append(series_obj)
-
-        # get document _id from dict
-        doc_id = doc["_id"]
-
-        if __name__ == '__main__':
-            print (type(doc))
-            print (type(doc["_id"]))
-            print (num, "--", doc, "\n")
+        # Discard the Mongo ID for the documents
+        docs.pop("_id")
 
         '''
         EXPORT THE MONGODB DOCUMENTS
@@ -257,69 +244,74 @@ def mongo_export_to_file(interactive, aws_account):
             print ("\nexporting Pandas objects to different file types.")
             print ("DataFrame len:", len(docs))
 
-        # Output to JSON
-        if interactive == 1:
-            output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'json', '')
-            output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.json')
-            output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.json'
-        else:
-            output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'json', '')
-            output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.json')
+        if choice == '1':
+            # Output to JSON
+            if interactive == 1:
+                output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'json', '')
+                output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.json')
+                output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.json'
+            else:
+                output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'json', '')
+                output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.json')
 
-        # export the MongoDB documents as a JSON file
-        docs.to_json(output_file)
+            # export the MongoDB documents as a JSON file
+            docs.to_json(output_file)
 
-        # have Pandas return a JSON string of the documents
-        json_export = docs.to_json() # return JSON data
-        if __name__ == '__main__':
-            print ("\nJSON data:", json_export)
+            # have Pandas return a JSON string of the documents
+            json_export = docs.to_json() # return JSON data
+            if __name__ == '__main__':
+                print ("\nJSON data:", json_export)
 
+        elif choice == '2':
         # Export to CSV
-        if interactive == 1:
-            output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
-            output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
-            output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.csv'
+            if interactive == 1:
+                output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
+                output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
+                output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.csv'
+            else:
+                # Set the output file
+                output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
+                output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
+
+            # export MongoDB documents to a CSV file
+            docs.to_csv(output_file, ",", index=False)
+
+            # export MongoDB documents to CSV
+            csv_export = docs.to_csv(sep=",") # CSV delimited by commas
+            if __name__ == '__main__':
+                print ("\nCSV data:", csv_export)
+
+        elif choice == '3':
+            # create IO HTML string
+            import io
+            html_str = io.StringIO()
+
+            # export as HTML
+            docs.to_html(
+            buf=html_str,
+            classes='table table-striped'
+            )
+
+            if __name__ == '__main__':
+                # print out the HTML table
+                print (html_str.getvalue())
+
+            # Output to HTML
+            if interactive == 1:
+                output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html', '')
+                output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.html')
+                output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.html'
+            else:
+                output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html', '')
+                output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.html')
+
+            # save the MongoDB documents as an HTML table
+            docs.to_html(output_file)
+            if __name__ == '__main__':
+                print ("\n\ntime elapsed:", time.time()-start_time)
         else:
-            # Set the output file
-            output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
-            output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
-
-        # export MongoDB documents to a CSV file
-        fieldnames = [ 'AWS Account', 'Account Number', 'Name', 'Instance ID', 'AMI ID', 'Volumes', 'Private IP', 'Public IP', 'Private DNS', 'Availability Zone', 'VPC ID', 'Type', 'Key Pair Name', 'State', 'Launch Date']
-        docs.to_csv(output_file, columns=fieldnames, sep=",", index=False) # CSV delimited by commas
-
-        # export MongoDB documents to CSV
-        csv_export = docs.to_csv(sep=",") # CSV delimited by commas
-        if __name__ == '__main__':
-            print ("\nCSV data:", csv_export)
-
-        # create IO HTML string
-        import io
-        html_str = io.StringIO()
-
-        # export as HTML
-        docs.to_html(
-        buf=html_str,
-        classes='table table-striped'
-        )
-
-        if __name__ == '__main__':
-            # print out the HTML table
-            print (html_str.getvalue())
-
-        # Output to HTML
-        if interactive == 1:
-            output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html', '')
-            output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.html')
-            output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.html'
-        else:
-            output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html', '')
-            output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.html')
-
-        # save the MongoDB documents as an HTML table
-        docs.to_html(output_file)
-        if __name__ == '__main__':
-            print ("\n\ntime elapsed:", time.time()-start_time)
+            Print("That is not a valid choice.")
+            #mongo_export_to_file(interactive, aws_account)
 
 def clear_db():
     mydb, mydb_name, instance_col = set_db()
@@ -417,8 +409,8 @@ def main():
        main()
     # 8. Export MongoDB to file
     elif option == '8':
-        if __name__ == '__main':
-            aws_account = None
+        if __name__ == '__main__':
+            aws_account = 'jf-master-pd'
         mongo_export_to_file(interactive, aws_account)
         main()
     # 9. Exit ec2 mongo
