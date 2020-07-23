@@ -191,11 +191,14 @@ def mongo_select_all():
     return instance_list
 
 def mongo_export_to_file(interactive, aws_account):
-    print("Available formats:")
-    print("1. JSON")
-    print("2. CSV")
-    print("3. HTML")
-    choice = input("Please select a number 1-3: ")
+    if __name__ == '__main__':
+        print("Available formats:")
+        print("1. JSON")
+        print("2. CSV")
+        print("3. HTML")
+        choice = input("Please select a number 1-3: ")
+    else:
+        choice = '2'
     if is_digit(choice) == True:
         if int(choice) > 3:
             print("Wrong selection.")
