@@ -193,7 +193,8 @@ def mongo_select_all():
 def mongo_export_to_file(interactive, aws_account):
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
-    mydb, mydb_name, instance_col = set_db()
+    #mydb, mydb_name, instance_col = set_db()
+    _, _, instance_col = set_db()
     if __name__ == '__main__':
             message = f"* Export MongoDB to  *"
             banner(message, border='*')
@@ -201,15 +202,20 @@ def mongo_export_to_file(interactive, aws_account):
     start_time = time.time()
 
     # make an API call to the MongoDB server
-    cursor = instance_col.find()
+    #cursor = instance_col.find()
     # extract the list of documents from cursor obj
-    mongo_docs = list(cursor)
+    #mongo_docs = list(cursor)
+    mongo_docs = instance_col.find()
 
     if __name__ == '__main__':
         print ("total docs:", len(mongo_docs))
 
     # create an empty DataFrame for storing documents
-    docs = pandas.DataFrame(columns=[])
+    #docs = pandas.DataFrame(columns=[])
+    docs = pandas.DataFrame(mongo_docs)
+
+    # Discard the Mongo ID for the documents
+    docs.pop("_id")
 
     # iterate over the list of MongoDB dict documents
     for num, doc in enumerate(mongo_docs):
@@ -271,8 +277,9 @@ def mongo_export_to_file(interactive, aws_account):
             output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
 
         # export MongoDB documents to a CSV file
-        fieldnames = [ 'AWS Account', 'Account Number', 'Name', 'Instance ID', 'AMI ID', 'Volumes', 'Private IP', 'Public IP', 'Private DNS', 'Availability Zone', 'VPC ID', 'Type', 'Key Pair Name', 'State', 'Launch Date']
-        docs.to_csv(output_file, columns=fieldnames, sep=",", index=False) # CSV delimited by commas
+        #fieldnames = [ 'AWS Account', 'Account Number', 'Name', 'Instance ID', 'AMI ID', 'Volumes', 'Private IP', 'Public IP', 'Private DNS', 'Availability Zone', 'VPC ID', 'Type', 'Key Pair Name', 'State', 'Launch Date']
+        #docs.to_csv(output_file, columns=fieldnames, sep=",", index=False) # CSV delimited by commas
+        docs.to_csv(output_file, ",", index=False)
 
         # export MongoDB documents to CSV
         csv_export = docs.to_csv(sep=",") # CSV delimited by commas
