@@ -41,15 +41,9 @@ def is_digit(check_input):
     return False
 
 def set_test_dict():
-<<<<<<< HEAD
     mydict = { "AWS Account": "company-lab", "Account Number": "12345678910", "Name": "bastion001",
 "Instance ID": "i-07aaef3b7167d592a", "AMI ID": "ami-07fd81f1ecf6cf387", "Volumes": "vol-09d6d898db4af132a",
 "Private IP": "10.238.3.165", "Public IP": "xx.xx.xx.xx", "Private DNS": "ip-10-238-3-165.ec2.internal",
-=======
-    mydict = { "AWS Account": "company-lab", "Account Number": "123456789101", "Name": "bastion001",
-"Instance ID": "i-07aaef3b7167d592a", "AMI ID": "ami-07fd81f1ecf6cf387", "Volumes": "vol-09d6d898db4af132a",
-"Private IP": "10.238.3.165", "Public IP": "x.xxx.xxx.xxx", "Private DNS": "ip-10-238-3-165.ec2.internal",
->>>>>>> python
 "Availability Zone": "us-east-1a", "VPC ID": "vpc-00de11103235ec567", "Type": "t3.small", "Key Pair Name": "ccmi-vzn-int01", "Instance State": "running", "Launch Date": "September 10 2019"}
     return mydict
 
@@ -117,70 +111,56 @@ def create_mongodb(mydict):
         print("The database exists.")
         main()
     else:
-        mydb = myclient[newdb]
-        mycol = mydb["test_column"]
-        x = mycol.insert_one(mydict)
+        try:
+            mydb = myclient[newdb]
+            mycol = mydb["test_column"]
+            x = mycol.insert_one(mydict)
+            message = f"Succeeded in creating: {newdb}"
+            banner(message)
+        except Exception as e:
+            print(f"MongoDB Database creation failed with: {e}")
 
 def drop_mongodb():
     myclient = connect_db()
-    mydb, mydb_name, instance_col = set_db()
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
-    if __name__ == '__main__':
-        message = f"* Drop a MongoDB Database*"
-        banner(message, border='*')
-        print('\n')
-        print(Fore.CYAN + "Available MongoDB Databases:")
-        if myclient != None:
-            # the list_database_names() method returns a list of strings
-            database_names = myclient.list_database_names()
-            counter = 1
-            for db in database_names:
-                message = str(counter) + '. ' + db
-                print(message)
-                counter = counter + 1
-        print ("There are", len(database_names), "databases.\n")
-        print(f"Please select a database. Enter a number 1 through {len(database_names)}.")
-        choice = input("Enter a number: ")
-        if is_digit(choice) == True:
-            if int(choice) > counter:
-                print("Wrong selection.")
-                set_db()
-            choice = int(choice)
-            choice = choice - 1
-            mydb = myclient[database_names[choice]]
-            mydb_name = database_names[choice]
-            instance_col = 'ec2_list-' + today
-            instance_col = mydb[instance_col]
-            print(f"You've selected: {database_names[choice]}\n")
-        else:
-            print("Must enter a digit. Try again.\n")
-    # access a database on a MongoDB server
-    db = myclient[mydb]
-
+    if myclient != None:
+        # the list_database_names() method returns a list of strings
+        database_names = myclient.list_database_names()
+        counter = 1
+        for db in database_names:
+            message = str(counter) + '. ' + db
+            print(message)
+            counter = counter + 1
+    print ("There are", len(database_names), "databases.\n")
+    db_names_before_drop = myclient.list_database_names()
+    print ("db count BEFORE drop:", len(db_names_before_drop))
+    print(f"Please select a database. Enter a number 1 through {len(database_names)}.")
+    choice = input("Enter a number: ")
+    if is_digit(choice) == True:
+        if int(choice) > counter:
+            print("Wrong selection.")
+            set_db()
+        choice = int(choice)
+        choice = choice - 1
+        dropdb = myclient[database_names[choice]]
+        print(dropdb)
+        dropdb_name = database_names[choice]
+        instance_col = 'ec2_list-' + today
+        instance_col = dropdb[instance_col]
+        print(f"You've selected: {database_names[choice]}\n")
+    else:
+        print("Must enter a digit. Try again.\n")
     # check if a collection exists
-    col_exists = instance_col in db.list_collection_names()
-    print ("'Some Collection' exists:", col_exists) # will print True or False
-
-    # use the database_name.some_collection.drop() method call
-    if col_exists == True:
-        # get the collection object if it exists
-        col = db[instance_col]
-
-    # drop the collection
-    col.drop()
-
-    # call the drop_collection() method and return dict response
-    response = db.drop_collection(mydb)
-
-    print ("\n", "drop_collection() response:", response)
-
-    # evaluate the dict object returned by API call
-    if 'errmsg' in response:
-        # e.g. 'ns not found'
-        print ("drop_collection() ERROR:", response['errmsg'])
-    elif 'ns' in response:
-        print ("the collection:", response['ns'], "is dropped.")
+    col_exists = instance_col in dropdb.list_collection_names()
+    print ("Some Collection exists:", col_exists) # will print True or False
+    # call MongoDB client object's drop_database() method to delete a db
+    myclient.drop_database(dropdb) # pass db name as string
+    # get all of the database names
+    db_names_after_drop = myclient.list_database_names()
+    print ("db count AFTER drop:", len(db_names_before_drop))
+    diff = len(db_names_before_drop) - len(db_names_after_drop)
+    print ("difference:", diff)
 
 def insert_doc(mydict):
     mydb, mydb_name, instance_col = set_db()
