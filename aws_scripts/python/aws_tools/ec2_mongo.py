@@ -191,12 +191,24 @@ def mongo_select_all():
     return instance_list
 
 def mongo_export_to_file(interactive, aws_account):
+    if __name__ == '__main__':
+        print("Available formats:")
+        print("1. JSON")
+        print("2. CSV")
+        print("3. HTML")
+        choice = input("Please select a number 1-3: ")
+    else:
+        choice = '2'
+    if is_digit(choice) == True:
+        if int(choice) > 3:
+            print("Wrong selection.")
+            #mongo_export_to_file(interactive, aws_account)
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
     #mydb, mydb_name, instance_col = set_db()
     _, _, instance_col = set_db()
     if __name__ == '__main__':
-            message = f"* Export MongoDB to  *"
+            message = f"* Export MongoDB to File *"
             banner(message, border='*')
     # start time of script
     start_time = time.time()
@@ -208,38 +220,21 @@ def mongo_export_to_file(interactive, aws_account):
     mongo_docs = instance_col.find()
 
     if __name__ == '__main__':
-        print ("total docs:", len(mongo_docs))
+        print ("total docs:", len(list(mongo_docs)))
 
-    # create an empty DataFrame for storing documents
-    #docs = pandas.DataFrame(columns=[])
-    docs = pandas.DataFrame(mongo_docs)
 
-    # Discard the Mongo ID for the documents
-    docs.pop("_id")
 
     # iterate over the list of MongoDB dict documents
     for num, doc in enumerate(mongo_docs):
         # Keep the original order
-        doc = OrderedDict(doc)
         # convert ObjectId() to str
-        doc["_id"] = str(doc["_id"])
 
-        # get document _id from dict
-        doc_id = doc["_id"]
+        # create an empty DataFrame for storing documents
+        #docs = pandas.DataFrame(columns=[])
+        docs = pandas.DataFrame(mongo_docs)
 
-        # create a Series obj from the MongoDB dict
-        series_obj = pandas.Series( doc, name=doc_id )
-
-         # append the MongoDB Series obj to the DataFrame obj
-        docs = docs.append(series_obj)
-
-        # get document _id from dict
-        doc_id = doc["_id"]
-
-        if __name__ == '__main__':
-            print (type(doc))
-            print (type(doc["_id"]))
-            print (num, "--", doc, "\n")
+        # Discard the Mongo ID for the documents
+        docs.pop("_id")
 
         '''
         EXPORT THE MONGODB DOCUMENTS
@@ -249,70 +244,74 @@ def mongo_export_to_file(interactive, aws_account):
             print ("\nexporting Pandas objects to different file types.")
             print ("DataFrame len:", len(docs))
 
-        # Output to JSON
-        if interactive == 1:
-            output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'json', '')
-            output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.json')
-            output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.json'
-        else:
-            output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'json', '')
-            output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.json')
+        if choice == '1':
+            # Output to JSON
+            if interactive == 1:
+                output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'json', '')
+                output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.json')
+                output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.json'
+            else:
+                output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'json', '')
+                output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.json')
 
-        # export the MongoDB documents as a JSON file
-        docs.to_json(output_file)
+            # export the MongoDB documents as a JSON file
+            docs.to_json(output_file)
 
-        # have Pandas return a JSON string of the documents
-        json_export = docs.to_json() # return JSON data
-        if __name__ == '__main__':
-            print ("\nJSON data:", json_export)
+            # have Pandas return a JSON string of the documents
+            json_export = docs.to_json() # return JSON data
+            if __name__ == '__main__':
+                print ("\nJSON data:", json_export)
 
+        elif choice == '2':
         # Export to CSV
-        if interactive == 1:
-            output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
-            output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
-            output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.csv'
+            if interactive == 1:
+                output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
+                output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
+                output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.csv'
+            else:
+                # Set the output file
+                output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
+                output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
+
+            # export MongoDB documents to a CSV file
+            docs.to_csv(output_file, ",", index=False)
+
+            # export MongoDB documents to CSV
+            csv_export = docs.to_csv(sep=",") # CSV delimited by commas
+            if __name__ == '__main__':
+                print ("\nCSV data:", csv_export)
+
+        elif choice == '3':
+            # create IO HTML string
+            import io
+            html_str = io.StringIO()
+
+            # export as HTML
+            docs.to_html(
+            buf=html_str,
+            classes='table table-striped'
+            )
+
+            if __name__ == '__main__':
+                # print out the HTML table
+                print (html_str.getvalue())
+
+            # Output to HTML
+            if interactive == 1:
+                output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html', '')
+                output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.html')
+                output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.html'
+            else:
+                output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html', '')
+                output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.html')
+
+            # save the MongoDB documents as an HTML table
+            docs.to_html(output_file)
+            if __name__ == '__main__':
+                print ("\n\ntime elapsed:", time.time()-start_time)
         else:
-            # Set the output file
-            output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
-            output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
-
-        # export MongoDB documents to a CSV file
-        #fieldnames = [ 'AWS Account', 'Account Number', 'Name', 'Instance ID', 'AMI ID', 'Volumes', 'Private IP', 'Public IP', 'Private DNS', 'Availability Zone', 'VPC ID', 'Type', 'Key Pair Name', 'State', 'Launch Date']
-        #docs.to_csv(output_file, columns=fieldnames, sep=",", index=False) # CSV delimited by commas
-        docs.to_csv(output_file, ",", index=False)
-
-        # export MongoDB documents to CSV
-        csv_export = docs.to_csv(sep=",") # CSV delimited by commas
-        if __name__ == '__main__':
-            print ("\nCSV data:", csv_export)
-
-        # create IO HTML string
-        import io
-        html_str = io.StringIO()
-
-        # export as HTML
-        docs.to_html(
-        buf=html_str,
-        classes='table table-striped'
-        )
-
-        if __name__ == '__main__':
-            # print out the HTML table
-            print (html_str.getvalue())
-
-        # Output to HTML
-        if interactive == 1:
-            output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html', '')
-            output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.html')
-            output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.html'
-        else:
-            output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html', '')
-            output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.html')
-
-        # save the MongoDB documents as an HTML table
-        docs.to_html(output_file)
-        if __name__ == '__main__':
-            print ("\n\ntime elapsed:", time.time()-start_time)
+            Print("That is not a valid choice.")
+            #mongo_export_to_file(interactive, aws_account)
 
 def clear_db():
     mydb, mydb_name, instance_col = set_db()
@@ -410,8 +409,8 @@ def main():
        main()
     # 8. Export MongoDB to file
     elif option == '8':
-        if __name__ == '__main':
-            aws_account = None
+        if __name__ == '__main__':
+            aws_account = 'jf-master-pd'
         mongo_export_to_file(interactive, aws_account)
         main()
     # 9. Exit ec2 mongo
