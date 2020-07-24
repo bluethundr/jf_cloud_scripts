@@ -62,7 +62,6 @@ def user_input():
     print(Fore.YELLOW)
     key_name = input("Enter the key name to use: ")
     print(f"Using key name: {key_name}")
-    #key_name = 'sncr-timd'
     print(Fore.RESET)
 
     print(Fore.GREEN)   
@@ -244,7 +243,6 @@ def user_input():
     print(Fore.YELLOW)
     key_name = input("Enter the key name to use: ")
     print(f"Using key name: {key_name}")
-    #key_name = 'sncr-timd'
     print(Fore.RESET)
 
     print(Fore.GREEN)   

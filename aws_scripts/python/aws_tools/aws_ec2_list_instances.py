@@ -31,8 +31,8 @@ from ec2_mongo import insert_doc,set_db,mongo_export_to_file
 # Initialize the color ouput with colorama
 init()
 
-BASE_URL = "https://confluence.synchronoss.net:8443/rest/api/content"
-VIEW_URL = "https://confluence.synchronoss.net:8443/pages/viewpage.action?pageId="
+BASE_URL = "https://confluence.company.net:8443/rest/api/content"
+VIEW_URL = "https://confluence.company.net:8443/pages/viewpage.action?pageId="
 
 def welcomebanner():
     # Print the welcome banner
@@ -411,12 +411,12 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
     else:
         to_addr = input("Enter the recipient's email address: ")
 
-    from_addr = 'cloudops@noreply.sncr.com'
+    from_addr = 'cloudops@noreply.company.com'
     if aws_accounts_question == 'one':
-        subject = "SNCR AWS Instance List: " + aws_account + " (" + aws_account_number + ") " + today
+        subject = "AWS Instance List: " + aws_account + " (" + aws_account_number + ") " + today
         content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The SD Team</font>"
     else:
-        subject = "SNCR AWS Instance Master List " + today
+        subject = "Company AWS Instance Master List " + today
         content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all company AWS accounts.<br><br>Regards,<br>The SD Team</font>"    
     msg = MIMEMultipart()
     msg['From'] = from_addr
@@ -434,7 +434,7 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.ehlo()
         server.starttls()
-        gmail_user = 'sncr.noreply@gmail.com'
+        gmail_user = 'company.noreply@gmail.com'
         gmail_password = 'ehhloWorld12345'
         server.login(gmail_user, gmail_password)
         server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])

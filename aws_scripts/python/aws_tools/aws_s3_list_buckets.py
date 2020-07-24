@@ -20,8 +20,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 
 init()
-BASE_URL = "https://confluence.synchronoss.net:8443/rest/api/content"
-VIEW_URL = "https://confluence.synchronoss.net:8443/pages/viewpage.action?pageId="
+BASE_URL = "https://confluence.company.net:8443/rest/api/content"
+VIEW_URL = "https://confluence.company.net:8443/pages/viewpage.action?pageId="
 
 def welcomebanner():
     # Print the welcome banner
@@ -230,12 +230,12 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
     print(Fore.YELLOW)
     first_name = str(input("Enter the recipient's first name: "))
     to_addr = input("Enter the recipient's email address: ")
-    from_addr = 'cloudops@noreply.syncrhonoss.com'
-    subject = "syncrhonoss AWS S3 Bucket List " + today
+    from_addr = 'cloudops@noreply.company.com'
+    subject = "company AWS S3 Bucket List " + today
     if aws_accounts_question == 'one':
         content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of S3 Buckets in AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>Cloud Ops</font>"
     else:
-        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of S3 Buckets in all syncrhonoss AWS accounts.<br><br>Regards,<br>Cloud Ops</font>"    
+        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of S3 Buckets in all company AWS accounts.<br><br>Regards,<br>Cloud Ops</font>"    
     msg = MIMEMultipart()
     msg['From'] = from_addr
     msg['To'] = to_addr
@@ -248,7 +248,7 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
         part = MIMEApplication(f.read(), Name=basename(filename))
         part['Content-Disposition'] = 'attachment; filename="{}"'.format(basename(filename))
         msg.attach(part)
-    server = smtplib.SMTP('smtpout.us.cworld.syncrhonoss.com', 25)
+    server = smtplib.SMTP('smtpout.us.cworld.company.com', 25)
     try:
         server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
         message = f"Email was sent to: {to_addr}"

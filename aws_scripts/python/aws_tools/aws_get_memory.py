@@ -143,7 +143,7 @@ def get_memory(hosts_list, aws_account,key_file, csv_path, text_path):
             print(Fore.YELLOW + f"ERROR: {e} on {server_name}" + Fore.GREEN + '\n')
 
 def convert_to_csv(csv_path,text_path,hosts_list, aws_account, aws_account_number, today):
-    csv_output = csv_path + 'sncr_memory_report-' + aws_account + '-' + today + '.csv'
+    csv_output = csv_path + 'company-' + aws_account + '-' + today + '.csv'
     filelist = os.listdir(text_path)
     pd.options.display.max_rows
 
@@ -197,8 +197,8 @@ def send_email(aws_account,aws_account_number, memory_report, today):
     else:
         to_addr = input("Enter the recipient's email address: ")
 
-    from_addr = 'cloudops@noreply.sncr.com'
-    subject = "SNCR AWS Instance Memory Report " + today
+    from_addr = 'cloudops@noreply.company.com'
+    subject = "Jokefire AWS Instance Memory Report " + today
     content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find the AWS Instance Memory Report for AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The SD Team</font>"
     msg = MIMEMultipart()
     msg['From'] = from_addr
@@ -215,7 +215,7 @@ def send_email(aws_account,aws_account_number, memory_report, today):
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.ehlo()
         server.starttls()
-        gmail_user = 'sncr.noreply@gmail.com'
+        gmail_user = 'company.noreply@gmail.com'
         gmail_password = 'ehhloWorld12345'
         server.login(gmail_user, gmail_password)
         server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
