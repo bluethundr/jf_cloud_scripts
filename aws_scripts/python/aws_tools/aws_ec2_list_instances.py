@@ -145,11 +145,6 @@ def list_instances(aws_account,aws_account_number, interactive, regions, fieldna
     region = ''
     # Set the ec2 dictionary
     ec2info = {}
-    # Write the file headers
-    if interactive == 1:
-        with open(output_file, mode='w+') as csv_file:
-            writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
-            writer.writeheader()
     print(Fore.CYAN)
     report_gov_or_comm(aws_account, account_found)
     print(Fore.RESET)
