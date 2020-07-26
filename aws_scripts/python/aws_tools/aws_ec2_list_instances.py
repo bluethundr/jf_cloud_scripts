@@ -429,7 +429,7 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.ehlo()
         server.starttls()
-        gmail_user = 'company.noreply@gmail.com'
+        gmail_user = 'sncr.noreply@gmail.com'
         gmail_password = 'ehhloWorld12345'
         server.login(gmail_user, gmail_password)
         server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
@@ -615,10 +615,10 @@ def main():
         print(Fore.YELLOW)
         message = "Work in one or all accounts"
         banner(message)
-        if str(options.all_accounts).lower == 'one':
-            message = f"Working in {options.all_accounts} account."
+        if aws_accounts_question.lower() == 'one':
+            message = f"Working in {aws_accounts_question} account."
         else:
-            message = f"Working in {options.all_accounts} accounts."
+            message = f"Working in {aws_accounts_question} accounts."
         banner(message)
         message = f"Working in AWS account: {aws_account}."
         banner(message)
