@@ -429,7 +429,7 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.ehlo()
         server.starttls()
-        gmail_user = 'company.noreply@gmail.com'
+        gmail_user = 'sncr.noreply@gmail.com'
         gmail_password = 'ehhloWorld12345'
         server.login(gmail_user, gmail_password)
         server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
