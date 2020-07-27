@@ -204,7 +204,10 @@ def mongo_export_to_file(interactive, aws_account):
 
     # compute the output file directory and name
     output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
-    output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
+    if interactive == 1:
+        output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
+    else:
+        output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
 
     # export MongoDB documents to a CSV file, leaving out the row "labels" (row numbers)
     docs.to_csv(output_file, ",", index=False) # CSV delimited by commas
