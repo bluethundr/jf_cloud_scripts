@@ -419,7 +419,6 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
     msg['Subject'] = subject
     body = MIMEText(content, 'html')
     msg.attach(body)
-
     filename = output_file
     with open(filename, 'r') as f:
         part = MIMEApplication(f.read(), Name=basename(filename))
@@ -494,7 +493,6 @@ def arguments():
     default = None,
     nargs = '?',
     help = "Write the immediate html string to confluence page")
-
 
     parser.add_argument(
     "-n",
@@ -615,10 +613,10 @@ def main():
         print(Fore.YELLOW)
         message = "Work in one or all accounts"
         banner(message)
-        if str(options.all_accounts).lower == 'one':
-            message = f"Working in {options.all_accounts} account."
+        if str(options.all_accounts).lower() == 'one':
+            message = f"Working in {aws_accounts_question} account."
         else:
-            message = f"Working in {options.all_accounts} accounts."
+            message = f"Working in {aws_accounts_question} accounts."
         banner(message)
         message = f"Working in AWS account: {aws_account}."
         banner(message)
