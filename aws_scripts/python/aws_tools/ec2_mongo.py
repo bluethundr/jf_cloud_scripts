@@ -204,10 +204,15 @@ def mongo_export_to_file(interactive, aws_account):
 
     # Set the CSV output directory
     output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
+<<<<<<< HEAD
+    if interactive == 1:
+        output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
+=======
     # compute the output file directory and name
     if interactive == 1:
         output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
         output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.csv'
+>>>>>>> master
     else:
         output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
 
