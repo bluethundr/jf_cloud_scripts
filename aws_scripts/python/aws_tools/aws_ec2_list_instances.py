@@ -417,7 +417,6 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
     msg['Subject'] = subject
     body = MIMEText(content, 'html')
     msg.attach(body)
-
     filename = output_file
     with open(filename, 'r') as f:
         part = MIMEApplication(f.read(), Name=basename(filename))
@@ -492,7 +491,6 @@ def arguments():
     default = None,
     nargs = '?',
     help = "Write the immediate html string to confluence page")
-
 
     parser.add_argument(
     "-n",
