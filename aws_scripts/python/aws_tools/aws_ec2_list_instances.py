@@ -61,8 +61,6 @@ def initialize(interactive, aws_account):
     # Set the date
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
-    # Set the fieldnames for the CSV and for the confluence page
-    fieldnames = [ 'AWS Account', 'Account Number', 'Name', 'Instance ID', 'AMI ID', 'Volumes', 'Private IP', 'Public IP', 'Private DNS', 'Region', 'Availability Zone', 'VPC ID', 'Type', 'Key Pair Name', 'State', 'Launch Date']
     # Set the input file
     aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_accounts_list.csv')
     # Set the output file
@@ -73,7 +71,7 @@ def initialize(interactive, aws_account):
     else:
         output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
         output_file_name = 'aws-instance-master-list-' + today +'.csv'
-    return today, aws_env_list, output_file, output_file_name, fieldnames
+    return today, aws_env_list, output_file, output_file_name
 
 def exit_program():
     endbanner()
@@ -130,8 +128,8 @@ def set_regions(aws_account):
     return regions
 
 
-def list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details):
-    today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
+def list_instances(aws_account,aws_account_number, interactive, regions, show_details):
+    today, aws_env_list, output_file, output_file_name = initialize(interactive, aws_account)
     options = arguments()
     instance_list = ''
     session = ''
@@ -392,7 +390,7 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
     options = arguments()
     to_addr = ''
     # Get the variables from intitialize
-    today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
+    today, aws_env_list, output_file, output_file_name = initialize(interactive, aws_account)
     if options.first_name:
         ## Get the address to send to
         print(Fore.YELLOW)
@@ -608,7 +606,7 @@ def main():
             print(Fore.RESET)
 
         # Grab variables from initialize
-        today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
+        today, aws_env_list, output_file, output_file_name = initialize(interactive, aws_account)
 
         # Get the list of the accounts from the aws confluence page
         account_names, account_numbers = read_account_info(aws_env_list)
@@ -629,7 +627,7 @@ def main():
                 aws_account_number = my_aws_account_number
         # Set the regions and run the program
         regions = set_regions(aws_account)
-        output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
+        output_file = list_instances(aws_account,aws_account_number, interactive, regions, show_details)
         htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account)
         print(Fore.YELLOW)
         message = "Send an Email"
@@ -683,10 +681,7 @@ def main():
             show_details = input("Show server details (y/n): ")
             print(Fore.RESET)
         aws_account = 'all'
-        today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
-        with open(output_file, mode='w+') as csv_file:
-            writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
-            writer.writeheader()
+        today, aws_env_list, output_file, output_file_name = initialize(interactive, aws_account)
         account_names, account_numbers = read_account_info(aws_env_list)
         for (aws_account, aws_account_number) in zip(account_names, account_numbers):
             try:
@@ -701,7 +696,7 @@ def main():
                 print(Fore.RESET)
                 # Set the regions
                 regions = set_regions(aws_account)
-                output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
+                output_file = list_instances(aws_account,aws_account_number, interactive, regions, show_details)
                 htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file,today, interactive, aws_account)
 
         message = " Send an Email "

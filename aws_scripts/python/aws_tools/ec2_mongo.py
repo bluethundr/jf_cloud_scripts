@@ -209,8 +209,6 @@ def mongo_export_to_file(interactive, aws_account):
     # export MongoDB documents to a CSV file, leaving out the row "labels" (row numbers)
     docs.to_csv(output_file, ",", index=False) # CSV delimited by commas
 
-    print("hi")
-
 def clear_db():
     mydb, mydb_name, instance_col = set_db()
     message = f"* Clear the DB *"
