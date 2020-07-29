@@ -113,7 +113,7 @@ def create_mongodb(mydict):
     else:
         try:
             mydb = myclient[newdb]
-            mycol = mydb["test_column"]
+            mycol = mydb["testColumn"]
             x = mycol.insert_one(mydict)
             message = f"Succeeded in creating: {newdb}"
             banner(message)
@@ -123,7 +123,7 @@ def create_mongodb(mydict):
 def drop_mongodb():
     myclient = connect_db()
     today = datetime.today()
-    today = today.strftime("%m-%d-%Y")
+    today = today.strftime("%m%d%Y")
     if myclient != None:
         # the list_database_names() method returns a list of strings
         database_names = myclient.list_database_names()
@@ -146,7 +146,7 @@ def drop_mongodb():
         dropdb = myclient[database_names[choice]]
         print(dropdb)
         dropdb_name = database_names[choice]
-        instance_col = 'ec2_list-' + today
+        instance_col = 'ec2List-' + today
         instance_col = dropdb[instance_col]
         print(f"You've selected: {database_names[choice]}\n")
     else:
@@ -202,10 +202,17 @@ def mongo_export_to_file(interactive, aws_account):
     # Discard the Mongo ID for the documents
     docs.pop("_id")
 
-    # compute the output file directory and name
+    # Set the CSV output directory
     output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
+<<<<<<< HEAD
     if interactive == 1:
         output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
+=======
+    # compute the output file directory and name
+    if interactive == 1:
+        output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
+        output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.csv'
+>>>>>>> master
     else:
         output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
 
