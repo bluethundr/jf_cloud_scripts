@@ -17,12 +17,10 @@ import keyring
 import requests
 from html import escape
 from botocore.exceptions import ValidationError
-from web_scraper import web_scraper
 from requests.auth import HTTPBasicAuth
 from datetime import datetime
 from colorama import init, Fore
 from os.path import basename
-from subprocess import check_output,CalledProcessError,PIPE
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
@@ -212,14 +210,9 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
                                 if tag["Key"] == "Engagement" or tag["Key"] == "Engagement Code":
                                     engagement = tag["Value"]
                         except ValueError:
-                            # print("Instance: %s has no tags" % instance_id)
                             pass
                     key_name = instance['KeyName'] if instance['KeyName'] else None
                     vpc_id = instance.get('VpcId') if instance.get('VpcId') else None
-                    #if 'VpcId' in instance:
-                    #    vpc_id = instance['VpcId']
-                    #else:
-                    #    vpc_id = None
                     private_dns = instance['PrivateDnsName'] if instance['PrivateDnsName'] else None
                     ec2info[instance['InstanceId']] = {
                         'AWS Account': aws_account,
@@ -271,8 +264,6 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
                     instance = {}
                     ec2_info_items = {}
                     ec2info = {}
-                    with open(output_file,'a') as csv_file:
-                        csv_file.close()
         except Exception as e:
             print(f"An exception has occurred: {e}")
     if profile_missing_message == '*':
