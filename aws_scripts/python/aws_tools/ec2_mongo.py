@@ -6,6 +6,7 @@ import os
 import time
 import pymongo
 import pandas
+import numpy as np
 from pandas import ExcelWriter, ExcelFile
 from pymongo import MongoClient, errors
 from bson.objectid import ObjectId
@@ -249,13 +250,11 @@ def mongo_export_to_file(interactive, aws_account):
         if __name__ == '__main__':
             # print out the HTML table
             print (html_str.getvalue())
-        # Set the JSON output directory
+        # Set the HTML output directory
         output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html', '')
         if interactive == 1:
             output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.html')
         else:
-            print("Choose this file")
-            time.sleep(5)
             output_file = os.path.join(output_dir, 'aws-instance-master-list' + today +'.html')
         # save the MongoDB documents as an HTML table
         docs.to_html(output_file)
@@ -268,7 +267,7 @@ def mongo_export_to_file(interactive, aws_account):
             output_file = os.path.join(output_dir, 'aws-instance-master-list' + today +'.xlsx')
         # export MongoDB documents to a Excel file, leaving out the row "labels" (row numbers)
         writer = ExcelWriter(output_file)
-        docs.to_excel(writer,'Sheet1',index=False)
+        docs.to_excel(writer,'EC2 List',index=False)
         writer.save()
 
 def clear_db():
