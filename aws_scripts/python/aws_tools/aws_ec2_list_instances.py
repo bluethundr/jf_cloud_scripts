@@ -64,11 +64,11 @@ def initialize(interactive, aws_account):
     # Set the output file
     output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
     if interactive == 1:
-        output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
-        output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.csv'
+        output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today + '.csv')
+        output_file_name = 'aws-instance-list-' + aws_account + '-' + 'today' + '.csv'
     else:
-        output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
-        output_file_name = 'aws-instance-master-list-' + today +'.csv'
+        output_file = os.path.join(output_dir, 'aws-instance-master-list' + today +'.csv')
+        output_file_name = 'aws-instance-master-list' + today + '.csv'
     return today, aws_env_list, output_file, output_file_name
 
 def exit_program():
@@ -280,8 +280,8 @@ def convert_csv_to_html_table(output_file, today, interactive, aws_account):
         htmlfile = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.html')
         htmlfile_name = 'aws-instance-list-' + aws_account + '-' + today + '.html'
     else:
-        htmlfile = os.path.join(output_dir, 'aws-instance-master-list-' + today + '.html')
-        htmlfile_name = 'aws-instance-master-list-' + today +'.html'
+        htmlfile = os.path.join(output_dir, 'aws-instance-master-list' + today + '.html')
+        htmlfile_name = 'aws-instance-master-list' + today + '.html'
     remove_htmlfile = htmlfile
     count = 0
     html = ''
@@ -627,7 +627,7 @@ def main():
             print(Fore.YELLOW)
             email_answer = input("Send an email (y/n): ")
 
-        if email_answer.lower() == 'y' or email_answer == 'yes':
+        if email_answer.lower() == 'y' or email_answer.lower() == 'yes':
             send_email(aws_accounts_question,aws_account,aws_account_number, interactive)
         else:
             message = "Okay. Not sending an email."

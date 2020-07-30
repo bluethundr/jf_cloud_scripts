@@ -211,6 +211,8 @@ def mongo_export_to_file(interactive, aws_account):
         print("3. HTML")
         print("4. Excel")
         choice = input("Enter a number 1-4: ")
+    else:
+        choice = '1'
     if choice == '1':
         if __name__ == '__main__':
             # export MongoDB documents to CSV
