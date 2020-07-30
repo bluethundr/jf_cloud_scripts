@@ -271,7 +271,6 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
     print(Fore.GREEN)
     report_instance_stats(instance_count, aws_account, account_found)
     print(Fore.RESET + '\n')
-    mongo_export_to_file(interactive, aws_account)
     return output_file
 
 def convert_csv_to_html_table(output_file, today, interactive, aws_account):
@@ -617,6 +616,7 @@ def main():
         # Set the regions and run the program
         regions = set_regions(aws_account)
         output_file = list_instances(aws_account,aws_account_number, interactive, regions, show_details)
+        mongo_export_to_file(interactive, aws_account)
         htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account)
         print(Fore.YELLOW)
         message = "Send an Email"
@@ -687,7 +687,7 @@ def main():
                 regions = set_regions(aws_account)
                 output_file = list_instances(aws_account,aws_account_number, interactive, regions, show_details)
                 htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file,today, interactive, aws_account)
-
+        mongo_export_to_file(interactive, aws_account)
         message = " Send an Email "
         print(Fore.YELLOW)
         banner(message, "*")
