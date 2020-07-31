@@ -677,9 +677,6 @@ def main():
                 banner(message)
                 print(Fore.RESET)
 
-        #with open(htmlfile, 'r') as htmlfile:
-        #    html = htmlfile.read()
-
     else:
         if options.verbose:
             show_details = options.verbose
