@@ -547,7 +547,6 @@ def arguments():
     type = str,
     help = "Run again")
 
-
     options = parser.parse_args()
     return options
 
@@ -676,7 +675,6 @@ def main():
                 print(Fore.CYAN)
                 banner(message)
                 print(Fore.RESET)
-
     else:
         if options.verbose:
             show_details = options.verbose
