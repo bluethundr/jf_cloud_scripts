@@ -395,12 +395,12 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
     else:
         to_addr = input("Enter the recipient's email address: ")
 
-    from_addr = 'cloudops@noreply.company.com'
+    from_addr = 'jkfr.noreply@gmail.com'
     if aws_accounts_answer == 'one':
-        subject = "AWS Instance List: " + aws_account + " (" + aws_account_number + ") " + today
+        subject = "JF AWS Instance List: " + aws_account + " (" + aws_account_number + ") " + today
         content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The SD Team</font>"
     else:
-        subject = "Company AWS Instance Master List " + today
+        subject = "JF AWS Instance Master List " + today
         content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all company AWS accounts.<br><br>Regards,<br>The SD Team</font>"    
     msg = MIMEMultipart()
     msg['From'] = from_addr
@@ -417,7 +417,7 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.ehlo()
         server.starttls()
-        gmail_user = 'sncr.noreply@gmail.com'
+        gmail_user = 'jkfr.noreply@gmail.com'
         gmail_password = 'ehhloWorld12345'
         server.login(gmail_user, gmail_password)
         server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
