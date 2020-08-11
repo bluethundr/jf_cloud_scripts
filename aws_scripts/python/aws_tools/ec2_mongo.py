@@ -6,6 +6,7 @@ import os
 import time
 import pymongo
 import pandas
+import argparse
 import numpy as np
 from pandas import ExcelWriter, ExcelFile
 from pymongo import MongoClient, errors
@@ -42,6 +43,20 @@ def is_digit(check_input):
     if check_input.isdigit():
         return True
     return False
+
+def arguments():
+    parser = argparse.ArgumentParser(description='This is a program that provides a text interface to MongoDB.')
+
+    parser.add_argument(
+    "-n",
+    "--account_name",
+    type = str,
+    default = None,
+    nargs = '?',
+    help = "Name of the AWS account you'll be working in")
+
+    options = parser.parse_args()
+    return options
 
 def set_test_dict():
     mydict = { "AWS Account": "company-lab", "Account Number": "12345678910", "Name": "bastion001",
@@ -194,6 +209,7 @@ def mongo_select_all():
     return instance_list
 
 def mongo_export_to_file(interactive, aws_account):
+    time.sleep(5)
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
     _, _, instance_col = set_db()
@@ -205,16 +221,16 @@ def mongo_export_to_file(interactive, aws_account):
     # Discard the Mongo ID for the documents
     docs.pop("_id")
     if __name__ == '__main__':
-        aws_account = ''
         print("Choose a file format")
         print("1. CSV")
         print("2. JSON")
         print("3. HTML")
         print("4. Excel")
         choice = input("Enter a number 1-4: ")
+        choice = int(choice)
     else:
-        choice = '1'
-    if choice == '1':
+        choice = 1
+    if choice == 1:
         if __name__ == '__main__':
             # export MongoDB documents to CSV
             csv_export = docs.to_csv(sep=",") # CSV delimited by commas
@@ -228,7 +244,7 @@ def mongo_export_to_file(interactive, aws_account):
 
         # export MongoDB documents to a CSV file, leaving out the row "labels" (row numbers)
         docs.to_csv(output_file, ",", index=False) # CSV delimited by commas
-    elif choice == '2':
+    elif choice == 2:
         if __name__ == '__main__':
             json_export = docs.to_json() # return JSON data
             print ("\nJSON data:", json_export)
@@ -240,7 +256,7 @@ def mongo_export_to_file(interactive, aws_account):
             output_file = os.path.join(output_dir, 'aws-instance-master-list' + today +'.json')
         # export MongoDB documents to a CSV file, leaving out the row "labels" (row numbers)
         docs.to_json(output_file)
-    elif choice == '3':
+    elif choice == 3:
         html_str = io.StringIO()
         # export as HTML
         docs.to_html(
@@ -255,16 +271,17 @@ def mongo_export_to_file(interactive, aws_account):
         if interactive == 1:
             output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.html')
         else:
-            output_file = os.path.join(output_dir, 'aws-instance-master-list' + today +'.html')
+            output_file = os.path.join(output_dir, 'aws-instance-master-list' + today + '.html')
         # save the MongoDB documents as an HTML table
         docs.to_html(output_file)
-    elif choice == '4':
+    elif choice == 4:
         # Set the Excel output directory
         output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'excel', '')
+        time.sleep(5)
         if interactive == 1:
-            output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.xlsx')
+            output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today + '.xlsx')
         else:
-            output_file = os.path.join(output_dir, 'aws-instance-master-list' + today +'.xlsx')
+            output_file = os.path.join(output_dir, 'aws-instance-master-list' + today + '.xlsx')
         # export MongoDB documents to a Excel file, leaving out the row "labels" (row numbers)
         writer = ExcelWriter(output_file)
         docs.to_excel(writer,'EC2 List',index=False)
@@ -330,10 +347,21 @@ def menu():
 
 
 def main():
+    options = arguments()
     welcomebanner()
     mydict = set_test_dict()
+    if __name__ == '__main__':
+        interactive = 1
+    ### Interactive == 1  - user specifies an account
+    if interactive == 1:
+        ## Select the account
+        if options.account_name:
+            aws_account = options.account_name
+        else:
+            print(Fore.YELLOW)
+            aws_account = input("Enter the name of the AWS account you'll be working in: ")
+            print(Fore.RESET)
     menu()
-    interactive = 1
     option = input("Enter the option: ")
     print(f"Option is: {option}\n")
     # 1. Create a MongoDB database
@@ -366,8 +394,6 @@ def main():
        main()
     # 8. Export MongoDB to file
     elif option == '8':
-        if __name__ == '__main__':
-            aws_account = None
         mongo_export_to_file(interactive, aws_account)
         main()
     # 9. Exit ec2 mongo

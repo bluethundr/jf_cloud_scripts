@@ -590,7 +590,7 @@ def main():
         title = 'AWS EC2 Instances - CCMI'
 
     aws_account_number = ''
-
+    ### Interactive == 1  - user specifies an account
     if interactive == 1:
         ## Select the account
         if options.account_name:
@@ -675,6 +675,7 @@ def main():
                 print(Fore.CYAN)
                 banner(message)
                 print(Fore.RESET)
+    ### Interactive = 0 - cycling through all acounts.
     else:
         if options.verbose:
             show_details = options.verbose
@@ -752,8 +753,6 @@ def main():
 
         with open(htmlfile, 'r') as htmlfile:
             html = htmlfile.read()
-
-
         print(Fore.RESET)
 
     print(Fore.GREEN)
