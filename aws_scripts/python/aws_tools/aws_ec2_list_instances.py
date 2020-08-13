@@ -22,6 +22,7 @@ from os.path import basename
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
+from ec2_mongo import insert_doc,set_db,mongo_export_to_file
 
 # Initialize the color ouput with colorama
 init()
@@ -62,6 +63,7 @@ def initialize(interactive, aws_account):
     aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_accounts_list.csv')
     # Set the output file
     output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
+    ### Interactive == 1  - user specifies an account
     if interactive == 1:
         output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
         output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.csv'
@@ -140,11 +142,6 @@ def list_instances(aws_account,aws_account_number, interactive, regions, fieldna
     region = ''
     # Set the ec2 dictionary
     ec2info = {}
-    # Write the file headers
-    if interactive == 1:
-        with open(output_file, mode='w+') as csv_file:
-            writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
-            writer.writeheader()
     print(Fore.CYAN)
     report_gov_or_comm(aws_account, account_found)
     print(Fore.RESET)
@@ -237,9 +234,9 @@ def list_instances(aws_account,aws_account_number, interactive, regions, fieldna
                         'State': instance['State']['Name'],
                         'Launch Date': launch_time_friendly
                     }
-                    with open(output_file,'a') as csv_file:
-                        writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
-                        writer.writerow({'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly})
+                    instance_dict = {'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly}
+                    mongo_instance_dict = {'_id': '', 'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly}
+                    insert_doc(mongo_instance_dict)
                     ec2_info_items = ec2info.items
                     if show_details == 'y' or show_details == 'yes':
                         for instance_id, instance in ec2_info_items():
@@ -270,8 +267,6 @@ def list_instances(aws_account,aws_account_number, interactive, regions, fieldna
                     instance = {}
                     ec2_info_items = {}
                     ec2info = {}
-                    with open(output_file,'a') as csv_file:
-                        csv_file.close()
         except Exception as e:
             print(f"An exception has occurred: {e}")
     if profile_missing_message == '*':
@@ -283,6 +278,7 @@ def list_instances(aws_account,aws_account_number, interactive, regions, fieldna
 
 def convert_csv_to_html_table(output_file, today, interactive, aws_account):
     output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html')
+    ### Interactive == 1  - user specifies an account
     if interactive == 1:
         htmlfile = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.html')
         htmlfile_name = 'aws-instance-list-' + aws_account + '-' + today + '.html'
@@ -491,7 +487,6 @@ def arguments():
     nargs = '?',
     help = "Write the immediate html string to confluence page")
 
-
     parser.add_argument(
     "-n",
     "--account_name",
@@ -550,6 +545,12 @@ def arguments():
     type = str,
     help = "Write the EC2 instances to the screen")
 
+    parser.add_argument(
+    "-o",
+    "--reports",
+    type = str,
+    help = "Run reports")
+
     options = parser.parse_args()
     return options
 
@@ -561,6 +562,13 @@ def main():
 
     if options.html:
         html = options.html
+
+    if options.reports:
+        reports_answer = options.reports
+    else:
+        print(Fore.YELLOW)
+        reports_answer = input("Print reports (y/n): ")
+        print(Fore.RESET )
 
     if options.all_accounts:
         aws_accounts_question = options.all_accounts
@@ -587,7 +595,7 @@ def main():
         title = 'AWS EC2 Instances - CCMI'
 
     aws_account_number = ''
-
+    ### Interactive == 1  - user specifies an account
     if interactive == 1:
         ## Select the account
         if options.account_name:
@@ -628,6 +636,8 @@ def main():
         # Set the regions and run the program
         regions = set_regions(aws_account)
         output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
+        if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
+            mongo_export_to_file(interactive, aws_account)
         htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account)
 
         print(Fore.YELLOW)
@@ -674,6 +684,7 @@ def main():
             print(Fore.CYAN)
             banner(message)
             print(Fore.RESET)
+    ### Interactive = 0 - cycling through all acounts.
     else:
         if options.verbose:
             show_details = options.verbose
@@ -701,6 +712,8 @@ def main():
                 # Set the regions
                 regions = set_regions(aws_account)
                 output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
+                if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
+                    mongo_export_to_file(interactive, aws_account)
                 htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file,today, interactive, aws_account)
 
         message = " Send an Email "
@@ -723,7 +736,7 @@ def main():
         with open(htmlfile, 'r') as htmlfile:
             html = htmlfile.read()
 
-        print(Fore.CYAN)  
+        print(Fore.CYAN)
         message = "* Write to Confluence *"
         banner(message, "*")
         if options.write_confluence:
