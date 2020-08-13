@@ -5,26 +5,20 @@ import boto3
 import botocore
 import time
 import objectpath
-#import pprint
 import csv
 import smtplib
 import os
 import argparse
 import getpass
-#import sys
 import json
 import keyring
 import requests
-#import itertools
-#import codecs
-#import pandas
 from html import escape
 from botocore.exceptions import ValidationError
 from requests.auth import HTTPBasicAuth
 from datetime import datetime
 from colorama import init, Fore
 from os.path import basename
-#from subprocess import check_output,CalledProcessError,PIPE
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
