@@ -380,7 +380,7 @@ def get_login(username = None):
         keyring.set_password('confluence_script', username, passwd)
     return (username, passwd)
 
-def send_email(aws_accounts_question,aws_account,aws_account_number, interactive):
+def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
     options = arguments()
     to_addr = ''
     # Get the variables from intitialize
@@ -398,12 +398,12 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
     else:
         to_addr = input("Enter the recipient's email address: ")
 
-    from_addr = 'cloudops@noreply.sncr.com'
-    if aws_accounts_question == 'one':
-        subject = "SNCR AWS Instance List: " + aws_account + " (" + aws_account_number + ") " + today
+    from_addr = 'jkfr.noreply@gmail.com'
+    if aws_accounts_answer == 'one':
+        subject = "JF AWS Instance List: " + aws_account + " (" + aws_account_number + ") " + today
         content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The SD Team</font>"
     else:
-        subject = "SNCR AWS Instance Master List " + today
+        subject = "JF AWS Instance Master List " + today
         content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all company AWS accounts.<br><br>Regards,<br>The SD Team</font>"    
     msg = MIMEMultipart()
     msg['From'] = from_addr
@@ -421,11 +421,11 @@ def send_email(aws_accounts_question,aws_account,aws_account_number, interactive
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.ehlo()
         server.starttls()
-        gmail_user = 'sncr.noreply@gmail.com'
+        gmail_user = 'jkfr.noreply@gmail.com'
         gmail_password = 'ehhloWorld12345'
         server.login(gmail_user, gmail_password)
         server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
-        message = f"Email was sent to:{to_addr}"
+        message = f"Email was sent to: {to_addr}"
         banner(message)
     except Exception as error:
         message = f"Exception: {error}\nEmail was not sent."
@@ -571,15 +571,15 @@ def main():
         print(Fore.RESET )
 
     if options.all_accounts:
-        aws_accounts_question = options.all_accounts
+        aws_accounts_answer = options.all_accounts
     else:
         ## Select one or many accounts
         print(Fore.YELLOW)
-        aws_accounts_question = input("List instances in one or all accounts: ")
+        aws_accounts_answer = input("List instances in one or all accounts: ")
         print(Fore.RESET)
 
     # Set interacive variable to indicate one or many accounts
-    if aws_accounts_question.lower() == "one" or aws_accounts_question.lower() == "1":
+    if aws_accounts_answer.lower() == "one" or aws_accounts_answer.lower() == "1":
         interactive = 1
     else:
         interactive = 0
@@ -620,10 +620,10 @@ def main():
         print(Fore.YELLOW)
         message = "Work in one or all accounts"
         banner(message)
-        if str(options.all_accounts).lower == 'one':
-            message = f"Working in {options.all_accounts} account."
+        if aws_accounts_answer.lower() == 'one':
+            message = f"Working in {aws_accounts_answer} account."
         else:
-            message = f"Working in {options.all_accounts} accounts."
+            message = f"Working in {aws_accounts_answer} accounts."
         banner(message)
         message = f"Working in AWS account: {aws_account}."
         banner(message)
@@ -638,52 +638,51 @@ def main():
         output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
             mongo_export_to_file(interactive, aws_account)
-        htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account)
-
-        print(Fore.YELLOW)
-        message = "Send an Email"
-        banner(message)
-        if options.send_email:
-            email_answer = options.send_email
-        else:
+            htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account)
             print(Fore.YELLOW)
-            email_answer = input("Send an email (y/n): ")
-
-        if email_answer.lower() == 'y' or email_answer == 'yes':
-            send_email(aws_accounts_question,aws_account,aws_account_number, interactive)
-        else:
-            message = "Okay. Not sending an email."
-            print(Fore.YELLOW)
+            message = "Send an Email"
             banner(message)
-        print(Fore.RESET)
+            if options.send_email:
+                email_answer = options.send_email
+            else:
+                print(Fore.YELLOW)
+                email_answer = input("Send an email (y/n): ")
 
-        with open(htmlfile, 'r') as htmlfile:
-            html = htmlfile.read()
-
-        message = "* Write to Confluence *"
-        print(Fore.CYAN)
-        banner(message, "*")
-        print(Fore.RESET)
-        if options.write_confluence:
-            confluence_answer = options.write_confluence
-        else:
-            print(Fore.CYAN)
-            confluence_answer = input("Write the list to confluence (y/n): ")
+            if email_answer.lower() == 'y' or email_answer == 'yes':
+                send_email(aws_accounts_answer,aws_account,aws_account_number, interactive)
+            else:
+                message = "Okay. Not sending an email."
+                print(Fore.YELLOW)
+                banner(message)
             print(Fore.RESET)
 
-        if options.user and options.password:
-            user = options.user
-            password = options.password
-            auth = (user, password)
-            write_data_to_confluence(auth, html, pageid, title)
-        elif confluence_answer.lower() == 'yes' or confluence_answer.lower() == 'y':
-            auth = authenticate()
-            write_data_to_confluence(auth, html, pageid, title)
-        else:
-            message = "Okay. Not writing to confluence."
+            with open(htmlfile, 'r') as htmlfile:
+                html = htmlfile.read()
+
+            message = "* Write to Confluence *"
             print(Fore.CYAN)
-            banner(message)
+            banner(message, "*")
             print(Fore.RESET)
+            if options.write_confluence:
+                confluence_answer = options.write_confluence
+            else:
+                print(Fore.CYAN)
+                confluence_answer = input("Write the list to confluence (y/n): ")
+                print(Fore.RESET)
+
+            if options.user and options.password:
+                user = options.user
+                password = options.password
+                auth = (user, password)
+                write_data_to_confluence(auth, html, pageid, title)
+            elif confluence_answer.lower() == 'yes' or confluence_answer.lower() == 'y':
+                auth = authenticate()
+                write_data_to_confluence(auth, html, pageid, title)
+            else:
+                message = "Okay. Not writing to confluence."
+                print(Fore.CYAN)
+                banner(message)
+                print(Fore.RESET)
     ### Interactive = 0 - cycling through all acounts.
     else:
         if options.verbose:
@@ -694,9 +693,6 @@ def main():
             print(Fore.RESET)
         aws_account = 'all'
         today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
-        with open(output_file, mode='w+') as csv_file:
-            writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
-            writer.writeheader()
         account_names, account_numbers = read_account_info(aws_env_list)
         for (aws_account, aws_account_number) in zip(account_names, account_numbers):
             try:
@@ -712,59 +708,57 @@ def main():
                 # Set the regions
                 regions = set_regions(aws_account)
                 output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
-                if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
-                    mongo_export_to_file(interactive, aws_account)
                 htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file,today, interactive, aws_account)
-
-        message = " Send an Email "
-        print(Fore.YELLOW)
-        banner(message, "*")
-        print(Fore.RESET)
-        if options.send_email:
-            email_answer = options.send_email
-        else:
+                mongo_export_to_file(interactive, aws_account)
+        if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
+            message = " Send an Email "
             print(Fore.YELLOW)
-            email_answer = input("Send an email (y/n): ")
-
-        if email_answer.lower() == 'y' or email_answer.lower() == 'yes':
-            send_email(aws_accounts_question,aws_account,aws_account_number, interactive)
-        else:
-            message = "Okay. Not sending an email."
-            print(Fore.YELLOW)
-            banner(message)
-
-        with open(htmlfile, 'r') as htmlfile:
-            html = htmlfile.read()
-
-        print(Fore.CYAN)
-        message = "* Write to Confluence *"
-        banner(message, "*")
-        if options.write_confluence:
-            confluence_answer = options.write_confluence
-        else:
-            confluence_answer = input("Write the list to confluence (y/n): ")
-
-        if options.user and options.password:
-            user = options.user
-            password = options.password
-            auth = (user, password)
-            try:
-                write_data_to_confluence(auth, html, pageid, title)
-            except Exception as e:
-                print(f"An exception has occurred: {e}")
-
-        else:
-            if confluence_answer.lower() == 'yes' or confluence_answer.lower() == 'y':
-                if options.user:
-                    username = options.user
-                else:
-                    username = input("Enter a user name:")
-                auth = authenticate()
-                write_data_to_confluence(auth, html, pageid, title)
-            else:
-                message = "Okay. Not writing to confluence."
-                banner(message)
+            banner(message, "*")
             print(Fore.RESET)
+            if options.send_email:
+                email_answer = options.send_email
+            else:
+                print(Fore.YELLOW)
+                email_answer = input("Send an email (y/n): ")
+
+            if email_answer.lower() == 'y' or email_answer.lower() == 'yes':
+                send_email(aws_accounts_answer,aws_account,aws_account_number, interactive)
+            else:
+                message = "Okay. Not sending an email."
+                print(Fore.YELLOW)
+                banner(message)
+
+            with open(htmlfile, 'r') as htmlfile:
+                html = htmlfile.read()
+
+            print(Fore.CYAN)
+            message = "* Write to Confluence *"
+            banner(message, "*")
+            if options.write_confluence:
+                confluence_answer = options.write_confluence
+            else:
+                confluence_answer = input("Write the list to confluence (y/n): ")
+
+            if options.user and options.password:
+                user = options.user
+                password = options.password
+                auth = (user, password)
+                try:
+                    write_data_to_confluence(auth, html, pageid, title)
+                except Exception as e:
+                    print(f"An exception has occurred: {e}")
+            else:
+                if confluence_answer.lower() == 'yes' or confluence_answer.lower() == 'y':
+                    if options.user:
+                        username = options.user
+                    else:
+                        username = input("Enter a user name:")
+                    auth = authenticate()
+                    write_data_to_confluence(auth, html, pageid, title)
+                else:
+                    message = "Okay. Not writing to confluence."
+                    banner(message)
+                print(Fore.RESET)
 
     print(Fore.GREEN)
     if options.run_again:
