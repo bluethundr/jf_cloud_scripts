@@ -15,22 +15,26 @@ import sys
 import json
 import keyring
 import requests
+import itertools
+import codecs
+import pandas
 from html import escape
 from botocore.exceptions import ValidationError
+#from web_scraper import web_scraper
 from requests.auth import HTTPBasicAuth
 from datetime import datetime
 from colorama import init, Fore
 from os.path import basename
+from subprocess import check_output,CalledProcessError,PIPE
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
-from ec2_mongo import insert_doc,set_db,mongo_export_to_file
 
 # Initialize the color ouput with colorama
 init()
 
-BASE_URL = "https://confluence.company.net:8443/rest/api/content"
-VIEW_URL = "https://confluence.company.net:8443/pages/viewpage.action?pageId="
+BASE_URL = "https://confluence.synchronoss.net:8443/rest/api/content"
+VIEW_URL = "https://confluence.synchronoss.net:8443/pages/viewpage.action?pageId="
 
 def welcomebanner():
     # Print the welcome banner
@@ -59,17 +63,19 @@ def initialize(interactive, aws_account):
     # Set the date
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
+    # Set the fieldnames for the CSV and for the confluence page
+    fieldnames = [ 'AWS Account', 'Account Number', 'Name', 'Instance ID', 'AMI ID', 'Volumes', 'Private IP', 'Public IP', 'Private DNS', 'Region', 'Availability Zone', 'VPC ID', 'Type', 'Key Pair Name', 'State', 'Launch Date']
     # Set the input file
     aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_accounts_list.csv')
     # Set the output file
     output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
     if interactive == 1:
-        output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today + '.csv')
-        output_file_name = 'aws-instance-list-' + aws_account + '-' + 'today' + '.csv'
+        output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
+        output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.csv'
     else:
-        output_file = os.path.join(output_dir, 'aws-instance-master-list' + today +'.csv')
-        output_file_name = 'aws-instance-master-list' + today + '.csv'
-    return today, aws_env_list, output_file, output_file_name
+        output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
+        output_file_name = 'aws-instance-master-list-' + today +'.csv'
+    return today, aws_env_list, output_file, output_file_name, fieldnames
 
 def exit_program():
     endbanner()
@@ -126,8 +132,8 @@ def set_regions(aws_account):
     return regions
 
 
-def list_instances(aws_account,aws_account_number, interactive, regions, show_details):
-    today, aws_env_list, output_file, output_file_name = initialize(interactive, aws_account)
+def list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details):
+    today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
     options = arguments()
     instance_list = ''
     session = ''
@@ -141,6 +147,11 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
     region = ''
     # Set the ec2 dictionary
     ec2info = {}
+    # Write the file headers
+    if interactive == 1:
+        with open(output_file, mode='w+') as csv_file:
+            writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
+            writer.writeheader()
     print(Fore.CYAN)
     report_gov_or_comm(aws_account, account_found)
     print(Fore.RESET)
@@ -164,8 +175,10 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
             ec2 = session.client("ec2")
         except Exception as e:
             print(f"An exception has occurred: {e}")
-        message = f"  Region: {region} in {aws_account}: ({aws_account_number})  "
-        banner(message)
+        print(Fore.GREEN)
+        message = f"* Region: {region} in {aws_account}: ({aws_account_number}) *"
+        banner(message, "*")
+
         print(Fore.RESET)
         # Loop through the instances
         try:
@@ -231,9 +244,9 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
                         'State': instance['State']['Name'],
                         'Launch Date': launch_time_friendly
                     }
-                    instance_dict = {'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly}
-                    mongo_instance_dict = {'_id': '', 'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly}
-                    insert_doc(mongo_instance_dict)
+                    with open(output_file,'a') as csv_file:
+                        writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
+                        writer.writerow({'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly})
                     ec2_info_items = ec2info.items
                     if show_details == 'y' or show_details == 'yes':
                         for instance_id, instance in ec2_info_items():
@@ -264,6 +277,8 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
                     instance = {}
                     ec2_info_items = {}
                     ec2info = {}
+                    with open(output_file,'a') as csv_file:
+                        csv_file.close()
         except Exception as e:
             print(f"An exception has occurred: {e}")
     if profile_missing_message == '*':
@@ -273,36 +288,35 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
     print(Fore.RESET + '\n')
     return output_file
 
-def convert_csv_to_html_table(output_file, today, interactive, aws_account, reports_answer):
+def convert_csv_to_html_table(output_file, today, interactive, aws_account):
     output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html')
     if interactive == 1:
         htmlfile = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.html')
         htmlfile_name = 'aws-instance-list-' + aws_account + '-' + today + '.html'
     else:
-        htmlfile = os.path.join(output_dir, 'aws-instance-master-list' + today + '.html')
-        htmlfile_name = 'aws-instance-master-list' + today + '.html'
+        htmlfile = os.path.join(output_dir, 'aws-instance-master-list-' + today + '.html')
+        htmlfile_name = 'aws-instance-master-list-' + today +'.html'
     remove_htmlfile = htmlfile
     count = 0
     html = ''
-    if reports_answer.lower() == 'y' or reports_answer.lower() == 'y':
-        with open(output_file,'r') as CSVFILE:
-            reader = csv.reader(CSVFILE)
-            html += "<table><tbody>"
-            for row in reader:
-                html += "<tr>"
-                # Process the headers
-                if count == 0:
-                    for column in row:
-                        html += "<th>%s</th>" % escape(column)
-                else:
-                    # Process the data
-                    for column in row:
-                        html += "<td>%s</td>" % escape(column)
-                html += "</tr>"
-                count += 1
-            html += "</tbody></table>"
-        with open(htmlfile,'w+') as HTMLFILE:
-            HTMLFILE.write(html)
+    with open(output_file,'r') as CSVFILE:
+        reader = csv.reader(CSVFILE)
+        html += "<table><tbody>"
+        for row in reader:
+            html += "<tr>"
+            # Process the headers
+            if count == 0:
+                for column in row:
+                    html += "<th>%s</th>" % escape(column)
+            else:
+                # Process the data
+                for column in row:
+                    html += "<td>%s</td>" % escape(column)
+            html += "</tr>"
+            count += 1
+        html += "</tbody></table>"
+    with open(htmlfile,'w+') as HTMLFILE:
+        HTMLFILE.write(html)
     return htmlfile, htmlfile_name, remove_htmlfile
 
 
@@ -377,11 +391,11 @@ def get_login(username = None):
         keyring.set_password('confluence_script', username, passwd)
     return (username, passwd)
 
-def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
+def send_email(aws_accounts_question,aws_account,aws_account_number, interactive):
     options = arguments()
     to_addr = ''
     # Get the variables from intitialize
-    today, aws_env_list, output_file, output_file_name = initialize(interactive, aws_account)
+    today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
     if options.first_name:
         ## Get the address to send to
         print(Fore.YELLOW)
@@ -395,12 +409,12 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
     else:
         to_addr = input("Enter the recipient's email address: ")
 
-    from_addr = 'jkfr.noreply@gmail.com'
-    if aws_accounts_answer == 'one':
-        subject = "JF AWS Instance List: " + aws_account + " (" + aws_account_number + ") " + today
+    from_addr = 'cloudops@noreply.sncr.com'
+    if aws_accounts_question == 'one':
+        subject = "SNCR AWS Instance List: " + aws_account + " (" + aws_account_number + ") " + today
         content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The SD Team</font>"
     else:
-        subject = "JF AWS Instance Master List " + today
+        subject = "SNCR AWS Instance Master List " + today
         content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all company AWS accounts.<br><br>Regards,<br>The SD Team</font>"    
     msg = MIMEMultipart()
     msg['From'] = from_addr
@@ -408,6 +422,7 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
     msg['Subject'] = subject
     body = MIMEText(content, 'html')
     msg.attach(body)
+
     filename = output_file
     with open(filename, 'r') as f:
         part = MIMEApplication(f.read(), Name=basename(filename))
@@ -417,11 +432,11 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.ehlo()
         server.starttls()
-        gmail_user = 'jkfr.noreply@gmail.com'
+        gmail_user = 'sncr.noreply@gmail.com'
         gmail_password = 'ehhloWorld12345'
         server.login(gmail_user, gmail_password)
         server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
-        message = f"Email was sent to: {to_addr}"
+        message = f"Email was sent to:{to_addr}"
         banner(message)
     except Exception as error:
         message = f"Exception: {error}\nEmail was not sent."
@@ -483,6 +498,7 @@ def arguments():
     nargs = '?',
     help = "Write the immediate html string to confluence page")
 
+
     parser.add_argument(
     "-n",
     "--account_name",
@@ -541,12 +557,6 @@ def arguments():
     type = str,
     help = "Write the EC2 instances to the screen")
 
-    parser.add_argument(
-    "-o",
-    "--reports",
-    type = str,
-    help = "Run again")
-
     options = parser.parse_args()
     return options
 
@@ -559,22 +569,16 @@ def main():
     if options.html:
         html = options.html
 
-    if options.reports:
-        reports_answer = options.reports
-    else:
-        print(Fore.YELLOW)
-        reports_answer = input("Print reports (y/n): ")
-        print(Fore.RESET )
-
     if options.all_accounts:
-        aws_accounts_answer = options.all_accounts
+        aws_accounts_question = options.all_accounts
     else:
         ## Select one or many accounts
         print(Fore.YELLOW)
-        aws_accounts_answer = input("List instances in one or all accounts: ")
+        aws_accounts_question = input("List instances in one or all accounts: ")
         print(Fore.RESET)
+
     # Set interacive variable to indicate one or many accounts
-    if aws_accounts_answer.lower() == "one" or aws_accounts_answer.lower() == "1":
+    if aws_accounts_question.lower() == "one" or aws_accounts_question.lower() == "1":
         interactive = 1
     else:
         interactive = 0
@@ -590,7 +594,7 @@ def main():
         title = 'AWS EC2 Instances - CCMI'
 
     aws_account_number = ''
-    ### Interactive == 1  - user specifies an account
+
     if interactive == 1:
         ## Select the account
         if options.account_name:
@@ -608,17 +612,17 @@ def main():
             print(Fore.RESET)
 
         # Grab variables from initialize
-        today, aws_env_list, output_file, output_file_name = initialize(interactive, aws_account)
+        today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
 
         # Get the list of the accounts from the aws confluence page
         account_names, account_numbers = read_account_info(aws_env_list)
         print(Fore.YELLOW)
         message = "Work in one or all accounts"
         banner(message)
-        if aws_accounts_answer.lower() == 'one':
-            message = f"Working in {aws_accounts_answer} account."
+        if str(options.all_accounts).lower == 'one':
+            message = f"Working in {options.all_accounts} account."
         else:
-            message = f"Working in {aws_accounts_answer} accounts."
+            message = f"Working in {options.all_accounts} accounts."
         banner(message)
         message = f"Working in AWS account: {aws_account}."
         banner(message)
@@ -627,55 +631,56 @@ def main():
         for (my_aws_account, my_aws_account_number) in zip(account_names, account_numbers):
             if my_aws_account == aws_account:
                 aws_account_number = my_aws_account_number
+
         # Set the regions and run the program
         regions = set_regions(aws_account)
-        output_file = list_instances(aws_account,aws_account_number, interactive, regions, show_details)
-        if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
-            mongo_export_to_file(interactive, aws_account)
-        htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account, reports_answer)
-        if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
+        output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
+        htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account)
+
+        print(Fore.YELLOW)
+        message = "Send an Email"
+        banner(message)
+        if options.send_email:
+            email_answer = options.send_email
+        else:
             print(Fore.YELLOW)
-            message = "Send an Email"
+            email_answer = input("Send an email (y/n): ")
+
+        if email_answer.lower() == 'y' or email_answer == 'yes':
+            send_email(aws_accounts_question,aws_account,aws_account_number, interactive)
+        else:
+            message = "Okay. Not sending an email."
+            print(Fore.YELLOW)
             banner(message)
-            if options.send_email:
-                email_answer = options.send_email
-            else:
-                print(Fore.YELLOW)
-                email_answer = input("Send an email (y/n): ")
+        print(Fore.RESET)
 
-            if email_answer.lower() == 'y' or email_answer.lower() == 'yes':
-                send_email(aws_accounts_answer,aws_account,aws_account_number, interactive)
-            else:
-                message = "Okay. Not sending an email."
-                print(Fore.YELLOW)
-                banner(message)
-            print(Fore.RESET)
+        with open(htmlfile, 'r') as htmlfile:
+            html = htmlfile.read()
 
+        message = "* Write to Confluence *"
+        print(Fore.CYAN)
+        banner(message, "*")
+        print(Fore.RESET)
+        if options.write_confluence:
+            confluence_answer = options.write_confluence
+        else:
             print(Fore.CYAN)
-            message = "* Write to Confluence *"
-            banner(message, "*")
+            confluence_answer = input("Write the list to confluence (y/n): ")
             print(Fore.RESET)
-            if options.write_confluence:
-                confluence_answer = options.write_confluence
-            else:
-                print(Fore.CYAN)
-                confluence_answer = input("Write the list to confluence (y/n): ")
-                print(Fore.RESET)
 
-            if options.user and options.password:
-                user = options.user
-                password = options.password
-                auth = (user, password)
-                write_data_to_confluence(auth, html, pageid, title)
-            elif confluence_answer.lower() == 'yes' or confluence_answer.lower() == 'y':
-                auth = authenticate()
-                write_data_to_confluence(auth, html, pageid, title)
-            else:
-                message = "Okay. Not writing to confluence."
-                print(Fore.CYAN)
-                banner(message)
-                print(Fore.RESET)
-    ### Interactive = 0 - cycling through all acounts.
+        if options.user and options.password:
+            user = options.user
+            password = options.password
+            auth = (user, password)
+            write_data_to_confluence(auth, html, pageid, title)
+        elif confluence_answer.lower() == 'yes' or confluence_answer.lower() == 'y':
+            auth = authenticate()
+            write_data_to_confluence(auth, html, pageid, title)
+        else:
+            message = "Okay. Not writing to confluence."
+            print(Fore.CYAN)
+            banner(message)
+            print(Fore.RESET)
     else:
         if options.verbose:
             show_details = options.verbose
@@ -684,7 +689,10 @@ def main():
             show_details = input("Show server details (y/n): ")
             print(Fore.RESET)
         aws_account = 'all'
-        today, aws_env_list, output_file, output_file_name = initialize(interactive, aws_account)
+        today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
+        with open(output_file, mode='w+') as csv_file:
+            writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',', lineterminator='\n')
+            writer.writeheader()
         account_names, account_numbers = read_account_info(aws_env_list)
         for (aws_account, aws_account_number) in zip(account_names, account_numbers):
             try:
@@ -699,61 +707,58 @@ def main():
                 print(Fore.RESET)
                 # Set the regions
                 regions = set_regions(aws_account)
-                output_file = list_instances(aws_account,aws_account_number, interactive, regions, show_details)
-                htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file,today, interactive, aws_account, reports_answer)
-            if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
-                mongo_export_to_file(interactive, aws_account)
-        if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
-            message = " Send an Email "
-            print(Fore.YELLOW)
-            banner(message, "*")
-            print(Fore.RESET)
-            if options.send_email:
-                email_answer = options.send_email
-            else:
-                print(Fore.YELLOW)
-                email_answer = input("Send an email (y/n): ")
+                output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
+                htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file,today, interactive, aws_account)
 
-            if email_answer.lower() == 'y' or email_answer.lower() == 'yes':
-                send_email(aws_accounts_answer,aws_account,aws_account_number, interactive)
-            else:
-                message = "Okay. Not sending an email."
-                print(Fore.YELLOW)
-                banner(message)
-
-            print(Fore.CYAN)
-            message = "* Write to Confluence *"
-            banner(message, "*")
-            if options.write_confluence:
-                confluence_answer = options.write_confluence
-            else:
-                confluence_answer = input("Write the list to confluence (y/n): ")
-
-            if options.user and options.password:
-                user = options.user
-                password = options.password
-                auth = (user, password)
-                try:
-                    write_data_to_confluence(auth, html, pageid, title)
-                except Exception as e:
-                    print(f"An exception has occurred: {e}")
-            else:
-                if confluence_answer.lower() == 'yes' or confluence_answer.lower() == 'y':
-                    if options.user:
-                        username = options.user
-                    else:
-                        username = input("Enter a user name:")
-                    auth = authenticate()
-                    write_data_to_confluence(auth, html, pageid, title)
-                else:
-                    message = "Okay. Not writing to confluence."
-                    banner(message)
+        message = " Send an Email "
+        print(Fore.YELLOW)
+        banner(message, "*")
+        print(Fore.RESET)
+        if options.send_email:
+            email_answer = options.send_email
         else:
-            print("Not printing reports.")
+            print(Fore.YELLOW)
+            email_answer = input("Send an email (y/n): ")
+
+        if email_answer.lower() == 'y' or email_answer.lower() == 'yes':
+            send_email(aws_accounts_question,aws_account,aws_account_number, interactive)
+        else:
+            message = "Okay. Not sending an email."
+            print(Fore.YELLOW)
+            banner(message)
 
         with open(htmlfile, 'r') as htmlfile:
             html = htmlfile.read()
-        print(Fore.RESET)
+
+        print(Fore.CYAN)  
+        message = "* Write to Confluence *"
+        banner(message, "*")
+        if options.write_confluence:
+            confluence_answer = options.write_confluence
+        else:
+            confluence_answer = input("Write the list to confluence (y/n): ")
+
+        if options.user and options.password:
+            user = options.user
+            password = options.password
+            auth = (user, password)
+            try:
+                write_data_to_confluence(auth, html, pageid, title)
+            except Exception as e:
+                print(f"An exception has occurred: {e}")
+
+        else:
+            if confluence_answer.lower() == 'yes' or confluence_answer.lower() == 'y':
+                if options.user:
+                    username = options.user
+                else:
+                    username = input("Enter a user name:")
+                auth = authenticate()
+                write_data_to_confluence(auth, html, pageid, title)
+            else:
+                message = "Okay. Not writing to confluence."
+                banner(message)
+            print(Fore.RESET)
 
     print(Fore.GREEN)
     if options.run_again:
