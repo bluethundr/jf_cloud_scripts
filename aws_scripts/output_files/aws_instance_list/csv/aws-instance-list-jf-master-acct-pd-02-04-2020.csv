@@ -1,4 +1,0 @@
-AWS Account,Account Number,Name,Instance ID,AMI ID,Volumes,Private IP,Public IP,Private DNS,Region,Availability Zone,VPC ID,Type,Key Pair Name,State,Launch Date
-jf-master-acct-pd,565241749827,,i-0545faf5b25d954f9,ami-0036ab7a,vol-04fc2c7287c773cbf,172.31.10.105,,ip-172-31-10-105.ec2.internal,,us-east-1a,vpc-68b1ff12,t2.small,sncr-timd,running,February 04 2020
-jf-master-acct-pd,565241749827,,i-09bd5f3fe5cd60c1c,ami-0036ab7a,vol-0835e82bdbda6e295,172.31.7.253,,ip-172-31-7-253.ec2.internal,,us-east-1a,vpc-68b1ff12,t2.small,sncr-timd,running,February 04 2020
-jf-master-acct-pd,565241749827,,i-08b9029d5157f9459,ami-0036ab7a,vol-01b30057b6fbb8080,172.31.8.12,,ip-172-31-8-12.ec2.internal,,us-east-1a,vpc-68b1ff12,t2.small,sncr-timd,running,February 04 2020
