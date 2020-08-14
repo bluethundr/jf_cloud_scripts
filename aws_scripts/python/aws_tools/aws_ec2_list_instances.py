@@ -27,8 +27,8 @@ from ec2_mongo import insert_doc,set_db,mongo_export_to_file
 # Initialize the color ouput with colorama
 init()
 
-BASE_URL = "https://confluence.synchronoss.net:8443/rest/api/content"
-VIEW_URL = "https://confluence.synchronoss.net:8443/pages/viewpage.action?pageId="
+BASE_URL = "https://confluence.company.net:8443/rest/api/content"
+VIEW_URL = "https://confluence.company.net:8443/pages/viewpage.action?pageId="
 
 def welcomebanner():
     # Print the welcome banner
