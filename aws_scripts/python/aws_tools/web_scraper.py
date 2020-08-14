@@ -101,7 +101,7 @@ def web_scraper(options):
         create_work_dir(output_dir)
     filename = 'aws_confluence_page-' + today
     destination = os.path.join(output_dir, filename + '.csv' )
-    url = 'https://confluence.synchronoss.net:8443/display/~tdun0002/AWS+Accounts+Access'
+    url = 'https://confluence.company.net:8443/display/~tdun0002/AWS+Accounts+Access'
     message = "Log into confluence"
     print(Fore.CYAN)
     banner(message)
