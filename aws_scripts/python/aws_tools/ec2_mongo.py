@@ -79,12 +79,15 @@ def connect_db():
     return myclient
 
 def set_db():
+    if __name__ == '__main__':
+        message = "* Select a MongoDB Database *"
+        print(Fore.CYAN)
+        banner(message, '*')
+        print(Fore.RESET)
     myclient = connect_db()
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
     if __name__ == '__main__':
-        message = "Select Database"
-        banner(message)
         print(Fore.CYAN + "Available MongoDB Databases:")
         if myclient != None:
             # the list_database_names() method returns a list of strings
@@ -119,10 +122,9 @@ def set_db():
 
 def create_mongodb(mydict):
     myclient = connect_db()
-    if __name__ == '__main__':
-        message = f"* Create new MongoDB *"
-        banner(message, border='*')
-        print('\n')
+    message = f"* Create new MongoDB *"
+    banner(message, border='*')
+    print('\n')
     newdb = input("Enter the name of a new mongo database: ")
     dblist = myclient.list_database_names()
     if newdb in dblist:
@@ -139,6 +141,8 @@ def create_mongodb(mydict):
             print(f"MongoDB Database creation failed with: {e}")
 
 def drop_mongodb():
+    message = "* Drop MongoDB *"
+    banner(message, '*')
     myclient = connect_db()
     today = datetime.today()
     today = today.strftime("%m%d%Y")
@@ -162,7 +166,6 @@ def drop_mongodb():
         choice = int(choice)
         choice = choice - 1
         dropdb = myclient[database_names[choice]]
-        print(dropdb)
         dropdb_name = database_names[choice]
         instance_col = 'ec2List-' + today
         instance_col = dropdb[instance_col]
@@ -209,13 +212,11 @@ def mongo_select_all():
     return instance_list
 
 def mongo_export_to_file(interactive, aws_account):
-    time.sleep(5)
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
     _, _, instance_col = set_db()
     # make an API call to the MongoDB server
     mongo_docs = instance_col.find()
-
     # Convert the mongo docs to a DataFrame
     docs = pandas.DataFrame(mongo_docs)
     # Discard the Mongo ID for the documents
@@ -240,7 +241,7 @@ def mongo_export_to_file(interactive, aws_account):
         if interactive == 1:
             output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
         else:
-            output_file = os.path.join(output_dir, 'aws-instance-master-list' + today +'.csv')
+            output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
 
         # export MongoDB documents to a CSV file, leaving out the row "labels" (row numbers)
         docs.to_csv(output_file, ",", index=False) # CSV delimited by commas
@@ -345,6 +346,15 @@ def menu():
     print("9. Exit ec2 mongo")
     print("\n")
 
+def select_account(options):
+    ## Select the account
+    if options.account_name:
+        aws_account = options.account_name
+    else:
+        print(Fore.YELLOW)
+        aws_account = input("Enter the name of the AWS account you'll be working in: ")
+        print(Fore.RESET)
+    return aws_account
 
 def main():
     options = arguments()
@@ -352,58 +362,51 @@ def main():
     mydict = set_test_dict()
     if __name__ == '__main__':
         interactive = 1
-    ### Interactive == 1  - user specifies an account
-    if interactive == 1:
-        ## Select the account
-        if options.account_name:
-            aws_account = options.account_name
+        menu()
+        option = input("Enter the option: ")
+        print(f"Option is: {option}\n")
+        option = int(option)
+        # 1. Create a MongoDB database
+        if option == 1:
+            create_mongodb(mydict)
+            main()
+        # 2. Drop a MongoDB Database
+        elif option == 2:
+            drop_mongodb()
+            main()
+        # 3. Do a test insert to the DB
+        elif option  == 3:
+            x = insert_doc(mydict)
+            main()
+        # 4. Clear the DB"
+        elif option == 4:
+            clear_db()
+            main()
+        # 5. Print the DB
+        elif option == 5:
+            mongo_select_all()
+            main()
+        # 6. Print DB Names
+        elif option == 6:
+            print_db_names()
+            main()
+        # 7. Print collections
+        elif option == 7:
+            print_collections()
+            main()
+        # 8. Export MongoDB to file
+        elif option == 8:
+            aws_account = select_account(options)
+            mongo_export_to_file(interactive, aws_account)
+            main()
+        # 9. Exit ec2 mongo
+        elif option == 9:
+            exit_program()
+        # Invalid Input
         else:
-            print(Fore.YELLOW)
-            aws_account = input("Enter the name of the AWS account you'll be working in: ")
-            print(Fore.RESET)
-    menu()
-    option = input("Enter the option: ")
-    print(f"Option is: {option}\n")
-    # 1. Create a MongoDB database
-    if option == '1':
-        create_mongodb(mydict)
-        main()
-    # 2. Drop a MongoDB Database
-    elif option == '2':
-        drop_mongodb()
-        main()
-    # 3. Do a test insert to the DB
-    elif option  == '3':
-        x = insert_doc(mydict)
-        main()
-    # 4. Clear the DB"
-    elif option == '4':
-        clear_db()
-        main()
-    # 5. Print the DB
-    elif option == '5':
-        mongo_select_all()
-        main()
-    # 6. Print DB Names
-    elif option == '6':
-       print_db_names()
-       main()
-    # 7. Print collections
-    elif option == '7':
-       print_collections()
-       main()
-    # 8. Export MongoDB to file
-    elif option == '8':
-        mongo_export_to_file(interactive, aws_account)
-        main()
-    # 9. Exit ec2 mongo
-    elif option == '9':
-        exit_program()
-    # Invalid Input
-    else:
-        message = "That is not a valid option."
-        banner(message)
-        main()
+            message = "That is not a valid option."
+            banner(message)
+            main()
 
 if __name__ == "__main__":
     main()
