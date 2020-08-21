@@ -34,8 +34,8 @@ from email.mime.application import MIMEApplication
 # Initialize the color ouput with colorama
 init()
 
-BASE_URL = "https://confluence.synchronoss.net:8443/rest/api/content"
-VIEW_URL = "https://confluence.synchronoss.net:8443/pages/viewpage.action?pageId="
+BASE_URL = "https://confluence.company.net:8443/rest/api/content"
+VIEW_URL = "https://confluence.company.net:8443/pages/viewpage.action?pageId="
 
 def welcomebanner():
     # Print the welcome banner

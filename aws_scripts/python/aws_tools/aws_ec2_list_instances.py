@@ -398,7 +398,7 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
     else:
         to_addr = input("Enter the recipient's email address: ")
 
-    from_addr = 'jkfr.noreply@gmail.com'
+    from_addr = 'cloudops@noreply.jkfr.com'
     if aws_accounts_answer == 'one':
         subject = "JF AWS Instance List: " + aws_account + " (" + aws_account_number + ") " + today
         content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The SD Team</font>"
@@ -421,10 +421,9 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
         server.ehlo()
         server.starttls()
         gmail_user = 'jkfr.noreply@gmail.com'
-        gmail_password = '
-        '
+        gmail_password = ''
         server.login(gmail_user, gmail_password)
-        server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
+        server.send_message(msg, from_addr, to_addrs=[to_addr])
         message = f"Email was sent to: {to_addr}"
         banner(message)
     except Exception as error:
@@ -692,72 +691,63 @@ def main():
             show_details = input("Show server details (y/n): ")
             print(Fore.RESET)
         aws_account = 'all'
+        # Grab variables from initialize
         today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
         account_names, account_numbers = read_account_info(aws_env_list)
         for (aws_account, aws_account_number) in zip(account_names, account_numbers):
-            try:
-                aws_account = aws_account.split()[0]
-            except Exception as e:
-                message = f"An exception has occurred: {e}"
-                banner(message)
-            else:
-                message = f"Working in AWS Account: {aws_account}."
-                print(Fore.YELLOW)
-                banner(message)
-                print(Fore.RESET)
-                # Set the regions
-                regions = set_regions(aws_account)
-                output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
-                htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file,today, interactive, aws_account)
-                mongo_export_to_file(interactive, aws_account)
-        if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
-            message = " Send an Email "
+            aws_account = aws_account.split()[0]
+            message = f"Working in AWS Account: {aws_account}."
             print(Fore.YELLOW)
-            banner(message, "*")
+            banner(message)
             print(Fore.RESET)
+            # Set the regions
+            regions = set_regions(aws_account)
+            output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
+        if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
+            htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account)
+            print(Fore.YELLOW)
+            message = "Send an Email"
+            banner(message)
             if options.send_email:
                 email_answer = options.send_email
             else:
                 print(Fore.YELLOW)
                 email_answer = input("Send an email (y/n): ")
 
-            if email_answer.lower() == 'y' or email_answer.lower() == 'yes':
+            if email_answer.lower() == 'y' or email_answer == 'yes':
                 send_email(aws_accounts_answer,aws_account,aws_account_number, interactive)
             else:
                 message = "Okay. Not sending an email."
                 print(Fore.YELLOW)
                 banner(message)
+            print(Fore.RESET)
 
             with open(htmlfile, 'r') as htmlfile:
                 html = htmlfile.read()
 
-            print(Fore.CYAN)
             message = "* Write to Confluence *"
+            print(Fore.CYAN)
             banner(message, "*")
+            print(Fore.RESET)
             if options.write_confluence:
                 confluence_answer = options.write_confluence
             else:
+                print(Fore.CYAN)
                 confluence_answer = input("Write the list to confluence (y/n): ")
+                print(Fore.RESET)
 
             if options.user and options.password:
                 user = options.user
                 password = options.password
                 auth = (user, password)
-                try:
-                    write_data_to_confluence(auth, html, pageid, title)
-                except Exception as e:
-                    print(f"An exception has occurred: {e}")
+                write_data_to_confluence(auth, html, pageid, title)
+            elif confluence_answer.lower() == 'yes' or confluence_answer.lower() == 'y':
+                auth = authenticate()
+                write_data_to_confluence(auth, html, pageid, title)
             else:
-                if confluence_answer.lower() == 'yes' or confluence_answer.lower() == 'y':
-                    if options.user:
-                        username = options.user
-                    else:
-                        username = input("Enter a user name:")
-                    auth = authenticate()
-                    write_data_to_confluence(auth, html, pageid, title)
-                else:
-                    message = "Okay. Not writing to confluence."
-                    banner(message)
+                message = "Okay. Not writing to confluence."
+                print(Fore.CYAN)
+                banner(message)
                 print(Fore.RESET)
 
     print(Fore.GREEN)
