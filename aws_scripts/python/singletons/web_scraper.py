@@ -57,11 +57,11 @@ def get_login(username = None):
 
 def create_work_dir(work_dir):
     access_rights = 0o755
-    try:  
+    try:
         os.mkdir(work_dir)
-    except OSError:  
+    except OSError:
         print (f"The directory %s already exists: {work_dir}")
-    else:  
+    else:
         print (f"Successfully created the directory: {work_dir}")
 
 def remove_file(output_file, output_file_name):
@@ -105,9 +105,9 @@ def web_scraper():
         output_row = []
         for column in columns:
             output_row.append(column.text.strip().replace('(', ' ('))
-        print(output_row)    
+        print(output_row)
         rows.append(output_row)
-        
+
     with open(destination, 'w+', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',',
                                 quotechar='"', quoting=csv.QUOTE_MINIMAL)
