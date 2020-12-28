@@ -703,8 +703,6 @@ def main():
             # Set the regions
             regions = set_regions(aws_account)
             output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
-            htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file,today, interactive, aws_account)
-            mongo_export_to_file(interactive, aws_account)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
             mongo_export_to_file(interactive, aws_account)
             htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account)
