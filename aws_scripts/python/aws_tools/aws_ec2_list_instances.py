@@ -3,7 +3,6 @@
 # Import modules
 import boto3
 import botocore
-import time
 import objectpath
 import csv
 import smtplib
@@ -128,17 +127,16 @@ def set_regions(aws_account):
 
 
 def list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details):
-    today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
-    options = arguments()
+    _, _, output_file, _, _= initialize(interactive, aws_account)
     delete_from_collection(aws_account_number)
     instance_list = ''
     session = ''
     ec2 = ''
     account_found = ''
-    PrivateDNS = None
-    block_device_list = None
+    #PrivateDNS = None
+    #block_device_list = None
     instance_count = 0
-    account_type_message = ''
+    #account_type_message = ''
     profile_missing_message = ''
     region = ''
     # Set the ec2 dictionary
@@ -235,7 +233,6 @@ def list_instances(aws_account,aws_account_number, interactive, regions, fieldna
                         'State': instance['State']['Name'],
                         'Launch Date': launch_time_friendly
                     }
-                    instance_dict = {'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly}
                     mongo_instance_dict = {'_id': '', 'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly}
                     insert_doc(mongo_instance_dict)
                     ec2_info_items = ec2info.items
@@ -405,7 +402,7 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
         content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The SD Team</font>"
     else:
         subject = "SNCR AWS Instance Master List " + today
-        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all company AWS accounts.<br><br>Regards,<br>The SD Team</font>"    
+        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all CCMI AWS accounts.<br><br>Regards,<br>The SD Team</font>"    
     msg = MIMEMultipart()
     msg['From'] = from_addr
     msg['To'] = to_addr
@@ -416,7 +413,7 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
     with open(filename, 'r') as f:
         part = MIMEApplication(f.read(), Name=basename(filename))
         part['Content-Disposition'] = 'attachment; filename="{}"'.format(basename(filename))
-        msg.attach(part) 
+        msg.attach(part)
     try:
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.ehlo()
@@ -706,7 +703,7 @@ def main():
             output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
             mongo_export_to_file(interactive, aws_account, aws_account_number)
-            htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account)
+            htmlfile, _, _ = convert_csv_to_html_table(output_file, today, interactive, aws_account)
             print(Fore.YELLOW)
             message = "Send an Email"
             banner(message)
