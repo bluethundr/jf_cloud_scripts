@@ -27,8 +27,8 @@ from ec2_mongo import insert_doc,set_db,mongo_export_to_file
 # Initialize the color ouput with colorama
 init()
 
-BASE_URL = "https://confluence.company.net:8443/rest/api/content"
-VIEW_URL = "https://confluence.company.net:8443/pages/viewpage.action?pageId="
+BASE_URL = "https://confluence.synchronoss.net:8443/rest/api/content"
+VIEW_URL = "https://confluence.synchronoss.net:8443/pages/viewpage.action?pageId="
 
 def welcomebanner():
     # Print the welcome banner
@@ -398,12 +398,12 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
     else:
         to_addr = input("Enter the recipient's email address: ")
 
-    from_addr = 'cloudops@noreply.jkfr.com'
+    from_addr = 'cloudops@noreply.sncr.com'
     if aws_accounts_answer == 'one':
-        subject = "JF AWS Instance List: " + aws_account + " (" + aws_account_number + ") " + today
+        subject = "SNCR AWS Instance List: " + aws_account + " (" + aws_account_number + ") " + today
         content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The SD Team</font>"
     else:
-        subject = "JF AWS Instance Master List " + today
+        subject = "SNCR AWS Instance Master List " + today
         content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all company AWS accounts.<br><br>Regards,<br>The SD Team</font>"    
     msg = MIMEMultipart()
     msg['From'] = from_addr
@@ -420,10 +420,10 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.ehlo()
         server.starttls()
-        gmail_user = 'jkfr.noreply@gmail.com'
-        gmail_password = ''
+        gmail_user = 'sncr.noreply@gmail.com'
+        gmail_password = 'ehhloWorld12345'
         server.login(gmail_user, gmail_password)
-        server.send_message(msg, from_addr, to_addrs=[to_addr])
+        server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
         message = f"Email was sent to: {to_addr}"
         banner(message)
     except Exception as error:
@@ -682,7 +682,7 @@ def main():
                 print(Fore.CYAN)
                 banner(message)
                 print(Fore.RESET)
-    ### Interactive = 0 - cycling through all acounts.
+    ### Interactive == 0 - cycling through all acounts.
     else:
         if options.verbose:
             show_details = options.verbose
@@ -704,6 +704,7 @@ def main():
             regions = set_regions(aws_account)
             output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
+            mongo_export_to_file(interactive, aws_account)
             htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account)
             print(Fore.YELLOW)
             message = "Send an Email"
