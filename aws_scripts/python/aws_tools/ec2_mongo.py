@@ -4,16 +4,13 @@
 import io
 import os
 import time
-import pymongo
 import pandas
 import argparse
-import numpy as np
-from pandas import ExcelWriter, ExcelFile
+from pandas import ExcelWriter
 from pymongo import MongoClient, errors
 from bson.objectid import ObjectId
 from datetime import datetime
 from colorama import init, Fore
-from collections import OrderedDict
 init()
 
 def welcomebanner():
@@ -134,7 +131,7 @@ def create_mongodb(mydict):
         try:
             mydb = myclient[newdb]
             mycol = mydb["testColumn"]
-            x = mycol.insert_one(mydict)
+            mycol.insert_one(mydict)
             message = f"Succeeded in creating: {newdb}"
             banner(message)
         except Exception as e:
@@ -166,8 +163,7 @@ def drop_mongodb():
         choice = int(choice)
         choice = choice - 1
         dropdb = myclient[database_names[choice]]
-        dropdb_name = database_names[choice]
-        instance_col = "ec2List-" + today
+        instance_col = "ec2_list_" + today
         instance_col = dropdb[instance_col]
         print(f"You've selected: {database_names[choice]}\n")
     else:
@@ -177,6 +173,7 @@ def drop_mongodb():
     print ("Some Collection exists:", col_exists) # will print True or False
     # call MongoDB client object"s drop_database() method to delete a db
     myclient.drop_database(dropdb) # pass db name as string
+    time.sleep(5)
     # get all of the database names
     db_names_after_drop = myclient.list_database_names()
     print ("db count AFTER drop:", len(db_names_before_drop))
@@ -309,7 +306,7 @@ def delete_from_collection(aws_account_number):
         banner(message, border="*")
         print(f"This command clears old entries the database.\n")
     try:
-        x = instance_col.remove({"Account Number": aws_account_number});
+        instance_col.remove({"Account Number": aws_account_number});
     except Exception as e:
         print(f"An error has occurred: {e}")
 
