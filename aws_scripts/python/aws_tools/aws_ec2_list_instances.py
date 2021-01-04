@@ -22,7 +22,7 @@ from os.path import basename
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
-from ec2_mongo import insert_doc,set_db,mongo_export_to_file
+from ec2_mongo import insert_doc,set_db,mongo_export_to_file,delete_from_collection
 
 # Initialize the color ouput with colorama
 init()
@@ -130,6 +130,7 @@ def set_regions(aws_account):
 def list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details):
     today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
     options = arguments()
+    delete_from_collection(aws_account_number)
     instance_list = ''
     session = ''
     ec2 = ''
@@ -636,7 +637,7 @@ def main():
         regions = set_regions(aws_account)
         output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
-            mongo_export_to_file(interactive, aws_account)
+            mongo_export_to_file(interactive, aws_account, aws_account_number)
             htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account)
             print(Fore.YELLOW)
             message = "Send an Email"
@@ -704,7 +705,7 @@ def main():
             regions = set_regions(aws_account)
             output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
-            mongo_export_to_file(interactive, aws_account)
+            mongo_export_to_file(interactive, aws_account, aws_account_number)
             htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account)
             print(Fore.YELLOW)
             message = "Send an Email"
