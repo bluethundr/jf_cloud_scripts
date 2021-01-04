@@ -108,7 +108,7 @@ def set_db():
             choice = choice - 1
             mydb = myclient[database_names[choice]]
             mydb_name = database_names[choice]
-            instance_col = "ec2_list-" + today
+            instance_col = "ec2_list_" + today
             instance_col = mydb[instance_col]
             print(f"You've selected: {database_names[choice]}\n")
         else:
@@ -116,7 +116,7 @@ def set_db():
     else:
         mydb = myclient["aws_inventories"]
         mydb_name = "aws_inventories"
-        instance_col = "ec2_list-" + today
+        instance_col = "ec2_list_" + today
         instance_col = mydb[instance_col]
     return mydb, mydb_name, instance_col
 
@@ -184,7 +184,7 @@ def drop_mongodb():
     print ("difference:", diff)
 
 def insert_doc(mydict):
-    mydb, mydb_name, instance_col = set_db()
+    _, _, instance_col = set_db()
     mydict["_id"] = ObjectId()
     instance_doc = instance_col.insert_one(mydict)
     if __name__ == "__main__":
@@ -211,12 +211,15 @@ def mongo_select_all():
     print("\n")
     return instance_list
 
-def mongo_export_to_file(interactive, aws_account):
+def mongo_export_to_file(interactive, aws_account, aws_account_number):
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
     _, _, instance_col = set_db()
     # make an API call to the MongoDB server
-    mongo_docs = instance_col.find()
+    if interactive == 0:
+         mongo_docs = instance_col.find()
+    else:
+        mongo_docs = instance_col.find({"Account Number": aws_account_number})
     # Convert the mongo docs to a DataFrame
     docs = pandas.DataFrame(mongo_docs)
     # Discard the Mongo ID for the documents
@@ -289,7 +292,7 @@ def mongo_export_to_file(interactive, aws_account):
         writer.save()
 
 def clear_db():
-    mydb, mydb_name, instance_col = set_db()
+    _, _, instance_col = set_db()
     message = f"* Clear the DB *"
     banner(message, border="*")
     print(f"This command empties the database.\n")
@@ -298,6 +301,17 @@ def clear_db():
     except Exception as e:
         print(f"An error has occurred: {e}")
     print(x.deleted_count, "documents deleted.")
+
+def delete_from_collection(aws_account_number):
+    _, _, instance_col = set_db()
+    if __name__ == "__main__":
+        message = f"* Clear old entries *"
+        banner(message, border="*")
+        print(f"This command clears old entries the database.\n")
+    try:
+        x = instance_col.remove({"Account Number": aws_account_number});
+    except Exception as e:
+        print(f"An error has occurred: {e}")
 
 def print_db_names():
     myclient = connect_db()
@@ -397,7 +411,7 @@ def main():
         # 8. Export MongoDB to file
         elif option == 8:
             aws_account = select_account(options)
-            mongo_export_to_file(interactive, aws_account)
+            mongo_export_to_file(interactive, aws_account, aws_account_number)
             main()
         # 9. Exit ec2 mongo
         elif option == 9:
