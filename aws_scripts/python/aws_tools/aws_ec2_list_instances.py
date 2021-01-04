@@ -128,7 +128,7 @@ def set_regions(aws_account):
 
 
 def list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details):
-    today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
+    _, _, output_file, _, _= initialize(interactive, aws_account)
     options = arguments()
     delete_from_collection(aws_account_number)
     instance_list = ''
