@@ -62,10 +62,8 @@ def initialize(interactive, aws_account):
     ### Interactive == 1  - user specifies an account
     if interactive == 1:
         output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
-        output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.csv'
     else:
         output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
-        output_file_name = 'aws-instance-master-list-' + today +'.csv'
     return today, aws_env_list, output_file
 
 def exit_program():
@@ -381,7 +379,7 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
     options = arguments()
     to_addr = ''
     # Get the variables from intitialize
-    today, aws_env_list, output_file = initialize(interactive, aws_account)
+    today, _, output_file = initialize(interactive, aws_account)
     if options.first_name:
         ## Get the address to send to
         print(Fore.YELLOW)
