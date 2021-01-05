@@ -142,8 +142,6 @@ def loop_accounts():
 
 def test_profiles(ec2_client, aws_account, aws_account_number):
     print(Fore.RESET)
-    policy_doc = ''
-    policy_arn = ''
     try:
         desc_network_interfaces_response = (ec2_client.describe_network_interfaces()['ResponseMetadata']['HTTPStatusCode'])
         # Verify that console login was created
