@@ -83,6 +83,7 @@ def select_account(options, aws_env_list):
         aws_account = input("Enter the name of the AWS account you'll be working in: ")
         print(Fore.RESET)
     aws_account_number = find_account_number(aws_account, aws_env_list)
+
     return aws_account, aws_account_number
 
 def find_account_number(aws_account,aws_env_list):
@@ -90,6 +91,8 @@ def find_account_number(aws_account,aws_env_list):
     for (my_aws_account, my_aws_account_number) in zip(account_names, account_numbers):
         if my_aws_account == aws_account:
             aws_account_number = my_aws_account_number
+    if aws_account == 'all':
+        aws_account_number = '123456789101'
     return aws_account_number
 
 def arguments():
@@ -356,7 +359,6 @@ def delete_from_collection(aws_account_number):
         message = f"* Clear old entries *"
         banner(message, border="*")
         print(f"This command clears old entries the database.\n")
-        aws_account_number = input("Enter an AWS account number: ")
     try:
         #instance_col.remove({"Account Number": aws_account_number});
         instance_col.delete_many({"Account Number": aws_account_number})
@@ -411,6 +413,77 @@ def menu():
     print("10. Exit ec2 mongo")
     print("\n")
 
+
+def arguments():
+    parser = argparse.ArgumentParser(description='This is a program performs operations on MongoDB.')
+
+    parser.add_argument(
+    "-c",
+    "--create",
+    default = None,
+    type = str,
+    help = "Create a MongoDB Database")
+
+    parser.add_argument(
+    "-n",
+    "--account_name",
+    default = None,
+    type = str,
+    help = "Create a MongoDB Database")
+
+    parser.add_argument(
+    "-d",
+    "--drop",
+    type = str,
+    help = "Drop a Database")
+
+    parser.add_argument(
+    "-t",
+    "--test",
+    default = None,
+    type = str,
+    help = "Test Insert")
+
+    parser.add_argument(
+    "-e",
+    "--clear",
+    default = None,
+    type = str,
+    help = "Clear the DB")
+
+    parser.add_argument(
+    "-r",
+    "--remove",
+    type = str,
+    default = None,
+    nargs = '?',
+    help = "Remove accounts from a collection")
+
+    parser.add_argument(
+    "-p",
+    "--print",
+    type = str,
+    default = None,
+    nargs = '?',
+    help = "Print the datbases (list dbs)")
+
+    parser.add_argument(
+    "-l",
+    "--collections",
+    type = str,
+    default = None,
+    nargs = '?',
+    help = "Print the collections (list)")
+
+    parser.add_argument(
+    "-f",
+    "--export",
+    type = int,
+    help = "Export to a file")
+
+    options = parser.parse_args()
+    return options
+
 def main():
     options = arguments()
     welcomebanner()
@@ -419,7 +492,6 @@ def main():
         interactive = 1
         aws_account = "ccmi-att-lab"
         _, aws_env_list, _, _, _ = initialize(interactive, aws_account)
-        aws_account, aws_account_number = select_account(options, aws_env_list)
         menu()
         option = input("Enter the option: ")
         option = int(option)
@@ -433,7 +505,7 @@ def main():
             main()
         # 3. Do a test insert to the DB
         elif option  == 3:
-            x = insert_doc(mydict)
+            insert_doc(mydict)
             main()
         # 4. Clear the DB"
         elif option == 4:
@@ -441,6 +513,7 @@ def main():
             main()
         # 5. Remove accounts from the DB.
         elif option == 5:
+            _, aws_account_number = select_account(options, aws_env_list)
             delete_from_collection(aws_account_number)
             main()
         # 6. Print the DB
@@ -457,6 +530,7 @@ def main():
             main()
         # 9. Export MongoDB to file
         elif option == 9:
+            aws_account, aws_account_number = select_account(options, aws_env_list)
             mongo_export_to_file(interactive, aws_account, aws_account_number)
             main()
         # 10. Exit ec2 mongo
