@@ -6,6 +6,7 @@ import os
 import time
 import pandas
 import argparse
+import csv
 from pandas import ExcelWriter
 from pymongo import MongoClient, errors
 from bson.objectid import ObjectId
@@ -40,6 +41,56 @@ def is_digit(check_input):
     if check_input.isdigit():
         return True
     return False
+
+def initialize(interactive, aws_account):
+    # Set the date
+    today = datetime.today()
+    today = today.strftime("%m-%d-%Y")
+    # Set the fieldnames for the CSV and for the confluence page
+    fieldnames = [ 'AWS Account', 'Account Number', 'Name', 'Instance ID', 'AMI ID', 'Volumes', 'Private IP', 'Public IP', 'Private DNS', 'Region', 'Availability Zone', 'VPC ID', 'Type', 'Key Pair Name', 'State', 'Launch Date']
+    # Set the input file
+    aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_accounts_list.csv')
+    # Set the output file
+    output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
+    ### Interactive == 1  - user specifies an account
+    if interactive == 1:
+        output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
+        output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.csv'
+    else:
+        output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
+        output_file_name = 'aws-instance-master-list-' + today +'.csv'
+    return today, aws_env_list, output_file, output_file_name, fieldnames
+
+def read_account_info(aws_env_list):
+    account_names = []
+    account_numbers = []
+    with open(aws_env_list) as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=',')
+        next(csv_reader)
+        for row in csv_reader:
+                account_name = str(row[0])
+                account_number = str(row[1])
+                account_names.append(account_name)
+                account_numbers.append(account_number)
+    return account_names, account_numbers
+
+def select_account(options, aws_env_list):
+    ## Select the account
+    if options.account_name:
+        aws_account = options.account_name
+    else:
+        print(Fore.YELLOW)
+        aws_account = input("Enter the name of the AWS account you'll be working in: ")
+        print(Fore.RESET)
+    aws_account_number = find_account_number(aws_account, aws_env_list)
+    return aws_account, aws_account_number
+
+def find_account_number(aws_account,aws_env_list):
+    account_names, account_numbers = read_account_info(aws_env_list)
+    for (my_aws_account, my_aws_account_number) in zip(account_names, account_numbers):
+        if my_aws_account == aws_account:
+            aws_account_number = my_aws_account_number
+    return aws_account_number
 
 def arguments():
     parser = argparse.ArgumentParser(description="This is a program that provides a text interface to MongoDB.")
@@ -192,7 +243,7 @@ def insert_doc(mydict):
     return instance_doc
 
 def mongo_select_all():
-    mydb, mydb_name, instance_col = set_db()
+    _, mydb_name, instance_col = set_db()
     instance_list = list(instance_col.find())
     if __name__ == "__main__":
         message = f"* Print DB Documents in {mydb_name} *"
@@ -305,8 +356,10 @@ def delete_from_collection(aws_account_number):
         message = f"* Clear old entries *"
         banner(message, border="*")
         print(f"This command clears old entries the database.\n")
+        aws_account_number = input("Enter an AWS account number: ")
     try:
-        instance_col.remove({"Account Number": aws_account_number});
+        #instance_col.remove({"Account Number": aws_account_number});
+        instance_col.delete_many({"Account Number": aws_account_number})
     except Exception as e:
         print(f"An error has occurred: {e}")
 
@@ -350,22 +403,13 @@ def menu():
     print("2. Drop MongoDB Database")
     print("3. Do a test insert to the DB")
     print("4. Clear the DB")
-    print("5. Print the DB")
-    print("6. Print DB Names")
-    print("7. Print collections")
-    print("8. Export MongoDB to file")
-    print("9. Exit ec2 mongo")
+    print("5. Remove accounts from the DB.")
+    print("6. Print the DB")
+    print("7. Print DB Names")
+    print("8. Print collections")
+    print("9. Export MongoDB to file")
+    print("10. Exit ec2 mongo")
     print("\n")
-
-def select_account(options):
-    ## Select the account
-    if options.account_name:
-        aws_account = options.account_name
-    else:
-        print(Fore.YELLOW)
-        aws_account = input("Enter the name of the AWS account you'll be working in: ")
-        print(Fore.RESET)
-    return aws_account
 
 def main():
     options = arguments()
@@ -373,9 +417,11 @@ def main():
     mydict = set_test_dict()
     if __name__ == "__main__":
         interactive = 1
+        aws_account = "ccmi-att-lab"
+        _, aws_env_list, _, _, _ = initialize(interactive, aws_account)
+        aws_account, aws_account_number = select_account(options, aws_env_list)
         menu()
         option = input("Enter the option: ")
-        print(f"Option is: {option}\n")
         option = int(option)
         # 1. Create a MongoDB database
         if option == 1:
@@ -393,25 +439,28 @@ def main():
         elif option == 4:
             clear_db()
             main()
-        # 5. Print the DB
+        # 5. Remove accounts from the DB.
         elif option == 5:
+            delete_from_collection(aws_account_number)
+            main()
+        # 6. Print the DB
+        elif option == 6:
             mongo_select_all()
             main()
-        # 6. Print DB Names
-        elif option == 6:
+        # 7. Print DB Names
+        elif option == 7:
             print_db_names()
             main()
-        # 7. Print collections
-        elif option == 7:
+        # 8. Print collections
+        elif option == 8:
             print_collections()
             main()
-        # 8. Export MongoDB to file
-        elif option == 8:
-            aws_account = select_account(options)
+        # 9. Export MongoDB to file
+        elif option == 9:
             mongo_export_to_file(interactive, aws_account, aws_account_number)
             main()
-        # 9. Exit ec2 mongo
-        elif option == 9:
+        # 10. Exit ec2 mongo
+        elif option == 10:
             exit_program()
         # Invalid Input
         else:
