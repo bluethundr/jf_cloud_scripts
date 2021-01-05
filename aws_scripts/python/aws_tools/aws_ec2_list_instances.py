@@ -13,7 +13,6 @@ import json
 import keyring
 import requests
 from html import escape
-from botocore.exceptions import ValidationError
 from requests.auth import HTTPBasicAuth
 from datetime import datetime
 from colorama import init, Fore
@@ -382,7 +381,7 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
     options = arguments()
     to_addr = ''
     # Get the variables from intitialize
-    today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
+    today, _, output_file, _, _ = initialize(interactive, aws_account)
     if options.first_name:
         ## Get the address to send to
         print(Fore.YELLOW)
