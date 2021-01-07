@@ -51,6 +51,9 @@ def authenticate():
     auth = get_login()
     return auth
 
+
+
+
 def initialize(interactive, aws_account):
     # Set the date
     today = datetime.today()
@@ -551,6 +554,7 @@ def arguments():
     return options
 
 def main():
+    # Get command line arguments
     options = arguments()
 
     # Display the welcome banner

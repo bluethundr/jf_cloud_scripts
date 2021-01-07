@@ -40,14 +40,14 @@ def initialize():
     today = today.strftime("%m-%d-%Y")
     test_account_answer = input("Use test account (y/n): ")
     if test_account_answer.lower() == 'y' or test_account_answer.lower() == 'yes':
-        aws_env_list = os.path.join('..', '..', 'output_files', 'aws_accounts_list', 'aws_jokefire_page-' + today + '.csv')
+        aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_jokefire_page.csv')
     else:
-        aws_env_list = os.path.join('..', '..', 'output_files', 'aws_accounts_list', 'aws_confluence_page-' + today + '.csv')
-        
+        aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_accounts_list.csv')
+
     # Set the output file
     output_dir = os.path.join('..', '..', 'output_files', 'aws_create_role', 'csv')
     output_file = output_dir + 'aws-create-role-' + today +'.csv'
-    output_file_name = 'aws-create-role-' + today +'.csv'    
+    output_file_name = 'aws-create-role-' + today +'.csv'
     return today, aws_env_list, output_file, output_file_name
 
 def read_account_info(aws_env_list):
@@ -58,7 +58,7 @@ def read_account_info(aws_env_list):
     	next(csv_reader)
     	for row in csv_reader:
             account_name = str(row[0])
-            account_number = str(row[5])
+            account_number = str(row[1])
             account_names.append(account_name)
             account_numbers.append(account_number)
     return account_names, account_numbers
