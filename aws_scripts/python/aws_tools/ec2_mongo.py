@@ -47,8 +47,6 @@ def initialize(interactive, aws_account):
     # Set the date
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
-    # Set the fieldnames for the CSV and for the confluence page
-    fieldnames = [ 'AWS Account', 'Account Number', 'Name', 'Instance ID', 'AMI ID', 'Volumes', 'Private IP', 'Public IP', 'Private DNS', 'Region', 'Availability Zone', 'VPC ID', 'Type', 'Key Pair Name', 'State', 'Launch Date']
     # Set the input file
     aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_accounts_list.csv')
     # Set the output file
@@ -60,7 +58,7 @@ def initialize(interactive, aws_account):
     else:
         output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
         output_file_name = 'aws-instance-master-list-' + today +'.csv'
-    return today, aws_env_list, output_file, output_file_name, fieldnames
+    return today, aws_env_list, output_file, output_file_name
 
 def read_account_info(aws_env_list):
     account_names = []
@@ -126,6 +124,7 @@ def create_directories():
             os.makedirs(output_files_path)
         except OSError as e:
             raise
+
     # Create output subdirectories
     folders = ['csv','excel','html', 'json']
     for folder in folders:
@@ -447,7 +446,7 @@ def main():
     mydict = set_test_dict()
     if __name__ == "__main__":
         interactive = 1
-        aws_account = "ccmi-att-lab"
+        aws_account = ''
         _, aws_env_list, _, _, _ = initialize(interactive, aws_account)
         aws_account, aws_account_number = select_account(options, aws_env_list)
         menu()
