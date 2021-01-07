@@ -11,6 +11,7 @@ from pandas import ExcelWriter
 from pymongo import MongoClient, errors
 from bson.objectid import ObjectId
 from datetime import datetime
+from pathlib import Path
 from colorama import init, Fore
 init()
 
@@ -105,6 +106,34 @@ def arguments():
 
     options = parser.parse_args()
     return options
+
+def create_directories():
+
+    ## Set source and output file directories
+    source_files_path = Path('..', '..', 'source_files', 'aws_accounts_list')
+    output_files_path = Path('..', '..', 'output_files', 'aws_instance_list')
+
+    # Create output files directory
+    if not os.path.exists(source_files_path):
+        try:
+            os.makedirs(source_files_path)
+        except OSError as e:
+            raise
+
+    # Create output files directory
+    if not os.path.exists(output_files_path):
+        try:
+            os.makedirs(output_files_path)
+        except OSError as e:
+            raise
+    # Create output subdirectories
+    folders = ['csv','excel','html', 'json']
+    for folder in folders:
+        try:
+            os.mkdir(os.path.join(output_files_path,folder))
+        except OSError as e:
+            raise
+
 
 def set_test_dict():
     mydict = { "AWS Account": "company-lab", "Account Number": "12345678910", "Name": "bastion001",
@@ -260,6 +289,7 @@ def mongo_select_all():
     return instance_list
 
 def mongo_export_to_file(interactive, aws_account, aws_account_number):
+    create_directories()
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
     _, _, instance_col = set_db()
