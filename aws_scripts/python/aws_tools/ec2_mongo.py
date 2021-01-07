@@ -49,16 +49,7 @@ def initialize(interactive, aws_account):
     today = today.strftime("%m-%d-%Y")
     # Set the input file
     aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_accounts_list.csv')
-    # Set the output file
-    output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
-    ### Interactive == 1  - user specifies an account
-    if interactive == 1:
-        output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
-        output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.csv'
-    else:
-        output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
-        output_file_name = 'aws-instance-master-list-' + today +'.csv'
-    return today, aws_env_list, output_file, output_file_name
+    return today, aws_env_list
 
 def read_account_info(aws_env_list):
     account_names = []
@@ -111,28 +102,14 @@ def create_directories():
     source_files_path = Path('..', '..', 'source_files', 'aws_accounts_list')
     output_files_path = Path('..', '..', 'output_files', 'aws_instance_list')
 
-    # Create output files directory
-    if not os.path.exists(source_files_path):
-        try:
-            os.makedirs(source_files_path)
-        except OSError as e:
-            raise
-
-    # Create output files directory
-    if not os.path.exists(output_files_path):
-        try:
-            os.makedirs(output_files_path)
-        except OSError as e:
-            raise
+    os.makedirs(source_files_path, exist_ok=True)
+    os.makedirs(output_files_path, exist_ok=True)
 
     # Create output subdirectories
     folders = ['csv','excel','html', 'json']
     for folder in folders:
-        try:
-            os.mkdir(os.path.join(output_files_path,folder))
-        except OSError as e:
-            raise
-
+        full_path = os.path.join(output_files_path,folder)
+        os.makedirs(full_path, exist_ok=True)
 
 def set_test_dict():
     mydict = { "AWS Account": "company-lab", "Account Number": "12345678910", "Name": "bastion001",
@@ -447,7 +424,7 @@ def main():
     if __name__ == "__main__":
         interactive = 1
         aws_account = ''
-        _, aws_env_list, _, _, _ = initialize(interactive, aws_account)
+        _, aws_env_list = initialize(interactive, aws_account)
         aws_account, aws_account_number = select_account(options, aws_env_list)
         menu()
         option = input("Enter the option: ")
