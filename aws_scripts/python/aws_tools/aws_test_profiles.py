@@ -3,16 +3,10 @@
 import os
 import boto3
 import botocore
-import time
 import datetime
-import dateutil
-import itertools
-import json
 import csv
-import objectpath
 from colorama import init, Fore
-from datetime import date, datetime, timedelta
-from botocore.exceptions import ClientError, ProfileNotFound
+from datetime import datetime
 
 init()
 
@@ -44,11 +38,7 @@ def initialize():
     else:
         aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_accounts_list.csv')
 
-    # Set the output file
-    output_dir = os.path.join('..', '..', 'output_files', 'aws_create_role', 'csv')
-    output_file = output_dir + 'aws-create-role-' + today +'.csv'
-    output_file_name = 'aws-create-role-' + today +'.csv'
-    return today, aws_env_list, output_file, output_file_name
+    return today, aws_env_list
 
 def read_account_info(aws_env_list):
     account_names = []
@@ -75,12 +65,11 @@ def choose_accounts(aws_env_list):
         for (aws_account, aws_account_number) in zip(account_names, account_numbers):
             if my_account_name == aws_account:
                 my_account_number = aws_account_number
-                print(f"My Account Name: {my_account_name}\nMy Account Number: {my_account_number}")            
+                print(f"My Account Name: {my_account_name}\nMy Account Number: {my_account_number}")
         account_names = []
         account_numbers = []
         account_names.append(my_account_name)
         account_numbers.append(my_account_number)
-        
     elif all_accounts_question == 'some':
         my_account_names = input("Enter AWS account names separated by commas: ")
         my_account_names = my_account_names.split(",")
@@ -92,18 +81,18 @@ def choose_accounts(aws_env_list):
                 my_account_numbers.append(my_account_number)
         account_names = my_account_names
         aws_account_numbers = my_account_numbers
-    elif all_accounts_question == 'all':   
+    elif all_accounts_question == 'all':
         account_names, account_numbers = read_account_info(aws_env_list)
     else:
         print("That is not a valid choice.")
-    
+
     return account_names, account_numbers
 
 def loop_accounts():
     print(Fore.CYAN)
     message = '*   Loop Accounts   *'
     banner(message,"*")
-    today, aws_env_list, output_file, output_file_name = initialize()
+    _, aws_env_list = initialize()
     account_names, account_numbers = choose_accounts(aws_env_list)
     print(Fore.RESET)
     for (aws_account, aws_account_number) in zip(account_names, account_numbers):
@@ -124,7 +113,6 @@ def loop_accounts():
                 message = f"An exception has occurred: {e}"
                 account_found = 'no'
                 banner(message)
-                
                 pass
             try:
                 ec2_client = session.client('ec2')
@@ -142,7 +130,6 @@ def loop_accounts():
                 message = f"An exception has occurred: {e}"
                 banner(message)
                 account_found = 'no'
-                
                 pass
             try:
                 ec2_client = session.client('ec2')
@@ -152,56 +139,19 @@ def loop_accounts():
                 message = "This is a commercial account."
                 banner(message)
                 test_profiles(ec2_client, aws_account, aws_account_number)
-            
+
 def test_profiles(ec2_client, aws_account, aws_account_number):
     print(Fore.RESET)
-    policy_doc = ''
-    policy_arn = ''
-    try:    
+    try:
         desc_network_interfaces_response = (ec2_client.describe_network_interfaces()['ResponseMetadata']['HTTPStatusCode'])
         # Verify that console login was created
         if desc_network_interfaces_response == 200:
             print(Fore.GREEN + f"Access is working.")
-            
         else:
             print(Fore.YELLOW + f"Access is not working.")
-            
     except Exception as e:
         print(f"An exception has occurred: {e}")
     print(Fore.RESET)
-
-def send_email(aws_accounts_question,aws_account,aws_account_number): 
-    # Get the variables from intitialize
-    today, aws_env_list, output_file, output_file_name = initialize(interactive, aws_account)
-    ## Get the address to send to
-    print(Fore.YELLOW)
-    first_name = str(input("Enter the recipient's first name: "))
-    to_addr = input("Enter the recipient's email address: ")
-    from_addr = 'cloudops@noreply.company.com'
-    subject = "AWS Profile Test Results " + today
-    if aws_accounts_question == 'one':
-        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>Cloud Ops</font>"
-    else:
-        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all company AWS accounts.<br><br>Regards,<br>Cloud Ops</font>"    
-    msg = MIMEMultipart()
-    msg['From'] = from_addr
-    msg['To'] = to_addr
-    msg['Subject'] = subject
-    body = MIMEText(content, 'html')
-    msg.attach(body)
-
-    filename = output_file
-    with open(filename, 'r') as f:
-        part = MIMEApplication(f.read(), Name=basename(filename))
-        part['Content-Disposition'] = 'attachment; filename="{}"'.format(basename(filename))
-        msg.attach(part)
-    server = smtplib.SMTP('smtpout.us.cworld.company.com', 25)
-    try:
-        server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
-        print("Email was sent to: %s" % to_addr)
-    except Exception as error:
-        print("Exception:", error)
-        print("Email was not sent.")
 
 def main():
     welcomebanner()
