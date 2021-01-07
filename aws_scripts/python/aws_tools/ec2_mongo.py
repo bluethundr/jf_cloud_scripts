@@ -74,15 +74,37 @@ def read_account_info(aws_env_list):
                 account_numbers.append(account_number)
     return account_names, account_numbers
 
+def select_account(options, aws_env_list):
+    ## Select the account
+    if options.account_name:
+        aws_account = options.account_name
+    else:
+        print(Fore.YELLOW)
+        aws_account = input("Enter the name of the AWS account you'll be working in: ")
+        print(Fore.RESET)
+    aws_account_number = find_account_number(aws_account, aws_env_list)
+    return aws_account, aws_account_number
+
 def find_account_number(aws_account,aws_env_list):
     account_names, account_numbers = read_account_info(aws_env_list)
     for (my_aws_account, my_aws_account_number) in zip(account_names, account_numbers):
         if my_aws_account == aws_account:
             aws_account_number = my_aws_account_number
-    if aws_account == 'all':
-        aws_account_number = '123456789101'
     return aws_account_number
 
+def arguments():
+    parser = argparse.ArgumentParser(description="This is a program that provides a text interface to MongoDB.")
+
+    parser.add_argument(
+    "-n",
+    "--account_name",
+    type = str,
+    default = None,
+    nargs = "?",
+    help = "Name of the AWS account you'll be working in")
+
+    options = parser.parse_args()
+    return options
 
 def set_test_dict():
     mydict = { "AWS Account": "company-lab", "Account Number": "12345678910", "Name": "bastion001",
@@ -283,7 +305,7 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number):
         if interactive == 1:
             output_file = os.path.join(output_dir, "aws-instance-list-" + aws_account + "-" + today +".json")
         else:
-            output_file = os.path.join(output_dir, "aws-instance-master-list-" + today +".json")
+            output_file = os.path.join(output_dir, "aws-instance-master-list" + today +".json")
         # export MongoDB documents to a CSV file, leaving out the row "labels" (row numbers)
         docs.to_json(output_file)
     elif choice == 3:
@@ -301,7 +323,7 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number):
         if interactive == 1:
             output_file = os.path.join(output_dir, "aws-instance-list-" + aws_account + "-" + today +".html")
         else:
-            output_file = os.path.join(output_dir, "aws-instance-master-list-" + today + ".html")
+            output_file = os.path.join(output_dir, "aws-instance-master-list" + today + ".html")
         # save the MongoDB documents as an HTML table
         docs.to_html(output_file)
     elif choice == 4:
@@ -311,18 +333,11 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number):
         if interactive == 1:
             output_file = os.path.join(output_dir, "aws-instance-list-" + aws_account + "-" + today + ".xlsx")
         else:
-            output_file = os.path.join(output_dir, "aws-instance-master-list-" + today + ".xlsx")
+            output_file = os.path.join(output_dir, "aws-instance-master-list" + today + ".xlsx")
         # export MongoDB documents to a Excel file, leaving out the row "labels" (row numbers)
         writer = ExcelWriter(output_file)
         docs.to_excel(writer,"EC2 List",index=False)
         writer.save()
-
-
-    run_again = input("Run again (y/n): ")
-    if run_again.lower() == 'y' or run_again.lower() == 'yes':
-        main()
-    else:
-        exit_program()
 
 def clear_db():
     _, _, instance_col = set_db()
@@ -341,6 +356,7 @@ def delete_from_collection(aws_account_number):
         message = f"* Clear old entries *"
         banner(message, border="*")
         print(f"This command clears old entries the database.\n")
+        aws_account_number = input("Enter an AWS account number: ")
     try:
         #instance_col.remove({"Account Number": aws_account_number});
         instance_col.delete_many({"Account Number": aws_account_number})
@@ -395,120 +411,15 @@ def menu():
     print("10. Exit ec2 mongo")
     print("\n")
 
-
-def arguments():
-    parser = argparse.ArgumentParser(description='This is a program performs operations on MongoDB.')
-
-    parser.add_argument(
-    "-a",
-    "--all_accounts",
-    type = str,
-    default = None,
-    nargs = '?',
-    help = "Process one or all accounts")
-
-    parser.add_argument(
-    "-c",
-    "--create",
-    default = None,
-    type = str,
-    help = "Create a MongoDB Database")
-
-    parser.add_argument(
-    "-n",
-    "--account_name",
-    default = None,
-    type = str,
-    help = "Create a MongoDB Database")
-
-    parser.add_argument(
-    "-d",
-    "--drop",
-    type = str,
-    help = "Drop a Database")
-
-    parser.add_argument(
-    "-t",
-    "--test",
-    default = None,
-    type = str,
-    help = "Test Insert")
-
-    parser.add_argument(
-    "-e",
-    "--clear",
-    default = None,
-    type = str,
-    help = "Clear the DB")
-
-    parser.add_argument(
-    "-r",
-    "--remove",
-    type = str,
-    default = None,
-    nargs = '?',
-    help = "Remove accounts from a collection")
-
-    parser.add_argument(
-    "-p",
-    "--print",
-    type = str,
-    default = None,
-    nargs = '?',
-    help = "Print the datbases (list dbs)")
-
-    parser.add_argument(
-    "-l",
-    "--collections",
-    type = str,
-    default = None,
-    nargs = '?',
-    help = "Print the collections (list)")
-
-    parser.add_argument(
-    "-f",
-    "--export",
-    type = int,
-    help = "Export to a file")
-
-    options = parser.parse_args()
-    return options
-
 def main():
     options = arguments()
     welcomebanner()
-    if options.all_accounts:
-        aws_accounts_answer = options.all_accounts
-    else:
-        ## Select one or many accounts
-        print(Fore.YELLOW)
-        aws_accounts_answer = input("List instances in one or all accounts: ")
-        print(Fore.RESET)
-
-    # Set interacive variable to indicate one or many accounts
-    if aws_accounts_answer.lower() == "one" or aws_accounts_answer.lower() == "1":
-        interactive = 1
-    else:
-        interactive = 0
-
-    ### Interactive == 1  - user specifies an account
-    if interactive == 1:
-        ## Select the account
-        if options.account_name:
-            aws_account = options.account_name
-        else:
-            print(Fore.YELLOW)
-            aws_account = input("Enter the name of the AWS account you'll be working in: ")
-            print(Fore.RESET)
-    else:
-        aws_account = 'all'
-
-    _, aws_env_list, _, _, _ = initialize(interactive, aws_account)
-    aws_account_number = find_account_number(aws_account,aws_env_list)
-
-
     mydict = set_test_dict()
     if __name__ == "__main__":
+        interactive = 1
+        aws_account = "ccmi-att-lab"
+        _, aws_env_list, _, _, _ = initialize(interactive, aws_account)
+        aws_account, aws_account_number = select_account(options, aws_env_list)
         menu()
         option = input("Enter the option: ")
         option = int(option)
@@ -522,7 +433,7 @@ def main():
             main()
         # 3. Do a test insert to the DB
         elif option  == 3:
-            insert_doc(mydict)
+            x = insert_doc(mydict)
             main()
         # 4. Clear the DB"
         elif option == 4:
