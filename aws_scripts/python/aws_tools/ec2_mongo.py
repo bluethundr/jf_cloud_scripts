@@ -426,15 +426,15 @@ def main():
     options = arguments()
     welcomebanner()
     mydict = set_test_dict()
-    print(Fore.YELLOW)
-    aws_accounts_answer = input("List instances in one or all accounts: ")
-    print(Fore.RESET)
-    # Set interacive variable to indicate one or many accounts
-    if aws_accounts_answer.lower() == "one" or aws_accounts_answer.lower() == "1":
-        interactive = 1
-    else:
-        interactive = 0
     if __name__ == "__main__":
+        print(Fore.YELLOW)
+        aws_accounts_answer = input("Work in one or all accounts: ")
+        print(Fore.RESET)
+        # Set interacive variable to indicate one or many accounts
+        if aws_accounts_answer.lower() == "one" or aws_accounts_answer.lower() == "1":
+            interactive = 1
+        else:
+            interactive = 0
         aws_account = ''
         _, aws_env_list = initialize(interactive, aws_account)
         menu()
@@ -450,7 +450,7 @@ def main():
             main()
         # 3. Do a test insert to the DB
         elif option  == 3:
-            x = insert_doc(mydict)
+            insert_doc(mydict)
             main()
         # 4. Clear the DB"
         elif option == 4:
