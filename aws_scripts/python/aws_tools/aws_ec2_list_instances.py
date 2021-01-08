@@ -20,7 +20,7 @@ from os.path import basename
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
-from ec2_mongo import insert_doc,set_db,mongo_export_to_file,delete_from_collection
+from ec2_mongo import insert_docgit,mongo_export_to_file,delete_from_collection
 
 # Initialize the color ouput with colorama
 init()
@@ -50,9 +50,6 @@ def banner(message, border='-'):
 def authenticate():
     auth = get_login()
     return auth
-
-
-
 
 def initialize(interactive, aws_account):
     # Set the date
