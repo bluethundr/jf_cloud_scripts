@@ -80,6 +80,8 @@ def find_account_number(aws_account,aws_env_list):
     for (my_aws_account, my_aws_account_number) in zip(account_names, account_numbers):
         if my_aws_account == aws_account:
             aws_account_number = my_aws_account_number
+    if aws_account ==  "all":
+        aws_account_number = '1234567891011'
     return aws_account_number
 
 def arguments():
@@ -344,6 +346,9 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number):
         writer = ExcelWriter(output_file)
         docs.to_excel(writer,"EC2 List",index=False)
         writer.save()
+        exit = input("Exit program (y/n): ")
+        if exit.lower() == "y" or exit.lower() == "yes":
+            exit_program()
 
 def clear_db():
     _, _, instance_col = set_db()
@@ -421,11 +426,17 @@ def main():
     options = arguments()
     welcomebanner()
     mydict = set_test_dict()
-    if __name__ == "__main__":
+    print(Fore.YELLOW)
+    aws_accounts_answer = input("List instances in one or all accounts: ")
+    print(Fore.RESET)
+    # Set interacive variable to indicate one or many accounts
+    if aws_accounts_answer.lower() == "one" or aws_accounts_answer.lower() == "1":
         interactive = 1
+    else:
+        interactive = 0
+    if __name__ == "__main__":
         aws_account = ''
         _, aws_env_list = initialize(interactive, aws_account)
-        aws_account, aws_account_number = select_account(options, aws_env_list)
         menu()
         option = input("Enter the option: ")
         option = int(option)
@@ -447,6 +458,7 @@ def main():
             main()
         # 5. Remove accounts from the DB.
         elif option == 5:
+            _, aws_account_number = select_account(options, aws_env_list)
             delete_from_collection(aws_account_number)
             main()
         # 6. Print the DB
@@ -463,6 +475,11 @@ def main():
             main()
         # 9. Export MongoDB to file
         elif option == 9:
+            if aws_accounts_answer == "all":
+                aws_account = "all"
+                aws_account_number = "123456789101"
+            else:
+                aws_account, aws_account_number = select_account(options, aws_env_list)
             mongo_export_to_file(interactive, aws_account, aws_account_number)
             main()
         # 10. Exit ec2 mongo
