@@ -44,7 +44,7 @@ def initialize():
         aws_account_number = aws_accounts_to_account_numbers(aws_account)
     print(Fore.GREEN, "\n")
     print("**************************************************************")
-    print("          Okay. Working in AWS account: %s                    " % aws_account)
+    print("          Okay. Working in GCP account: %s                    " % aws_account)
     print("**************************************************************")
     # Set the date
     today = datetime.today()
@@ -60,14 +60,14 @@ def welcomebanner():
     # Print the welcome banner
     print(Fore.CYAN)
     print('******************************************************')
-    print('*             AWS Billing Operations                 *')
+    print('*             GCP Billing Operations                 *')
     print('******************************************************\n')
     time.sleep(5)
 
 def endbanner():
     print(Fore.CYAN)
     print("*****************************************************")
-    print("* AWS Billing Operations Are Complete               *")
+    print("* GCP Billing Operations Are Complete               *")
     print("*****************************************************")
 
 
@@ -79,9 +79,9 @@ def choose_action():
     print(Fore.YELLOW)
     print("These are the actions possible in AWS: ")
     print("1. Run the Report")
-    print("2. Read AWS Bill")
+    print("2. Read GCP Bill")
     print("3. Read the CUR File")
-    print("4. Write AWS Bill")
+    print("4. Write GCP Bill")
     print("5. Send Email")
     print("6. Recreate Table")
     print("7. Recreate CUR Table")
@@ -121,47 +121,9 @@ def table_name():
 
 def aws_accounts_to_account_numbers(aws_account):
     switcher = {
-        'company-lab': '486469900423',
-        'company-bill': '188087670762',
-        'company-stage': '051170381115',
-        'company-dlab': '287093337099',
-        'company-nonprod': '832839043616',
-        'company-prod': '560044853747',
-        'company-ksr-a': '764210188035',
-        'company-ksr-b': '991163571593',
-        'company-dsg-logging-admin': '962923862227',
-        'company-dsg-logging-gov': '900653850120',
-        'company-dsg-security-admin': '219577256432',
-        'company-dsg-security-gov': '902541738353',
-        'company-master': '419585237664',
-        'company-transit-hub1': '303779310401',
-        'company-transit-hub3': '154101686306',
-        'company-security': '193256904289',
-        'company-shared-services': '300944922012',
-        'company-logging': '826254699822',
-        'company-spoke-acct1': '103440952267',
-        'company-spoke-acct2': '288378600023',
-        'company-spoke-acct3': '872950281716',
-        'company-spoke-acct4': '167031866369',
-        'company-spoke-acct6': '067621579922',
-        'company-ab-nonprod': '151528745488',
-        'company-ab-prod': '155775729998',
-        'company-govcloud-ab-admin-nonprod': '675966588449',
-        'company-govcloud-ab-nonprod': '654077510425',
-        'company-govcloud-ab-admin-prod': '863351155240',
-        'company-govcloud-ab-prod': '654360223973',
-        'company-govcloud-ab-mc-admin-nonprod': '818951881696',
-        'company-govcloud-ab-mc-nonprod': '026715570499',
-        'company-govcloud-ab-mc-admin-prod': '609094545271',
-        'company-govcloud-ab-mc-prod': '028074947530',
-        'company-govcloud-admin-ab-dsg-logmon-nonprod': '913530316654',
-        'company-govcloud-ab-dsg-logmon-nonprod': '042821237378',
-        'company-govcloud-admin-ab-dsg-logmon-prod': '849740718434',
-        'company-govcloud-ab-dsg-logmon-prod': '042489471961',
-        'company-dsg-security-lab': '059345717693',
-        'jf-python-dev': '369812892824',
-        'jf-python-dev-gov': '894300395449',
-        'jf-master-acct': '993905884429'
+        'company-lab': '1234567890101',
+        'company-bill': '1234567890102',
+        'company-stage': '1234567890103',
     }
     return switcher.get(aws_account, "nothing")
 
@@ -176,7 +138,7 @@ def get_today():
 def read_csv_to_sql(aws_account, aws_account_number):
     print(Fore.CYAN)
     print("*****************************************************")
-    print("*             Read the AWS Bill                     *")
+    print("*             Read the GCP Bill                     *")
     print("*****************************************************")
     print(Fore.RESET)
     cursor, mydb = connect_to_db()
@@ -240,7 +202,7 @@ def read_csv_to_sql(aws_account, aws_account_number):
 def read_cur_to_sql(aws_account, aws_account_number):
     print(Fore.CYAN)
     print("*****************************************************")
-    print("*             Read the AWS Bill                     *")
+    print("*             Read the GCP Bill                     *")
     print("*****************************************************")
     print(Fore.RESET)
     cursor, mydb = connect_to_db()
@@ -299,7 +261,7 @@ def read_cur_to_sql(aws_account, aws_account_number):
 def write_to_csv(aws_account, aws_account_number, table_name):
     print(Fore.CYAN)
     print("*****************************************************")
-    print("*             Write the AWS Bill                    *")
+    print("*             Write the GCP Bill                    *")
     print("*****************************************************")
     print(Fore.RESET)
     cursor, mydb = connect_to_db()
@@ -969,17 +931,7 @@ def set_default_engagement():
     # Set all empty values to NULL  
     set_engagement_sql = """ UPDATE """ + my_table_name + """ SET 
                     Engagement = CASE 
-                        WHEN LinkedAccountId = '103440952267' THEN '800000046406'
-                        WHEN LinkedAccountId = '412164052405' THEN '803000006453'
-                        WHEN LinkedAccountId IN ('167031866369', '806534465904') THEN '800000043270'
-                        WHEN LinkedAccountId IN ('764210188035', '991163571593') THEN '400000008426'
-                        WHEN LinkedAccountId IN ('151528745488', '155775729998') THEN '807000000401'
-                        WHEN LinkedAccountId IN ('913530316654', '042821237378', '849740718434', '042489471961') THEN '808000000298'
-                        WHEN LinkedAccountId IN ('962923862227', '900653850120', '219577256432', '902541738353') THEN '800000047650'
-                        WHEN LinkedAccountId IN ('419585237664', '303779310401', '193256904289','300944922012', '826254699822','288378600023', '872950281716', '067621579922', '421544879922', '795959353786') THEN '800000039768'
-                        WHEN LinkedAccountId IN ('675966588449', '654077510425', '863351155240', '654360223973', '818951881696', '026715570499', '609094545271', '028074947530', '201370688988', '005350604950',  '635681562415', '007107066053') THEN '400000008692'
-                        WHEN LinkedAccountId IN ('580036671366', '664008221807', '486469900423', '188087670762',  '051170381115', '287093337099', '832839043616', '560044853747', '615531451610',  '396689707712', '193327972326', '396993371780', '120022335547', '363046072563') THEN '400000008378' 
-                        ELSE '800000039768'
+                        WHEN LinkedAccountId = '1234567890101' THEN '1234567890102'
                     END
                     WHERE Engagement IS NULL OR Engagement RLIKE '^[a-zA-Z]'; """
     try:
@@ -1014,7 +966,7 @@ def replace_bad_enagement():
     my_table_name = table_name()
     print("Replacing bad engagement codes.")
     # Set all empty values to NULL  
-    replace_bad_engagement_sql = """ UPDATE """ + my_table_name + """ SET Engagement='400000008378' WHERE LinkedAccountId = '051170381115' AND Engagement = '123456789012' ; """
+    replace_bad_engagement_sql = """ UPDATE """ + my_table_name + """ SET Engagement='1234567890101' WHERE LinkedAccountId = '1234567890102' AND Engagement = '1234567890103' ; """
     try:
         cursor.execute(replace_bad_engagement_sql)
     except mysql.connector.Error as error:
@@ -1049,14 +1001,10 @@ def replace_old_enagements():
     # Set all empty values to NULL  
     replace_old_engagements_sql = """ UPDATE """ + my_table_name + """
                                 SET Engagement = CASE Engagement
-                                                    WHEN '800000026680' THEN '800000032764'
-                                                    WHEN '807000000041' THEN '808000000000'
-                                                    WHEN '870000012569' THEN '807000000412'
-                                                    WHEN '807000000279' THEN '808000000223'
-                                                    WHEN '807000000282' THEN '808000000223'
-                                                    WHEN '870000000403' THEN '808000000223'
+                                                    WHEN '123456789101' THEN '123456789102'
+                                                    WHEN '1234567891013 THEN '1234567891014'
                                                 END
-                                WHERE LinkedAccountId in ('151528745488','155775729998') AND Engagement IN ('800000026680', '807000000041', '870000012569', '807000000279', '807000000282', '870000000403'); """
+                                WHERE LinkedAccountId in ('151528745488','155775729998') AND Engagement IN ('1234567891012', '1234567891013', '1234567891014, '123456789104, '123456789105, '1234567891015'); """
     try:
         cursor.execute(replace_old_engagements_sql)
     except mysql.connector.Error as error:
