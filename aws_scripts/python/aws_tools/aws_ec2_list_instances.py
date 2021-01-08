@@ -20,7 +20,7 @@ from os.path import basename
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
-from ec2_mongo import insert_docgit,mongo_export_to_file,delete_from_collection
+from ec2_mongo import insert_doc,mongo_export_to_file,delete_from_collection
 
 # Initialize the color ouput with colorama
 init()
@@ -55,8 +55,6 @@ def initialize(interactive, aws_account):
     # Set the date
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
-    # Set the fieldnames for the CSV and for the confluence page
-    fieldnames = [ 'AWS Account', 'Account Number', 'Name', 'Instance ID', 'AMI ID', 'Volumes', 'Private IP', 'Public IP', 'Private DNS', 'Region', 'Availability Zone', 'VPC ID', 'Type', 'Key Pair Name', 'State', 'Launch Date']
     # Set the input file
     aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_accounts_list.csv')
     # Set the output file
@@ -68,7 +66,7 @@ def initialize(interactive, aws_account):
     else:
         output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
         output_file_name = 'aws-instance-master-list-' + today +'.csv'
-    return today, aws_env_list, output_file, output_file_name, fieldnames
+    return today, aws_env_list, output_file, output_file_name
 
 def exit_program():
     endbanner()
@@ -125,8 +123,8 @@ def set_regions(aws_account):
     return regions
 
 
-def list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details):
-    _, _, output_file, _, _= initialize(interactive, aws_account)
+def list_instances(aws_account,aws_account_number, interactive, regions, show_details):
+    _, _, output_file, _ = initialize(interactive, aws_account)
     delete_from_collection(aws_account_number)
     instance_list = ''
     session = ''
@@ -282,7 +280,6 @@ def convert_csv_to_html_table(output_file, today, interactive, aws_account):
     else:
         htmlfile = os.path.join(output_dir, 'aws-instance-master-list-' + today + '.html')
         htmlfile_name = 'aws-instance-master-list-' + today +'.html'
-    remove_htmlfile = htmlfile
     count = 0
     html = ''
     with open(output_file,'r') as CSVFILE:
@@ -303,7 +300,7 @@ def convert_csv_to_html_table(output_file, today, interactive, aws_account):
         html += "</tbody></table>"
     with open(htmlfile,'w+') as HTMLFILE:
         HTMLFILE.write(html)
-    return htmlfile, htmlfile_name, remove_htmlfile
+    return htmlfile, htmlfile_name
 
 
 def get_page_ancestors(auth, pageid):
@@ -381,7 +378,7 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
     options = arguments()
     to_addr = ''
     # Get the variables from intitialize
-    today, _, output_file, _, _ = initialize(interactive, aws_account)
+    today, _, output_file, _ = initialize(interactive, aws_account)
     if options.first_name:
         ## Get the address to send to
         print(Fore.YELLOW)
@@ -425,26 +422,6 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
         banner(message)
     except Exception as error:
         message = f"Exception: {error}\nEmail was not sent."
-        banner(message)
-    print(Fore.RESET)
-
-
-def remove_file(output_file, output_file_name):
-    print(Fore.GREEN)
-    message = f"Removing the output file: {output_file_name}"
-    banner(message)
-    try:
-        os.remove(output_file)
-    except Exception as error:
-        print("Error: ", error)
-        remove_stat = 1
-    else:
-        remove_stat = 0
-    if remove_stat == 0:
-        message = "File removed!"
-        banner(message)
-    else:
-        message = "File not removed."
         banner(message)
     print(Fore.RESET)
 
@@ -610,7 +587,7 @@ def main():
             print(Fore.RESET)
 
         # Grab variables from initialize
-        today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
+        today, aws_env_list, output_file, _ = initialize(interactive, aws_account)
 
         # Read account info from the accounts list file
         account_names, account_numbers = read_account_info(aws_env_list)
@@ -632,10 +609,10 @@ def main():
 
         # Set the regions and run the program
         regions = set_regions(aws_account)
-        output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
+        output_file = list_instances(aws_account,aws_account_number, interactive, regions, show_details)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
             mongo_export_to_file(interactive, aws_account, aws_account_number)
-            htmlfile, htmlfile_name, remove_htmlfile = convert_csv_to_html_table(output_file, today, interactive, aws_account)
+            htmlfile, _, _ = convert_csv_to_html_table(output_file, today, interactive, aws_account)
             print(Fore.YELLOW)
             message = "Send an Email"
             banner(message)
@@ -690,7 +667,7 @@ def main():
             print(Fore.RESET)
         aws_account = 'all'
         # Grab variables from initialize
-        today, aws_env_list, output_file, output_file_name, fieldnames = initialize(interactive, aws_account)
+        today, aws_env_list, output_file, _ = initialize(interactive, aws_account)
         account_names, account_numbers = read_account_info(aws_env_list)
         for (aws_account, aws_account_number) in zip(account_names, account_numbers):
             aws_account = aws_account.split()[0]
@@ -700,7 +677,7 @@ def main():
             print(Fore.RESET)
             # Set the regions
             regions = set_regions(aws_account)
-            output_file = list_instances(aws_account,aws_account_number, interactive, regions, fieldnames, show_details)
+            output_file = list_instances(aws_account,aws_account_number, interactive, regions, show_details)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
             mongo_export_to_file(interactive, aws_account, aws_account_number)
             htmlfile, _, _ = convert_csv_to_html_table(output_file, today, interactive, aws_account)
