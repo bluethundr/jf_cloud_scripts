@@ -612,7 +612,7 @@ def main():
         output_file = list_instances(aws_account,aws_account_number, interactive, regions, show_details)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
             mongo_export_to_file(interactive, aws_account, aws_account_number)
-            htmlfile, _, _ = convert_csv_to_html_table(output_file, today, interactive, aws_account)
+            htmlfile, htmlfile_name = convert_csv_to_html_table(output_file, today, interactive, aws_account)
             print(Fore.YELLOW)
             message = "Send an Email"
             banner(message)
@@ -680,7 +680,7 @@ def main():
             output_file = list_instances(aws_account,aws_account_number, interactive, regions, show_details)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
             mongo_export_to_file(interactive, aws_account, aws_account_number)
-            htmlfile, _, _ = convert_csv_to_html_table(output_file, today, interactive, aws_account)
+            htmlfile, htmlfile_name = convert_csv_to_html_table(output_file, today, interactive, aws_account)
             print(Fore.YELLOW)
             message = "Send an Email"
             banner(message)
