@@ -346,9 +346,9 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number):
         writer = ExcelWriter(output_file)
         docs.to_excel(writer,"EC2 List",index=False)
         writer.save()
-        exit = input("Exit program (y/n): ")
-        if exit.lower() == "y" or exit.lower() == "yes":
-            exit_program()
+    exit = input("Exit program (y/n): ")
+    if exit.lower() == "y" or exit.lower() == "yes":
+        exit_program()
 
 def clear_db():
     _, _, instance_col = set_db()

@@ -105,7 +105,6 @@ def report_gov_or_comm(aws_account, account_found):
         message = "This is a commercial account."
         banner(message)
 
-
 def set_regions(aws_account):
     print(Fore.GREEN)
     message = f"Getting the regions in {aws_account} "
@@ -121,7 +120,6 @@ def set_regions(aws_account):
         ec2_client = session.client('ec2')
         regions = [reg['RegionName'] for reg in ec2_client.describe_regions()['Regions']]
     return regions
-
 
 def list_instances(aws_account,aws_account_number, interactive, regions, show_details):
     _, _, output_file, _ = initialize(interactive, aws_account)
@@ -302,7 +300,6 @@ def convert_csv_to_html_table(output_file, today, interactive, aws_account):
         HTMLFILE.write(html)
     return htmlfile, htmlfile_name
 
-
 def get_page_ancestors(auth, pageid):
     # Get basic page information plus the ancestors property
     url = '{base}/{pageid}?expand=ancestors'.format(
@@ -311,7 +308,6 @@ def get_page_ancestors(auth, pageid):
     r = requests.get(url, auth = auth)
     r.raise_for_status()
     return r.json()['ancestors']
-
 
 def get_page_info(auth, pageid):
     url = '{base}/{pageid}'.format(
@@ -612,7 +608,7 @@ def main():
         output_file = list_instances(aws_account,aws_account_number, interactive, regions, show_details)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
             mongo_export_to_file(interactive, aws_account, aws_account_number)
-            htmlfile, htmlfile_name = convert_csv_to_html_table(output_file, today, interactive, aws_account)
+            htmlfile, _ = convert_csv_to_html_table(output_file, today, interactive, aws_account)
             print(Fore.YELLOW)
             message = "Send an Email"
             banner(message)
@@ -680,7 +676,7 @@ def main():
             output_file = list_instances(aws_account,aws_account_number, interactive, regions, show_details)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
             mongo_export_to_file(interactive, aws_account, aws_account_number)
-            htmlfile, htmlfile_name = convert_csv_to_html_table(output_file, today, interactive, aws_account)
+            htmlfile, _ = convert_csv_to_html_table(output_file, today, interactive, aws_account)
             print(Fore.YELLOW)
             message = "Send an Email"
             banner(message)
