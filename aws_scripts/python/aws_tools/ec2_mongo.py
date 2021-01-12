@@ -133,7 +133,7 @@ def connect_db():
         print ("pymongo ERROR:", e)
     return myclient
 
-def set_db():
+def set_db(instance_col=None):
     if __name__ == "__main__":
         message = "* Select a MongoDB Database *"
         print(Fore.CYAN)
@@ -266,17 +266,17 @@ def mongo_select_all():
     print("\n")
     return instance_list
 
-def mongo_export_to_file(interactive, aws_account, aws_account_number,instance_col=None):
+def mongo_export_to_file(interactive, aws_account, aws_account_number,instance_col=None,date=None):
     create_directories()
-    today = datetime.today()
-    today = today.strftime("%m-%d-%Y")
+    if date == None:
+        today = datetime.today()
+        today = today.strftime("%m-%d-%Y")
+        date = today
     if not instance_col:
         _, _, instance_col = set_db()
     # make an API call to the MongoDB server
     if interactive == 0:
-        print(f"Instance Collection: {instance_col}\nInteractive: {interactive}")
-        time.sleep(10)
-        mongo_docs = instance_col.find()
+        mongo_docs = instance_col.find({})
     else:
         mongo_docs = instance_col.find({"Account Number": aws_account_number})
     # Convert the mongo docs to a DataFrame
@@ -301,9 +301,9 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,instance_c
         # Set the CSV output directory
         output_dir = os.path.join("..", "..", "output_files", "aws_instance_list", "csv", "")
         if interactive == 1:
-            output_file = os.path.join(output_dir, "aws-instance-list-" + aws_account + "-" + today +".csv")
+            output_file = os.path.join(output_dir, "aws-instance-list-" + aws_account + "-" + date +".csv")
         else:
-            output_file = os.path.join(output_dir, "aws-instance-master-list-" + today +".csv")
+            output_file = os.path.join(output_dir, "aws-instance-master-list-" + date +".csv")
 
         # export MongoDB documents to a CSV file, leaving out the row "labels" (row numbers)
         docs.to_csv(output_file, ",", index=False) # CSV delimited by commas
@@ -314,9 +314,9 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,instance_c
         # Set the JSON output directory
         output_dir = os.path.join("..", "..", "output_files", "aws_instance_list", "json", "")
         if interactive == 1:
-            output_file = os.path.join(output_dir, "aws-instance-list-" + aws_account + "-" + today +".json")
+            output_file = os.path.join(output_dir, "aws-instance-list-" + aws_account + "-" + date +".json")
         else:
-            output_file = os.path.join(output_dir, "aws-instance-master-list" + today +".json")
+            output_file = os.path.join(output_dir, "aws-instance-master-list-" + date +".json")
         # export MongoDB documents to a CSV file, leaving out the row "labels" (row numbers)
         docs.to_json(output_file)
     elif choice == 3:
@@ -332,9 +332,9 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,instance_c
         # Set the HTML output directory
         output_dir = os.path.join("..", "..", "output_files", "aws_instance_list", "html", "")
         if interactive == 1:
-            output_file = os.path.join(output_dir, "aws-instance-list-" + aws_account + "-" + today +".html")
+            output_file = os.path.join(output_dir, "aws-instance-list-" + aws_account + "-" + date +".html")
         else:
-            output_file = os.path.join(output_dir, "aws-instance-master-list" + today + ".html")
+            output_file = os.path.join(output_dir, "aws-instance-master-list-" + date + ".html")
         # save the MongoDB documents as an HTML table
         docs.to_html(output_file)
     elif choice == 4:
@@ -342,16 +342,19 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,instance_c
         output_dir = os.path.join("..", "..", "output_files", "aws_instance_list", "excel", "")
         time.sleep(5)
         if interactive == 1:
-            output_file = os.path.join(output_dir, "aws-instance-list-" + aws_account + "-" + today + ".xlsx")
+            output_file = os.path.join(output_dir, "aws-instance-list-" + aws_account + "-" + date + ".xlsx")
         else:
-            output_file = os.path.join(output_dir, "aws-instance-master-list" + today + ".xlsx")
+            output_file = os.path.join(output_dir, "aws-instance-master-list-" + date + ".xlsx")
         # export MongoDB documents to a Excel file, leaving out the row "labels" (row numbers)
         writer = ExcelWriter(output_file)
         docs.to_excel(writer,"EC2 List",index=False)
         writer.save()
-    exit = input("Exit program (y/n): ")
-    if exit.lower() == "y" or exit.lower() == "yes":
-        exit_program()
+    if __name__ == "__main__":
+        exit = input("Exit program (y/n): ")
+        if exit.lower() == "y" or exit.lower() == "yes":
+            exit_program()
+        else:
+            main()
 
 def clear_db():
     _, _, instance_col = set_db()
@@ -410,6 +413,7 @@ def print_collections():
                 print (col, "--", col_num)
 
 def print_reports(interactive,aws_account,aws_account_number):
+    set_db(instance_col=None)
     inputDate = input("Enter the date in format 'dd/mm/yyyy': ")
     day,month,year = inputDate.split('/')
     isValidDate = True
@@ -427,12 +431,11 @@ def print_reports(interactive,aws_account,aws_account_number):
     else:
         print(f"Input date is not valid: {inputDate}")
         print_reports(interactive,aws_account,aws_account_number)
+    myclient = connect_db()
+    mydb = myclient["aws_inventories"]
     instance_col = "ec2_list_" + inputDate
-    mongo_export_to_file(interactive, aws_account, aws_account_number,instance_col)
-
-
-    #print(f"New date format: {inputDate}")
-    #print_reports()
+    instance_col = mydb[instance_col]
+    mongo_export_to_file(interactive, aws_account, aws_account_number,instance_col,date=inputDate)
 
 def menu():
     message = "Main Menu"
