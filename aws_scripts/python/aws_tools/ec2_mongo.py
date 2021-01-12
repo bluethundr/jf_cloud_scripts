@@ -266,14 +266,17 @@ def mongo_select_all():
     print("\n")
     return instance_list
 
-def mongo_export_to_file(interactive, aws_account, aws_account_number):
+def mongo_export_to_file(interactive, aws_account, aws_account_number,instance_col=None):
     create_directories()
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
-    _, _, instance_col = set_db()
+    if not instance_col:
+        _, _, instance_col = set_db()
     # make an API call to the MongoDB server
     if interactive == 0:
-         mongo_docs = instance_col.find()
+        print(f"Instance Collection: {instance_col}\nInteractive: {interactive}")
+        time.sleep(10)
+        mongo_docs = instance_col.find()
     else:
         mongo_docs = instance_col.find({"Account Number": aws_account_number})
     # Convert the mongo docs to a DataFrame
@@ -406,6 +409,31 @@ def print_collections():
             for col_num, col in enumerate(collection_names):
                 print (col, "--", col_num)
 
+def print_reports(interactive,aws_account,aws_account_number):
+    inputDate = input("Enter the date in format 'dd/mm/yyyy': ")
+    day,month,year = inputDate.split('/')
+    isValidDate = True
+    try:
+        datetime(int(year),int(month),int(day))
+    except ValueError :
+        isValidDate = False
+        print_reports(interactive,aws_account,aws_account_number)
+
+    if(isValidDate) :
+        print(f"Input date is valid: {inputDate}")
+        format= "%m%d%Y"
+        inputDate = datetime.strptime(inputDate,"%m/%d/%Y")
+        inputDate = inputDate.strftime(format)
+    else:
+        print(f"Input date is not valid: {inputDate}")
+        print_reports(interactive,aws_account,aws_account_number)
+    instance_col = "ec2_list_" + inputDate
+    mongo_export_to_file(interactive, aws_account, aws_account_number,instance_col)
+
+
+    #print(f"New date format: {inputDate}")
+    #print_reports()
+
 def menu():
     message = "Main Menu"
     banner(message)
@@ -419,7 +447,8 @@ def menu():
     print("7. Print DB Names")
     print("8. Print collections")
     print("9. Export MongoDB to file")
-    print("10. Exit ec2 mongo")
+    print("10. Print Reports")
+    print("11. Exit ec2 mongo")
     print("\n")
 
 def main():
@@ -482,8 +511,16 @@ def main():
                 aws_account, aws_account_number = select_account(options, aws_env_list)
             mongo_export_to_file(interactive, aws_account, aws_account_number)
             main()
-        # 10. Exit ec2 mongo
+        # 10 Print Reports
         elif option == 10:
+            if aws_accounts_answer == "all":
+                aws_account = "all"
+                aws_account_number = "123456789101"
+            else:
+                aws_account, aws_account_number = select_account(options, aws_env_list)
+            print_reports(interactive,aws_account,aws_account_number)
+        # 11. Exit ec2 mongo
+        elif option == 11:
             exit_program()
         # Invalid Input
         else:
