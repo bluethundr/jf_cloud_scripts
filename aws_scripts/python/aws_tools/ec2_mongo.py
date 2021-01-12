@@ -272,6 +272,8 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,instance_c
         today = datetime.today()
         today = today.strftime("%m-%d-%Y")
         date = today
+    #today = datetime.today()
+    #date = date.strftime("%m-%d-%Y")
     if not instance_col:
         _, _, instance_col = set_db()
     # make an API call to the MongoDB server
