@@ -269,11 +269,14 @@ def mongo_select_all():
 def mongo_export_to_file(interactive, aws_account, aws_account_number,instance_col=None,date=None):
     create_directories()
     if date == None:
+        format= "%m-%d-%Y"
         today = datetime.today()
-        today = today.strftime("%m-%d-%Y")
+        today = today.strftime(format)
         date = today
-    #today = datetime.today()
-    #date = date.strftime("%m-%d-%Y")
+    else:
+        format= "%m-%d-%Y"
+        date = datetime.strptime(date,"%m%d%Y")
+        date = date.strftime(format)
     if not instance_col:
         _, _, instance_col = set_db()
     # make an API call to the MongoDB server
@@ -351,6 +354,7 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,instance_c
         writer = ExcelWriter(output_file)
         docs.to_excel(writer,"EC2 List",index=False)
         writer.save()
+        writer.close()
     if __name__ == "__main__":
         exit = input("Exit program (y/n): ")
         if exit.lower() == "y" or exit.lower() == "yes":
