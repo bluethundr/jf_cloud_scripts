@@ -451,6 +451,9 @@ def print_reports(interactive,aws_account,aws_account_number):
     mongo_export_to_file(interactive, aws_account, aws_account_number,instance_col,date=inputDate)
 
 # Choice 11. Exit ec2 Mongo
+def exit_program():
+    endbanner()
+    exit()
 
 def menu():
     message = "Main Menu"
