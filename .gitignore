@@ -1,0 +1,4 @@
+aws_scripts/python/aws_tools/__pycache__/
+.vscode/
+aws_scripts/output_files/
+aws_scripts/source_files/
