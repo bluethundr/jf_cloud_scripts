@@ -380,7 +380,6 @@ def get_login(username = None):
         keyring.set_password('confluence_script', username, passwd)
     return (username, passwd)
 
-
 ### AWS List Instances
 def list_instances(aws_account,aws_account_number, interactive, regions, show_details):
     _, _, output_file, _ = initialize(interactive, aws_account)
