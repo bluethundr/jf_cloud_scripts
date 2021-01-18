@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+#-*- coding: utf-8 -*-
 # Import modules
 import boto3
 import botocore
@@ -25,6 +25,7 @@ from ec2_mongo import insert_coll,mongo_export_to_file,delete_from_collection
 # Initialize the color ouput with colorama
 init()
 
+### Confluence URLs
 BASE_URL = "https://confluence.company.net:8443/rest/api/content"
 VIEW_URL = "https://confluence.company.net:8443/pages/viewpage.action?pageId="
 

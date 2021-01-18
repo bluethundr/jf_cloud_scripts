@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #-*- coding: utf-8 -*-
-# Import module
+# Import modules
 import io
 import os
 import time
