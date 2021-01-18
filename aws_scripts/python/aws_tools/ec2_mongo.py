@@ -15,111 +15,7 @@ from pathlib import Path
 from colorama import init, Fore
 init()
 
-def welcomebanner():
-    # Print the welcome banner
-    print(Fore.CYAN)
-    message = "*             EC2 MongoDB                     *"
-    banner(message, "*")
-    print(Fore.RESET)
-
-def endbanner():
-    print(Fore.CYAN)
-    message = "* EC2 MongoDB Operations Are Complete *"
-    banner(message, "*")
-    print(Fore.RESET)
-
-def banner(message, border="-"):
-    line = border * len(message)
-    print(line)
-    print(message)
-    print(line)
-
-def exit_program():
-    endbanner()
-    exit()
-
-def is_digit(check_input):
-    if check_input.isdigit():
-        return True
-    return False
-
-def initialize(interactive, aws_account):
-    # Set the date
-    today = datetime.today()
-    today = today.strftime("%m-%d-%Y")
-    # Set the input file
-    aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_accounts_list.csv')
-    return today, aws_env_list
-
-def read_account_info(aws_env_list):
-    account_names = []
-    account_numbers = []
-    with open(aws_env_list) as csv_file:
-        csv_reader = csv.reader(csv_file, delimiter=',')
-        next(csv_reader)
-        for row in csv_reader:
-                account_name = str(row[0])
-                account_number = str(row[1])
-                account_names.append(account_name)
-                account_numbers.append(account_number)
-    return account_names, account_numbers
-
-def select_account(options, aws_env_list):
-    ## Select the account
-    if options.account_name:
-        aws_account = options.account_name
-    else:
-        print(Fore.YELLOW)
-        aws_account = input("Enter the name of the AWS account you'll be working in: ")
-        print(Fore.RESET)
-    aws_account_number = find_account_number(aws_account, aws_env_list)
-    return aws_account, aws_account_number
-
-def find_account_number(aws_account,aws_env_list):
-    account_names, account_numbers = read_account_info(aws_env_list)
-    for (my_aws_account, my_aws_account_number) in zip(account_names, account_numbers):
-        if my_aws_account == aws_account:
-            aws_account_number = my_aws_account_number
-    if aws_account ==  "all":
-        aws_account_number = '1234567891011'
-    return aws_account_number
-
-def arguments():
-    parser = argparse.ArgumentParser(description="This is a program that provides a text interface to MongoDB.")
-
-    parser.add_argument(
-    "-n",
-    "--account_name",
-    type = str,
-    default = None,
-    nargs = "?",
-    help = "Name of the AWS account you'll be working in")
-
-    options = parser.parse_args()
-    return options
-
-def create_directories():
-
-    ## Set source and output file directories
-    source_files_path = Path('..', '..', 'source_files', 'aws_accounts_list')
-    output_files_path = Path('..', '..', 'output_files', 'aws_instance_list')
-
-    os.makedirs(source_files_path, exist_ok=True)
-    os.makedirs(output_files_path, exist_ok=True)
-
-    # Create output subdirectories
-    folders = ['csv','excel','html', 'json']
-    for folder in folders:
-        full_path = os.path.join(output_files_path,folder)
-        os.makedirs(full_path, exist_ok=True)
-
-def set_test_dict():
-    mydict = { "AWS Account": "company-lab", "Account Number": "12345678910", "Name": "bastion001",
-"Instance ID": "i-07aaef3b7167d592a", "AMI ID": "ami-07fd81f1ecf6cf387", "Volumes": "vol-09d6d898db4af132a",
-"Private IP": "10.238.3.165", "Public IP": "xx.xx.xx.xx", "Private DNS": "ip-10-238-3-165.ec2.internal",
-"Availability Zone": "us-east-1a", "VPC ID": "vpc-00de11103235ec567", "Type": "t3.small", "Key Pair Name": "ccmi-vzn-int01", "Instance State": "running", "Launch Date": "September 10 2019"}
-    return mydict
-
+### DB Functions
 def connect_db():
     try:
         myclient = MongoClient(
@@ -175,6 +71,144 @@ def set_db(instance_col=None):
         instance_col = mydb[instance_col]
     return mydb, mydb_name, instance_col
 
+### Utility Functions
+def welcomebanner():
+    # Print the welcome banner
+    print(Fore.CYAN)
+    message = "*             EC2 MongoDB                     *"
+    banner(message, "*")
+    print(Fore.RESET)
+
+def endbanner():
+    print(Fore.CYAN)
+    message = "* EC2 MongoDB Operations Are Complete *"
+    banner(message, "*")
+    print(Fore.RESET)
+
+def banner(message, border="-"):
+    line = border * len(message)
+    print(line)
+    print(message)
+    print(line)
+
+def exit_program():
+    endbanner()
+    exit()
+
+def menu():
+    message = "Main Menu"
+    banner(message)
+    print(Fore.CYAN + "Your available actions: ")
+    print("1. Create new MongoDB Database")
+    print("2. Drop MongoDB Database")
+    print("3. Do a test insert to the DB")
+    print("4. Clear the DB")
+    print("5. Remove accounts from the DB.")
+    print("6. Print the DB")
+    print("7. Print DB Names")
+    print("8. Print collections")
+    print("9. Export MongoDB to file")
+    print("10. Print Reports")
+    print("11. Exit ec2 mongo")
+    print("\n")
+
+def is_digit(check_input):
+    if check_input.isdigit():
+        return True
+    return False
+
+def initialize(interactive, aws_account):
+    # Set the date
+    today = datetime.today()
+    today = today.strftime("%m-%d-%Y")
+    # Set the input file
+    aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_accounts_list.csv')
+    return today, aws_env_list
+
+def read_account_info(aws_env_list):
+    account_names = []
+    account_numbers = []
+    with open(aws_env_list) as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=',')
+        next(csv_reader)
+        for row in csv_reader:
+                account_name = str(row[0])
+                account_number = str(row[1])
+                account_names.append(account_name)
+                account_numbers.append(account_number)
+    return account_names, account_numbers
+
+def select_account(options, aws_env_list):
+    ## Select the account
+    if options.account_name:
+        aws_account = options.account_name
+    else:
+        print(Fore.YELLOW)
+        aws_account = input("Enter the name of the AWS account you'll be working in: ")
+        print(Fore.RESET)
+    aws_account_number = find_account_number(aws_account, aws_env_list)
+    return aws_account, aws_account_number
+
+def find_account_number(aws_account,aws_env_list):
+    account_names, account_numbers = read_account_info(aws_env_list)
+    for (my_aws_account, my_aws_account_number) in zip(account_names, account_numbers):
+        if my_aws_account == aws_account:
+            aws_account_number = my_aws_account_number
+    if aws_account ==  "all":
+        aws_account_number = '1234567891011'
+    return aws_account_number
+
+def create_directories():
+    ## Set source and output file directories
+    source_files_path = Path('..', '..', 'source_files', 'aws_accounts_list')
+    output_files_path = Path('..', '..', 'output_files', 'aws_instance_list')
+
+    os.makedirs(source_files_path, exist_ok=True)
+    os.makedirs(output_files_path, exist_ok=True)
+
+    # Create output subdirectories
+    folders = ['csv','excel','html', 'json']
+    for folder in folders:
+        full_path = os.path.join(output_files_path,folder)
+        os.makedirs(full_path, exist_ok=True)
+
+def set_test_dict():
+    mydict = { "AWS Account": "company-lab", "Account Number": "12345678910", "Name": "bastion001",
+"Instance ID": "i-07aaef3b7167d592a", "AMI ID": "ami-07fd81f1ecf6cf387", "Volumes": "vol-09d6d898db4af132a",
+"Private IP": "10.238.3.165", "Public IP": "xx.xx.xx.xx", "Private DNS": "ip-10-238-3-165.ec2.internal",
+"Availability Zone": "us-east-1a", "VPC ID": "vpc-00de11103235ec567", "Type": "t3.small", "Key Pair Name": "ccmi-vzn-int01", "Instance State": "running", "Launch Date": "September 10 2019"}
+    return mydict
+
+## Used by ec2_list_instances only. Not in a menu.
+def delete_from_collection(aws_account_number):
+    _, _, instance_col = set_db()
+    if __name__ == "__main__":
+        message = f"* Clear old entries *"
+        banner(message, border="*")
+        print(f"This command clears old entries the database.\n")
+        aws_account_number = input("Enter an AWS account number: ")
+    try:
+        #instance_col.remove({"Account Number": aws_account_number});
+        instance_col.delete_many({"Account Number": aws_account_number})
+    except Exception as e:
+        print(f"An error has occurred: {e}")
+
+# CLI Arguments
+def arguments():
+    parser = argparse.ArgumentParser(description="This is a program that provides a text interface to MongoDB.")
+
+    parser.add_argument(
+    "-n",
+    "--account_name",
+    type = str,
+    default = None,
+    nargs = "?",
+    help = "Name of the AWS account you'll be working in")
+
+    options = parser.parse_args()
+    return options
+
+# 1. Create new MongoDB Database
 def create_mongodb(mydict):
     myclient = connect_db()
     message = f"* Create new MongoDB *"
@@ -195,6 +229,7 @@ def create_mongodb(mydict):
         except Exception as e:
             print(f"MongoDB Database creation failed with: {e}")
 
+# 2. Drop MongoDB Database
 def drop_mongodb():
     message = "* Drop MongoDB *"
     banner(message, "*")
@@ -238,7 +273,8 @@ def drop_mongodb():
     diff = len(db_names_before_drop) - len(db_names_after_drop)
     print ("difference:", diff)
 
-def insert_doc(mydict):
+# 3. Insert MongoDB Collection
+def insert_coll(mydict):
     _, _, instance_col = set_db()
     mydict["_id"] = ObjectId()
     instance_doc = instance_col.insert_one(mydict)
@@ -249,6 +285,35 @@ def insert_doc(mydict):
         banner(message)
     return instance_doc
 
+# 4. Clear the DB
+def clear_db():
+    _, _, instance_col = set_db()
+    message = f"* Clear the DB *"
+    banner(message, border="*")
+    print(f"This command empties the database.\n")
+    try:
+        x = instance_col.delete_many({})
+    except Exception as e:
+        print(f"An error has occurred: {e}")
+    print(x.deleted_count, "documents deleted.")
+
+# 5. Remove accounts from DB
+def print_db_names():
+    myclient = connect_db()
+    message = f"* Print DB Names *"
+    banner(message, border="*")
+    print("The database names are:")
+    if myclient != None:
+        # the list_database_names() method returns a list of strings
+        database_names = myclient.list_database_names()
+        counter = 1
+        for db in database_names:
+            message = str(counter) + ". " + db
+            print(message)
+            counter = counter + 1
+        print ("There are", len(database_names), "databases.")
+
+# 6. MongoDB Select All
 def mongo_select_all():
     _, mydb_name, instance_col = set_db()
     instance_list = list(instance_col.find())
@@ -266,6 +331,41 @@ def mongo_select_all():
     print("\n")
     return instance_list
 
+# 7. Print DB Names
+def print_db_names():
+    myclient = connect_db()
+    message = f"* Print DB Names *"
+    banner(message, border="*")
+    print("The database names are:")
+    if myclient != None:
+        # the list_database_names() method returns a list of strings
+        database_names = myclient.list_database_names()
+        counter = 1
+        for db in database_names:
+            message = str(counter) + ". " + db
+            print(message)
+            counter = counter + 1
+        print ("There are", len(database_names), "databases.")
+
+# 8 Print Collections
+def print_collections():
+    myclient = connect_db()
+    message = f"* Print DB Collections *"
+    banner(message, border="*")
+    print(f"This command prints the database collection names.\n")
+    if myclient != None:
+        # the list_database_names() method returns a list of strings
+        database_names = myclient.list_database_names()
+        print ("There are", len(database_names), "databases.")
+        for db_num, db in enumerate(database_names):
+            print ("\nGetting collections for database:", db, "--", db_num)
+            collection_names = myclient[db].list_collection_names()
+            print ("The MongoDB database returned", len(collection_names), "collections.")
+            # iterate over the list of collection names
+            for col_num, col in enumerate(collection_names):
+                print (col, "--", col_num)
+
+# 9. Export Mongo DB to File
 def mongo_export_to_file(interactive, aws_account, aws_account_number,instance_col=None,date=None):
     create_directories()
     if date == None:
@@ -362,62 +462,7 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,instance_c
         else:
             main()
 
-def clear_db():
-    _, _, instance_col = set_db()
-    message = f"* Clear the DB *"
-    banner(message, border="*")
-    print(f"This command empties the database.\n")
-    try:
-        x = instance_col.delete_many({})
-    except Exception as e:
-        print(f"An error has occurred: {e}")
-    print(x.deleted_count, "documents deleted.")
-
-def delete_from_collection(aws_account_number):
-    _, _, instance_col = set_db()
-    if __name__ == "__main__":
-        message = f"* Clear old entries *"
-        banner(message, border="*")
-        print(f"This command clears old entries the database.\n")
-        aws_account_number = input("Enter an AWS account number: ")
-    try:
-        #instance_col.remove({"Account Number": aws_account_number});
-        instance_col.delete_many({"Account Number": aws_account_number})
-    except Exception as e:
-        print(f"An error has occurred: {e}")
-
-def print_db_names():
-    myclient = connect_db()
-    message = f"* Print DB Names *"
-    banner(message, border="*")
-    print("The database names are:")
-    if myclient != None:
-        # the list_database_names() method returns a list of strings
-        database_names = myclient.list_database_names()
-        counter = 1
-        for db in database_names:
-            message = str(counter) + ". " + db
-            print(message)
-            counter = counter + 1
-        print ("There are", len(database_names), "databases.")
-
-def print_collections():
-    myclient = connect_db()
-    message = f"* Print DB Collections *"
-    banner(message, border="*")
-    print(f"This command prints the database collection names.\n")
-    if myclient != None:
-        # the list_database_names() method returns a list of strings
-        database_names = myclient.list_database_names()
-        print ("There are", len(database_names), "databases.")
-        for db_num, db in enumerate(database_names):
-            print ("\nGetting collections for database:", db, "--", db_num)
-            collection_names = myclient[db].list_collection_names()
-            print ("The MongoDB database returned", len(collection_names), "collections.")
-            # iterate over the list of collection names
-            for col_num, col in enumerate(collection_names):
-                print (col, "--", col_num)
-
+# 10. Print Reports
 def print_reports(interactive,aws_account,aws_account_number):
     set_db(instance_col=None)
     inputDate = input("Enter the date in format 'dd/mm/yyyy': ")
@@ -443,23 +488,7 @@ def print_reports(interactive,aws_account,aws_account_number):
     instance_col = mydb[instance_col]
     mongo_export_to_file(interactive, aws_account, aws_account_number,instance_col,date=inputDate)
 
-def menu():
-    message = "Main Menu"
-    banner(message)
-    print(Fore.CYAN + "Your available actions: ")
-    print("1. Create new MongoDB Database")
-    print("2. Drop MongoDB Database")
-    print("3. Do a test insert to the DB")
-    print("4. Clear the DB")
-    print("5. Remove accounts from the DB.")
-    print("6. Print the DB")
-    print("7. Print DB Names")
-    print("8. Print collections")
-    print("9. Export MongoDB to file")
-    print("10. Print Reports")
-    print("11. Exit ec2 mongo")
-    print("\n")
-
+### Main Function
 def main():
     options = arguments()
     welcomebanner()
@@ -488,7 +517,7 @@ def main():
             main()
         # 3. Do a test insert to the DB
         elif option  == 3:
-            insert_doc(mydict)
+            insert_coll(mydict)
             main()
         # 4. Clear the DB"
         elif option == 4:
@@ -537,5 +566,6 @@ def main():
             banner(message)
             main()
 
+### Run locally
 if __name__ == "__main__":
     main()

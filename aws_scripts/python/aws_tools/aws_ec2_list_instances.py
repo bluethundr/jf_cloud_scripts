@@ -20,7 +20,7 @@ from os.path import basename
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
-from ec2_mongo import insert_doc,mongo_export_to_file,delete_from_collection
+from ec2_mongo import insert_coll,mongo_export_to_file,delete_from_collection
 
 # Initialize the color ouput with colorama
 init()
@@ -28,6 +28,7 @@ init()
 BASE_URL = "https://confluence.company.net:8443/rest/api/content"
 VIEW_URL = "https://confluence.company.net:8443/pages/viewpage.action?pageId="
 
+### Utility Functions
 def welcomebanner():
     # Print the welcome banner
     print(Fore.CYAN)
@@ -121,6 +122,265 @@ def set_regions(aws_account):
         regions = [reg['RegionName'] for reg in ec2_client.describe_regions()['Regions']]
     return regions
 
+### Cli arguments
+def arguments():
+    parser = argparse.ArgumentParser(description='This is a program that lists the servers in EC2')
+
+    parser.add_argument(
+    "-u",
+    "--user",
+    default = getpass.getuser(),
+    help = "Specify the username to log into Confluence")
+
+    parser.add_argument(
+    "-d",
+    "--password",
+    help = "Specify the user's password")
+
+    parser.add_argument(
+    "-t",
+    "--title",
+    default = None,
+    type = str,
+    help = "Specify a new title")
+
+    parser.add_argument(
+    "-f",
+    "--file",
+    default = None,
+    type = str,
+    help = "Write the contents of FILE to the confluence page")
+
+    parser.add_argument(
+    "--html",
+    type = str,
+    default = None,
+    nargs = '?',
+    help = "Write the immediate html string to confluence page")
+
+    parser.add_argument(
+    "-n",
+    "--account_name",
+    type = str,
+    default = None,
+    nargs = '?',
+    help = "Name of the AWS account you'll be working in")
+
+    parser.add_argument(
+    "-c",
+    "--all_accounts",
+    type = str,
+    default = None,
+    nargs = '?',
+    help = "Process one or all accounts")
+
+    parser.add_argument(
+    "-p",
+    "--pageid",
+    type = int,
+    help = "Specify the Conflunce page id to overwrite")
+
+    parser.add_argument(
+    "-e",
+    "--send_email",
+    type = str,
+    help = "Send an email")
+
+    parser.add_argument(
+    "-r",
+    "--email_recipient",
+    type = str,
+    help = "Who will receive the email")
+
+    parser.add_argument(
+    "-g",
+    "--first_name",
+    type = str,
+    help = "First (given) name of the person receving the email")
+
+    parser.add_argument(
+    "-w",
+    "--write_confluence",
+    type = str,
+    help = "Write to confluence")
+
+    parser.add_argument(
+    "-i",
+    "--run_again",
+    type = str,
+    help = "Run again")
+
+    parser.add_argument(
+    "-v",
+    "--verbose",
+    type = str,
+    help = "Write the EC2 instances to the screen")
+
+    parser.add_argument(
+    "-o",
+    "--reports",
+    type = str,
+    help = "Run reports")
+
+    options = parser.parse_args()
+    return options
+
+### Email function
+def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
+    options = arguments()
+    to_addr = ''
+    # Get the variables from intitialize
+    today, _, output_file, _ = initialize(interactive, aws_account)
+    if options.first_name:
+        ## Get the address to send to
+        print(Fore.YELLOW)
+        first_name = options.first_name
+        print(Fore.RESET)
+    else:
+        first_name = str(input("Enter the recipient's first name: "))
+
+    if options.email_recipient:
+        to_addr = options.email_recipient
+    else:
+        to_addr = input("Enter the recipient's email address: ")
+
+    from_addr = 'cloudops@noreply.sncr.com'
+    if aws_accounts_answer == 'one':
+        subject = "SNCR AWS Instance List: " + aws_account + " (" + aws_account_number + ") " + today
+        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The SD Team</font>"
+    else:
+        subject = "SNCR AWS Instance Master List " + today
+        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all CCMI AWS accounts.<br><br>Regards,<br>The SD Team</font>"    
+    msg = MIMEMultipart()
+    msg['From'] = from_addr
+    msg['To'] = to_addr
+    msg['Subject'] = subject
+    body = MIMEText(content, 'html')
+    msg.attach(body)
+    filename = output_file
+    with open(filename, 'r') as f:
+        part = MIMEApplication(f.read(), Name=basename(filename))
+        part['Content-Disposition'] = 'attachment; filename="{}"'.format(basename(filename))
+        msg.attach(part)
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.ehlo()
+        server.starttls()
+        gmail_user = 'sncr.noreply@gmail.com'
+        gmail_password = 'ehhloWorld12345'
+        server.login(gmail_user, gmail_password)
+        server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
+        message = f"Email was sent to: {to_addr}"
+        banner(message)
+    except Exception as error:
+        message = f"Exception: {error}\nEmail was not sent."
+        banner(message)
+    print(Fore.RESET)
+
+### Confluence Functions
+def convert_csv_to_html_table(output_file, today, interactive, aws_account):
+    output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html')
+    ### Interactive == 1  - user specifies an account
+    if interactive == 1:
+        htmlfile = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.html')
+        htmlfile_name = 'aws-instance-list-' + aws_account + '-' + today + '.html'
+    else:
+        htmlfile = os.path.join(output_dir, 'aws-instance-master-list-' + today + '.html')
+        htmlfile_name = 'aws-instance-master-list-' + today +'.html'
+    count = 0
+    html = ''
+    with open(output_file,'r') as CSVFILE:
+        reader = csv.reader(CSVFILE)
+        html += "<table><tbody>"
+        for row in reader:
+            html += "<tr>"
+            # Process the headers
+            if count == 0:
+                for column in row:
+                    html += "<th>%s</th>" % escape(column)
+            else:
+                # Process the data
+                for column in row:
+                    html += "<td>%s</td>" % escape(column)
+            html += "</tr>"
+            count += 1
+        html += "</tbody></table>"
+    with open(htmlfile,'w+') as HTMLFILE:
+        HTMLFILE.write(html)
+    return htmlfile, htmlfile_name
+
+def get_page_ancestors(auth, pageid):
+    # Get basic page information plus the ancestors property
+    url = '{base}/{pageid}?expand=ancestors'.format(
+        base = BASE_URL,
+        pageid = pageid)
+    r = requests.get(url, auth = auth)
+    r.raise_for_status()
+    return r.json()['ancestors']
+
+def get_page_info(auth, pageid):
+    url = '{base}/{pageid}'.format(
+        base = BASE_URL,
+        pageid = pageid)
+    r = requests.get(url, auth = auth)
+    r.raise_for_status()
+    return r.json()
+
+def write_data_to_confluence(auth, html, pageid, title = None):
+    info = get_page_info(auth, pageid)
+    ver = int(info['version']['number']) + 1
+    ancestors = get_page_ancestors(auth, pageid)
+    anc = ancestors[-1]
+    del anc['_links']
+    del anc['_expandable']
+    del anc['extensions']
+    if title is not None:
+        info['title'] = title
+    data = {
+        'id' : str(pageid),
+        'type' : 'page',
+        'title' : info['title'],
+        'version' : {'number' : ver},
+        'ancestors' : [anc],
+        'body'  : {
+            'storage' :
+            {
+                'representation' : 'storage',
+                'value' : str(html)
+            }
+        }
+    }
+    data = json.dumps(data)
+    url = '{base}/{pageid}'.format(base = BASE_URL, pageid = pageid)
+    try:
+        r = requests.put(
+            url,
+            data = data,
+            auth = auth,
+            headers = { 'Content-Type' : 'application/json' }
+        )
+    except Exception as e:
+        print(f"An exception has occurred: {e}")
+    if r.status_code >= 400:
+        print(f"HTTP Status Code: {r.status_code}")
+        raise RuntimeError(r.content)
+    else:
+        message = f"Wrote {info['title']} version {ver}\nURL: {VIEW_URL}{pageid}"
+        print(Fore.CYAN)
+        banner(message, '*')
+        print(Fore.RESET)
+
+def get_login(username = None):
+    if username is None:
+        username = getpass.getuser()
+    passwd = None
+    if passwd is None:
+        passwd = getpass.getpass()
+        keyring.set_password('confluence_script', username, passwd)
+    return (username, passwd)
+
+
+### AWS List Instances
 def list_instances(aws_account,aws_account_number, interactive, regions, show_details):
     _, _, output_file, _ = initialize(interactive, aws_account)
     delete_from_collection(aws_account_number)
@@ -229,7 +489,7 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
                         'Launch Date': launch_time_friendly
                     }
                     mongo_instance_dict = {'_id': '', 'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly}
-                    insert_doc(mongo_instance_dict)
+                    insert_coll(mongo_instance_dict)
                     ec2_info_items = ec2info.items
                     if show_details == 'y' or show_details == 'yes':
                         for instance_id, instance in ec2_info_items():
@@ -269,260 +529,7 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
     print(Fore.RESET + '\n')
     return output_file
 
-def convert_csv_to_html_table(output_file, today, interactive, aws_account):
-    output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html')
-    ### Interactive == 1  - user specifies an account
-    if interactive == 1:
-        htmlfile = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.html')
-        htmlfile_name = 'aws-instance-list-' + aws_account + '-' + today + '.html'
-    else:
-        htmlfile = os.path.join(output_dir, 'aws-instance-master-list-' + today + '.html')
-        htmlfile_name = 'aws-instance-master-list-' + today +'.html'
-    count = 0
-    html = ''
-    with open(output_file,'r') as CSVFILE:
-        reader = csv.reader(CSVFILE)
-        html += "<table><tbody>"
-        for row in reader:
-            html += "<tr>"
-            # Process the headers
-            if count == 0:
-                for column in row:
-                    html += "<th>%s</th>" % escape(column)
-            else:
-                # Process the data
-                for column in row:
-                    html += "<td>%s</td>" % escape(column)
-            html += "</tr>"
-            count += 1
-        html += "</tbody></table>"
-    with open(htmlfile,'w+') as HTMLFILE:
-        HTMLFILE.write(html)
-    return htmlfile, htmlfile_name
-
-def get_page_ancestors(auth, pageid):
-    # Get basic page information plus the ancestors property
-    url = '{base}/{pageid}?expand=ancestors'.format(
-        base = BASE_URL,
-        pageid = pageid)
-    r = requests.get(url, auth = auth)
-    r.raise_for_status()
-    return r.json()['ancestors']
-
-def get_page_info(auth, pageid):
-    url = '{base}/{pageid}'.format(
-        base = BASE_URL,
-        pageid = pageid)
-    r = requests.get(url, auth = auth)
-    r.raise_for_status()
-    return r.json()
-
-def write_data_to_confluence(auth, html, pageid, title = None):
-    info = get_page_info(auth, pageid)
-    ver = int(info['version']['number']) + 1
-    ancestors = get_page_ancestors(auth, pageid)
-    anc = ancestors[-1]
-    del anc['_links']
-    del anc['_expandable']
-    del anc['extensions']
-    if title is not None:
-        info['title'] = title
-    data = {
-        'id' : str(pageid),
-        'type' : 'page',
-        'title' : info['title'],
-        'version' : {'number' : ver},
-        'ancestors' : [anc],
-        'body'  : {
-            'storage' :
-            {
-                'representation' : 'storage',
-                'value' : str(html)
-            }
-        }
-    }
-    data = json.dumps(data)
-    url = '{base}/{pageid}'.format(base = BASE_URL, pageid = pageid)
-    try:
-        r = requests.put(
-            url,
-            data = data,
-            auth = auth,
-            headers = { 'Content-Type' : 'application/json' }
-        )
-    except Exception as e:
-        print(f"An exception has occurred: {e}")
-    if r.status_code >= 400:
-        print(f"HTTP Status Code: {r.status_code}")
-        raise RuntimeError(r.content)
-    else:
-        message = f"Wrote {info['title']} version {ver}\nURL: {VIEW_URL}{pageid}"
-        print(Fore.CYAN)
-        banner(message, '*')
-        print(Fore.RESET)
-
-def get_login(username = None):
-    if username is None:
-        username = getpass.getuser()
-    passwd = None
-    if passwd is None:
-        passwd = getpass.getpass()
-        keyring.set_password('confluence_script', username, passwd)
-    return (username, passwd)
-
-def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
-    options = arguments()
-    to_addr = ''
-    # Get the variables from intitialize
-    today, _, output_file, _ = initialize(interactive, aws_account)
-    if options.first_name:
-        ## Get the address to send to
-        print(Fore.YELLOW)
-        first_name = options.first_name
-        print(Fore.RESET)
-    else:
-        first_name = str(input("Enter the recipient's first name: "))
-
-    if options.email_recipient:
-        to_addr = options.email_recipient
-    else:
-        to_addr = input("Enter the recipient's email address: ")
-
-    from_addr = 'cloudops@noreply.sncr.com'
-    if aws_accounts_answer == 'one':
-        subject = "SNCR AWS Instance List: " + aws_account + " (" + aws_account_number + ") " + today
-        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The SD Team</font>"
-    else:
-        subject = "SNCR AWS Instance Master List " + today
-        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all CCMI AWS accounts.<br><br>Regards,<br>The SD Team</font>"    
-    msg = MIMEMultipart()
-    msg['From'] = from_addr
-    msg['To'] = to_addr
-    msg['Subject'] = subject
-    body = MIMEText(content, 'html')
-    msg.attach(body)
-    filename = output_file
-    with open(filename, 'r') as f:
-        part = MIMEApplication(f.read(), Name=basename(filename))
-        part['Content-Disposition'] = 'attachment; filename="{}"'.format(basename(filename))
-        msg.attach(part)
-    try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.ehlo()
-        server.starttls()
-        gmail_user = 'sncr.noreply@gmail.com'
-        gmail_password = 'ehhloWorld12345'
-        server.login(gmail_user, gmail_password)
-        server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
-        message = f"Email was sent to: {to_addr}"
-        banner(message)
-    except Exception as error:
-        message = f"Exception: {error}\nEmail was not sent."
-        banner(message)
-    print(Fore.RESET)
-
-def arguments():
-    parser = argparse.ArgumentParser(description='This is a program that lists the servers in EC2')
-
-    parser.add_argument(
-    "-u",
-    "--user",
-    default = getpass.getuser(),
-    help = "Specify the username to log into Confluence")
-
-    parser.add_argument(
-    "-d",
-    "--password",
-    help = "Specify the user's password")
-
-    parser.add_argument(
-    "-t",
-    "--title",
-    default = None,
-    type = str,
-    help = "Specify a new title")
-
-    parser.add_argument(
-    "-f",
-    "--file",
-    default = None,
-    type = str,
-    help = "Write the contents of FILE to the confluence page")
-
-    parser.add_argument(
-    "--html",
-    type = str,
-    default = None,
-    nargs = '?',
-    help = "Write the immediate html string to confluence page")
-
-    parser.add_argument(
-    "-n",
-    "--account_name",
-    type = str,
-    default = None,
-    nargs = '?',
-    help = "Name of the AWS account you'll be working in")
-
-    parser.add_argument(
-    "-c",
-    "--all_accounts",
-    type = str,
-    default = None,
-    nargs = '?',
-    help = "Process one or all accounts")
-
-    parser.add_argument(
-    "-p",
-    "--pageid",
-    type = int,
-    help = "Specify the Conflunce page id to overwrite")
-
-    parser.add_argument(
-    "-e",
-    "--send_email",
-    type = str,
-    help = "Send an email")
-
-    parser.add_argument(
-    "-r",
-    "--email_recipient",
-    type = str,
-    help = "Who will receive the email")
-
-    parser.add_argument(
-    "-g",
-    "--first_name",
-    type = str,
-    help = "First (given) name of the person receving the email")
-
-    parser.add_argument(
-    "-w",
-    "--write_confluence",
-    type = str,
-    help = "Write to confluence")
-
-    parser.add_argument(
-    "-i",
-    "--run_again",
-    type = str,
-    help = "Run again")
-
-    parser.add_argument(
-    "-v",
-    "--verbose",
-    type = str,
-    help = "Write the EC2 instances to the screen")
-
-    parser.add_argument(
-    "-o",
-    "--reports",
-    type = str,
-    help = "Run reports")
-
-    options = parser.parse_args()
-    return options
-
+### Main Function
 def main():
     # Get command line arguments
     options = arguments()
@@ -557,7 +564,7 @@ def main():
     if options.pageid:
         pageid = options.pageid
     else:
-        pageid = 222389323 # AWS EC2 Instances - CCMI page
+        pageid = 222389323 # AWS EC2 Instances page
 
     if options.title:
         title = options.title
@@ -733,5 +740,6 @@ def main():
         exit_program()
     print(Fore.RESET)
 
+### Run locally
 if __name__ == "__main__":
     main()
