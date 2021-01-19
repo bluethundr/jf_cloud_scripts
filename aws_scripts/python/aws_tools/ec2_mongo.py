@@ -370,6 +370,9 @@ def print_collections():
 
 # 9. Export Mongo DB to File
 def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll=None,date=None):
+    if __name__ == "__main__":
+        message = "* Export MongoDB to File *"
+        banner(message, "*")
     create_directories()
     if date == None:
         format= "%m-%d-%Y"
@@ -483,6 +486,11 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
 
 # 10. Print Reports
 def print_reports(interactive,aws_account,aws_account_number):
+    print(Fore.CYAN)
+    if __name__ == "__main__":
+        message = "* Print Reports *"
+        banner(message, "*")
+
     inputDate = input("Enter the date in format 'dd/mm/yyyy': ")
     month,day,year = inputDate.split('/')
     isValidDate = True
@@ -604,7 +612,8 @@ def main():
                 print_reports(interactive,aws_account,aws_account_number)
             else:
                 pass
-                #aws_account, aws_account_number = select_account(options, aws_env_list)
+                aws_account, aws_account_number = select_account(options, aws_env_list)
+                print_reports(interactive,aws_account,aws_account_number)
         # 11. Exit ec2 mongo
         elif option == 11:
             exit_program()
