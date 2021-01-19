@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #-*- coding: utf-8 -*-
-# Import module
+# Import modules
 import io
 import os
 import time
@@ -15,6 +15,63 @@ from pathlib import Path
 from colorama import init, Fore
 init()
 
+### DB Functions
+def connect_db():
+    try:
+        myclient = MongoClient(
+                host = "mongodb://localhost:27017/",
+                serverSelectionTimeoutMS = 3000 # 3 second timeout
+            )
+    except errors.ServerSelectionTimeoutError as e:
+        # set the client instance to 'None' if exception
+        myclient = None
+        # catch pymongo.errors.ServerSelectionTimeoutError
+        print ("pymongo ERROR:", e)
+    return myclient
+
+def set_db(insert_coll=None):
+    if __name__ == "__main__":
+        message = "* Select a MongoDB Database *"
+        print(Fore.CYAN)
+        banner(message, "*")
+        print(Fore.RESET)
+    myclient = connect_db()
+    today = datetime.today()
+    today = today.strftime("%m%d%Y")
+    if __name__ == "__main__":
+        print(Fore.CYAN + "Available MongoDB Databases:")
+        if myclient != None:
+            # the list_database_names() method returns a list of strings
+            database_names = myclient.list_database_names()
+            counter = 1
+            for db in database_names:
+                message = str(counter) + ". " + db
+                print(message)
+                counter = counter + 1
+        print ("There are", len(database_names), "databases.\n")
+        print(f"Please select a database. Enter a number 1 through {len(database_names)}.")
+        choice = input("Enter a number: ")
+        if is_digit(choice) == True:
+            if int(choice) > counter:
+                print("Wrong selection.")
+                set_db()
+            choice = int(choice)
+            choice = choice - 1
+            mydb = myclient[database_names[choice]]
+            mydb_name = database_names[choice]
+            insert_coll = "ec2_list_" + today
+            insert_coll = mydb[insert_coll]
+            print(f"You've selected: {database_names[choice]}\n")
+        else:
+            print("Must enter a digit. Try again.\n")
+    else:
+        mydb = myclient["aws_inventories"]
+        mydb_name = "aws_inventories"
+        insert_coll = "ec2_list_" + today
+        insert_coll = mydb[insert_coll]
+    return mydb, mydb_name, insert_coll
+
+### Utility Functions
 def welcomebanner():
     # Print the welcome banner
     print(Fore.CYAN)
@@ -37,6 +94,23 @@ def banner(message, border="-"):
 def exit_program():
     endbanner()
     exit()
+
+def menu():
+    message = "Main Menu"
+    banner(message)
+    print(Fore.CYAN + "Your available actions: ")
+    print("1. Create new MongoDB Database")
+    print("2. Drop MongoDB Database")
+    print("3. Do a test insert to the DB")
+    print("4. Clear the DB")
+    print("5. Remove accounts from the DB.")
+    print("6. Print the DB")
+    print("7. Print DB Names")
+    print("8. Print collections")
+    print("9. Export MongoDB to file")
+    print("10. Print Reports")
+    print("11. Exit ec2 mongo")
+    print("\n")
 
 def is_digit(check_input):
     if check_input.isdigit():
@@ -84,22 +158,7 @@ def find_account_number(aws_account,aws_env_list):
         aws_account_number = '1234567891011'
     return aws_account_number
 
-def arguments():
-    parser = argparse.ArgumentParser(description="This is a program that provides a text interface to MongoDB.")
-
-    parser.add_argument(
-    "-n",
-    "--account_name",
-    type = str,
-    default = None,
-    nargs = "?",
-    help = "Name of the AWS account you'll be working in")
-
-    options = parser.parse_args()
-    return options
-
 def create_directories():
-
     ## Set source and output file directories
     source_files_path = Path('..', '..', 'source_files', 'aws_accounts_list')
     output_files_path = Path('..', '..', 'output_files', 'aws_instance_list')
@@ -120,61 +179,36 @@ def set_test_dict():
 "Availability Zone": "us-east-1a", "VPC ID": "vpc-00de11103235ec567", "Type": "t3.small", "Key Pair Name": "ccmi-vzn-int01", "Instance State": "running", "Launch Date": "September 10 2019"}
     return mydict
 
-def connect_db():
+## Used by ec2_list_instances only. Not in a menu.
+def delete_from_collection(aws_account_number):
+    _, _, insert_coll = set_db()
+    if __name__ == "__main__":
+        message = f"* Clear old entries *"
+        banner(message, border="*")
+        print(f"This command clears old entries the database.\n")
+        aws_account_number = input("Enter an AWS account number: ")
     try:
-        myclient = MongoClient(
-                host = "mongodb://localhost:27017/",
-                serverSelectionTimeoutMS = 3000 # 3 second timeout
-            )
-    except errors.ServerSelectionTimeoutError as e:
-        # set the client instance to 'None' if exception
-        myclient = None
-        # catch pymongo.errors.ServerSelectionTimeoutError
-        print ("pymongo ERROR:", e)
-    return myclient
+        #insert_coll.remove({"Account Number": aws_account_number});
+        insert_coll.delete_many({"Account Number": aws_account_number})
+    except Exception as e:
+        print(f"An error has occurred: {e}")
 
-def set_db(instance_col=None):
-    if __name__ == "__main__":
-        message = "* Select a MongoDB Database *"
-        print(Fore.CYAN)
-        banner(message, "*")
-        print(Fore.RESET)
-    myclient = connect_db()
-    today = datetime.today()
-    today = today.strftime("%m%d%Y")
-    if __name__ == "__main__":
-        print(Fore.CYAN + "Available MongoDB Databases:")
-        if myclient != None:
-            # the list_database_names() method returns a list of strings
-            database_names = myclient.list_database_names()
-            counter = 1
-            for db in database_names:
-                message = str(counter) + ". " + db
-                print(message)
-                counter = counter + 1
-        print ("There are", len(database_names), "databases.\n")
-        print(f"Please select a database. Enter a number 1 through {len(database_names)}.")
-        choice = input("Enter a number: ")
-        if is_digit(choice) == True:
-            if int(choice) > counter:
-                print("Wrong selection.")
-                set_db()
-            choice = int(choice)
-            choice = choice - 1
-            mydb = myclient[database_names[choice]]
-            mydb_name = database_names[choice]
-            instance_col = "ec2_list_" + today
-            instance_col = mydb[instance_col]
-            print(f"You've selected: {database_names[choice]}\n")
-        else:
-            print("Must enter a digit. Try again.\n")
-    else:
-        mydb = myclient["aws_inventories"]
-        mydb_name = "aws_inventories"
-        instance_col = "ec2_list_" + today
-        instance_col = mydb[instance_col]
-    return mydb, mydb_name, instance_col
+# CLI Arguments
+def arguments():
+    parser = argparse.ArgumentParser(description="This is a program that provides a text interface to MongoDB.")
 
+    parser.add_argument(
+    "-n",
+    "--account_name",
+    type = str,
+    default = None,
+    nargs = "?",
+    help = "Name of the AWS account you'll be working in")
+
+    options = parser.parse_args()
+    return options
+
+# 1. Create new MongoDB Database
 def create_mongodb(mydict):
     myclient = connect_db()
     message = f"* Create new MongoDB *"
@@ -195,6 +229,7 @@ def create_mongodb(mydict):
         except Exception as e:
             print(f"MongoDB Database creation failed with: {e}")
 
+# 2. Drop MongoDB Database
 def drop_mongodb():
     message = "* Drop MongoDB *"
     banner(message, "*")
@@ -221,13 +256,13 @@ def drop_mongodb():
         choice = int(choice)
         choice = choice - 1
         dropdb = myclient[database_names[choice]]
-        instance_col = "ec2_list_" + today
-        instance_col = dropdb[instance_col]
+        insert_coll = "ec2_list_" + today
+        insert_coll = dropdb[insert_coll]
         print(f"You've selected: {database_names[choice]}\n")
     else:
         print("Must enter a digit. Try again.\n")
     # check if a collection exists
-    col_exists = instance_col in dropdb.list_collection_names()
+    col_exists = insert_coll in dropdb.list_collection_names()
     print ("Some Collection exists:", col_exists) # will print True or False
     # call MongoDB client object"s drop_database() method to delete a db
     myclient.drop_database(dropdb) # pass db name as string
@@ -238,10 +273,11 @@ def drop_mongodb():
     diff = len(db_names_before_drop) - len(db_names_after_drop)
     print ("difference:", diff)
 
-def insert_doc(mydict):
-    _, _, instance_col = set_db()
+# 3. Insert MongoDB Collection
+def insert_coll(mydict):
+    _, _, insert_coll = set_db()
     mydict["_id"] = ObjectId()
-    instance_doc = instance_col.insert_one(mydict)
+    instance_doc = insert_coll.insert_one(mydict)
     if __name__ == "__main__":
         message = "* MongoDB Insert Document *"
         banner(message, "*")
@@ -249,9 +285,38 @@ def insert_doc(mydict):
         banner(message)
     return instance_doc
 
+# 4. Clear the DB
+def clear_db():
+    _, _, insert_coll = set_db()
+    message = f"* Clear the DB *"
+    banner(message, border="*")
+    print(f"This command empties the database.\n")
+    try:
+        x = insert_coll.delete_many({})
+    except Exception as e:
+        print(f"An error has occurred: {e}")
+    print(x.deleted_count, "documents deleted.")
+
+# 5. Remove accounts from DB
+def print_db_names():
+    myclient = connect_db()
+    message = f"* Print DB Names *"
+    banner(message, border="*")
+    print("The database names are:")
+    if myclient != None:
+        # the list_database_names() method returns a list of strings
+        database_names = myclient.list_database_names()
+        counter = 1
+        for db in database_names:
+            message = str(counter) + ". " + db
+            print(message)
+            counter = counter + 1
+        print ("There are", len(database_names), "databases.")
+
+# 6. MongoDB Select All
 def mongo_select_all():
-    _, mydb_name, instance_col = set_db()
-    instance_list = list(instance_col.find())
+    _, mydb_name, insert_coll = set_db()
+    instance_list = list(insert_coll.find())
     if __name__ == "__main__":
         message = f"* Print DB Documents in {mydb_name} *"
         banner(message, border="*")
@@ -266,7 +331,42 @@ def mongo_select_all():
     print("\n")
     return instance_list
 
-def mongo_export_to_file(interactive, aws_account, aws_account_number,instance_col=None,date=None):
+# 7. Print DB Names
+def print_db_names():
+    myclient = connect_db()
+    message = f"* Print DB Names *"
+    banner(message, border="*")
+    print("The database names are:")
+    if myclient != None:
+        # the list_database_names() method returns a list of strings
+        database_names = myclient.list_database_names()
+        counter = 1
+        for db in database_names:
+            message = str(counter) + ". " + db
+            print(message)
+            counter = counter + 1
+        print ("There are", len(database_names), "databases.")
+
+# 8 Print Collections
+def print_collections():
+    myclient = connect_db()
+    message = f"* Print DB Collections *"
+    banner(message, border="*")
+    print(f"This command prints the database collection names.\n")
+    if myclient != None:
+        # the list_database_names() method returns a list of strings
+        database_names = myclient.list_database_names()
+        print ("There are", len(database_names), "databases.")
+        for db_num, db in enumerate(database_names):
+            print ("\nGetting collections for database:", db, "--", db_num)
+            collection_names = myclient[db].list_collection_names()
+            print ("The MongoDB database returned", len(collection_names), "collections.")
+            # iterate over the list of collection names
+            for col_num, col in enumerate(collection_names):
+                print (col, "--", col_num)
+
+# 9. Export Mongo DB to File
+def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll=None,date=None):
     create_directories()
     if date == None:
         format= "%m-%d-%Y"
@@ -277,13 +377,13 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,instance_c
         format= "%m-%d-%Y"
         date = datetime.strptime(date,"%m%d%Y")
         date = date.strftime(format)
-    if not instance_col:
-        _, _, instance_col = set_db()
+    if not insert_coll:
+        _, _, insert_coll = set_db()
     # make an API call to the MongoDB server
     if interactive == 0:
-        mongo_docs = instance_col.find({})
+        mongo_docs = insert_coll.find({})
     else:
-        mongo_docs = instance_col.find({"Account Number": aws_account_number})
+        mongo_docs = insert_coll.find({"Account Number": aws_account_number})
     # Convert the mongo docs to a DataFrame
     docs = pandas.DataFrame(mongo_docs)
     # Discard the Mongo ID for the documents
@@ -362,71 +462,16 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,instance_c
         else:
             main()
 
-def clear_db():
-    _, _, instance_col = set_db()
-    message = f"* Clear the DB *"
-    banner(message, border="*")
-    print(f"This command empties the database.\n")
-    try:
-        x = instance_col.delete_many({})
-    except Exception as e:
-        print(f"An error has occurred: {e}")
-    print(x.deleted_count, "documents deleted.")
-
-def delete_from_collection(aws_account_number):
-    _, _, instance_col = set_db()
-    if __name__ == "__main__":
-        message = f"* Clear old entries *"
-        banner(message, border="*")
-        print(f"This command clears old entries the database.\n")
-        aws_account_number = input("Enter an AWS account number: ")
-    try:
-        #instance_col.remove({"Account Number": aws_account_number});
-        instance_col.delete_many({"Account Number": aws_account_number})
-    except Exception as e:
-        print(f"An error has occurred: {e}")
-
-def print_db_names():
-    myclient = connect_db()
-    message = f"* Print DB Names *"
-    banner(message, border="*")
-    print("The database names are:")
-    if myclient != None:
-        # the list_database_names() method returns a list of strings
-        database_names = myclient.list_database_names()
-        counter = 1
-        for db in database_names:
-            message = str(counter) + ". " + db
-            print(message)
-            counter = counter + 1
-        print ("There are", len(database_names), "databases.")
-
-def print_collections():
-    myclient = connect_db()
-    message = f"* Print DB Collections *"
-    banner(message, border="*")
-    print(f"This command prints the database collection names.\n")
-    if myclient != None:
-        # the list_database_names() method returns a list of strings
-        database_names = myclient.list_database_names()
-        print ("There are", len(database_names), "databases.")
-        for db_num, db in enumerate(database_names):
-            print ("\nGetting collections for database:", db, "--", db_num)
-            collection_names = myclient[db].list_collection_names()
-            print ("The MongoDB database returned", len(collection_names), "collections.")
-            # iterate over the list of collection names
-            for col_num, col in enumerate(collection_names):
-                print (col, "--", col_num)
-
+# 10. Print Reports
 def print_reports(interactive,aws_account,aws_account_number):
-    set_db(instance_col=None)
     inputDate = input("Enter the date in format 'dd/mm/yyyy': ")
-    day,month,year = inputDate.split('/')
+    month,day,year = inputDate.split('/')
     isValidDate = True
     try:
         datetime(int(year),int(month),int(day))
     except ValueError :
         isValidDate = False
+        print("Invalid date")
         print_reports(interactive,aws_account,aws_account_number)
 
     if(isValidDate) :
@@ -439,27 +484,11 @@ def print_reports(interactive,aws_account,aws_account_number):
         print_reports(interactive,aws_account,aws_account_number)
     myclient = connect_db()
     mydb = myclient["aws_inventories"]
-    instance_col = "ec2_list_" + inputDate
-    instance_col = mydb[instance_col]
-    mongo_export_to_file(interactive, aws_account, aws_account_number,instance_col,date=inputDate)
+    insert_coll = "ec2_list_" + inputDate
+    insert_coll = mydb[insert_coll]
+    mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll,date=inputDate)
 
-def menu():
-    message = "Main Menu"
-    banner(message)
-    print(Fore.CYAN + "Your available actions: ")
-    print("1. Create new MongoDB Database")
-    print("2. Drop MongoDB Database")
-    print("3. Do a test insert to the DB")
-    print("4. Clear the DB")
-    print("5. Remove accounts from the DB.")
-    print("6. Print the DB")
-    print("7. Print DB Names")
-    print("8. Print collections")
-    print("9. Export MongoDB to file")
-    print("10. Print Reports")
-    print("11. Exit ec2 mongo")
-    print("\n")
-
+### Main Function
 def main():
     options = arguments()
     welcomebanner()
@@ -488,7 +517,7 @@ def main():
             main()
         # 3. Do a test insert to the DB
         elif option  == 3:
-            insert_doc(mydict)
+            insert_coll(mydict)
             main()
         # 4. Clear the DB"
         elif option == 4:
@@ -525,9 +554,10 @@ def main():
             if aws_accounts_answer == "all":
                 aws_account = "all"
                 aws_account_number = "123456789101"
+                print_reports(interactive,aws_account,aws_account_number)
             else:
-                aws_account, aws_account_number = select_account(options, aws_env_list)
-            print_reports(interactive,aws_account,aws_account_number)
+                pass
+                #aws_account, aws_account_number = select_account(options, aws_env_list)
         # 11. Exit ec2 mongo
         elif option == 11:
             exit_program()
@@ -537,5 +567,6 @@ def main():
             banner(message)
             main()
 
+### Run locally
 if __name__ == "__main__":
     main()
