@@ -370,6 +370,9 @@ def print_collections():
 
 # 9. Export Mongo DB to File
 def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll=None,date=None):
+    if __name__ == "__main__":
+        message = "* Export MongoDB to File *"
+        banner(message, "*")
     create_directories()
     if date == None:
         format= "%m-%d-%Y"
@@ -483,6 +486,11 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
 
 # 10. Print Reports
 def print_reports(interactive,aws_account,aws_account_number):
+    print(Fore.CYAN)
+    if __name__ == "__main__":
+        message = "* Print Reports *"
+        banner(message, "*")
+
     inputDate = input("Enter the date in format 'dd/mm/yyyy': ")
     month,day,year = inputDate.split('/')
     isValidDate = True
@@ -504,9 +512,17 @@ def print_reports(interactive,aws_account,aws_account_number):
     myclient = connect_db()
     if myclient != None:
         mydb = myclient["aws_inventories"]
-        instance_col = "ec2_list_" + inputDate
-        instance_col = mydb[instance_col]
-    mongo_export_to_file(interactive, aws_account, aws_account_number,instance_col,date=inputDate)
+        try:
+            insert_coll = "ec2_list_" + inputDate
+            collection_names = mydb.list_collection_names()
+            if insert_coll not in collection_names:
+                print(f"Collection name: {insert_coll} does not exist in DB. Try again!")
+                print_reports(interactive,aws_account,aws_account_number)
+            else:
+                insert_coll = mydb[insert_coll]
+        except Exception as e:
+            print(f"An error has occurred: {e}")
+    mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll,date=inputDate)
 
 # Choice 11. Exit ec2 Mongo
 
@@ -596,7 +612,8 @@ def main():
                 print_reports(interactive,aws_account,aws_account_number)
             else:
                 pass
-                #aws_account, aws_account_number = select_account(options, aws_env_list)
+                aws_account, aws_account_number = select_account(options, aws_env_list)
+                print_reports(interactive,aws_account,aws_account_number)
         # 11. Exit ec2 mongo
         elif option == 11:
             exit_program()
