@@ -29,7 +29,7 @@ def connect_db():
         print ("pymongo ERROR:", e)
     return myclient
 
-def set_db(instance_col=None):
+def set_db(insert_coll=None):
     if __name__ == "__main__":
         message = "* Select a MongoDB Database *"
         print(Fore.CYAN)
@@ -59,17 +59,17 @@ def set_db(instance_col=None):
             choice = choice - 1
             mydb = myclient[database_names[choice]]
             mydb_name = database_names[choice]
-            instance_col = "ec2_list_" + today
-            instance_col = mydb[instance_col]
+            insert_coll = "ec2_list_" + today
+            insert_coll = mydb[insert_coll]
             print(f"You've selected: {database_names[choice]}\n")
         else:
             print("Must enter a digit. Try again.\n")
     else:
         mydb = myclient["aws_inventories"]
         mydb_name = "aws_inventories"
-        instance_col = "ec2_list_" + today
-        instance_col = mydb[instance_col]
-    return mydb, mydb_name, instance_col
+        insert_coll = "ec2_list_" + today
+        insert_coll = mydb[insert_coll]
+    return mydb, mydb_name, insert_coll
 
 ### Utility Functions
 def welcomebanner():
@@ -181,15 +181,15 @@ def set_test_dict():
 
 ## Used by ec2_list_instances only. Not in a menu.
 def delete_from_collection(aws_account_number):
-    _, _, instance_col = set_db()
+    _, _, insert_coll = set_db()
     if __name__ == "__main__":
         message = f"* Clear old entries *"
         banner(message, border="*")
         print(f"This command clears old entries the database.\n")
         aws_account_number = input("Enter an AWS account number: ")
     try:
-        #instance_col.remove({"Account Number": aws_account_number});
-        instance_col.delete_many({"Account Number": aws_account_number})
+        #insert_coll.remove({"Account Number": aws_account_number});
+        insert_coll.delete_many({"Account Number": aws_account_number})
     except Exception as e:
         print(f"An error has occurred: {e}")
 
@@ -256,13 +256,13 @@ def drop_mongodb():
         choice = int(choice)
         choice = choice - 1
         dropdb = myclient[database_names[choice]]
-        instance_col = "ec2_list_" + today
-        instance_col = dropdb[instance_col]
+        insert_coll = "ec2_list_" + today
+        insert_coll = dropdb[insert_coll]
         print(f"You've selected: {database_names[choice]}\n")
     else:
         print("Must enter a digit. Try again.\n")
     # check if a collection exists
-    col_exists = instance_col in dropdb.list_collection_names()
+    col_exists = insert_coll in dropdb.list_collection_names()
     print ("Some Collection exists:", col_exists) # will print True or False
     # call MongoDB client object"s drop_database() method to delete a db
     myclient.drop_database(dropdb) # pass db name as string
@@ -275,9 +275,9 @@ def drop_mongodb():
 
 # 3. Insert MongoDB Collection
 def insert_coll(mydict):
-    _, _, instance_col = set_db()
+    _, _, insert_coll = set_db()
     mydict["_id"] = ObjectId()
-    instance_doc = instance_col.insert_one(mydict)
+    instance_doc = insert_coll.insert_one(mydict)
     if __name__ == "__main__":
         message = "* MongoDB Insert Document *"
         banner(message, "*")
@@ -287,12 +287,12 @@ def insert_coll(mydict):
 
 # 4. Clear the DB
 def clear_db():
-    _, _, instance_col = set_db()
+    _, _, insert_coll = set_db()
     message = f"* Clear the DB *"
     banner(message, border="*")
     print(f"This command empties the database.\n")
     try:
-        x = instance_col.delete_many({})
+        x = insert_coll.delete_many({})
     except Exception as e:
         print(f"An error has occurred: {e}")
     print(x.deleted_count, "documents deleted.")
@@ -315,8 +315,8 @@ def print_db_names():
 
 # 6. MongoDB Select All
 def mongo_select_all():
-    _, mydb_name, instance_col = set_db()
-    instance_list = list(instance_col.find())
+    _, mydb_name, insert_coll = set_db()
+    instance_list = list(insert_coll.find())
     if __name__ == "__main__":
         message = f"* Print DB Documents in {mydb_name} *"
         banner(message, border="*")
@@ -366,7 +366,7 @@ def print_collections():
                 print (col, "--", col_num)
 
 # 9. Export Mongo DB to File
-def mongo_export_to_file(interactive, aws_account, aws_account_number,instance_col=None,date=None):
+def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll=None,date=None):
     create_directories()
     if date == None:
         format= "%m-%d-%Y"
@@ -377,13 +377,13 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,instance_c
         format= "%m-%d-%Y"
         date = datetime.strptime(date,"%m%d%Y")
         date = date.strftime(format)
-    if not instance_col:
-        _, _, instance_col = set_db()
+    if not insert_coll:
+        _, _, insert_coll = set_db()
     # make an API call to the MongoDB server
     if interactive == 0:
-        mongo_docs = instance_col.find({})
+        mongo_docs = insert_coll.find({})
     else:
-        mongo_docs = instance_col.find({"Account Number": aws_account_number})
+        mongo_docs = insert_coll.find({"Account Number": aws_account_number})
     # Convert the mongo docs to a DataFrame
     docs = pandas.DataFrame(mongo_docs)
     # Discard the Mongo ID for the documents
@@ -464,14 +464,14 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,instance_c
 
 # 10. Print Reports
 def print_reports(interactive,aws_account,aws_account_number):
-    set_db(instance_col=None)
     inputDate = input("Enter the date in format 'dd/mm/yyyy': ")
-    day,month,year = inputDate.split('/')
+    month,day,year = inputDate.split('/')
     isValidDate = True
     try:
         datetime(int(year),int(month),int(day))
     except ValueError :
         isValidDate = False
+        print("Invalid date")
         print_reports(interactive,aws_account,aws_account_number)
 
     if(isValidDate) :
@@ -484,9 +484,9 @@ def print_reports(interactive,aws_account,aws_account_number):
         print_reports(interactive,aws_account,aws_account_number)
     myclient = connect_db()
     mydb = myclient["aws_inventories"]
-    instance_col = "ec2_list_" + inputDate
-    instance_col = mydb[instance_col]
-    mongo_export_to_file(interactive, aws_account, aws_account_number,instance_col,date=inputDate)
+    insert_coll = "ec2_list_" + inputDate
+    insert_coll = mydb[insert_coll]
+    mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll,date=inputDate)
 
 ### Main Function
 def main():
@@ -554,9 +554,10 @@ def main():
             if aws_accounts_answer == "all":
                 aws_account = "all"
                 aws_account_number = "123456789101"
+                print_reports(interactive,aws_account,aws_account_number)
             else:
-                aws_account, aws_account_number = select_account(options, aws_env_list)
-            print_reports(interactive,aws_account,aws_account_number)
+                pass
+                #aws_account, aws_account_number = select_account(options, aws_env_list)
         # 11. Exit ec2 mongo
         elif option == 11:
             exit_program()
