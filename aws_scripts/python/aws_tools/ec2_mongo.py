@@ -57,18 +57,20 @@ def set_db(insert_coll=None):
                 set_db()
             choice = int(choice)
             choice = choice - 1
-            mydb = myclient[database_names[choice]]
-            mydb_name = database_names[choice]
+            if myclient != None:
+                mydb = myclient[database_names[choice]]
+                mydb_name = database_names[choice]
             insert_coll = "ec2_list_" + today
             insert_coll = mydb[insert_coll]
             print(f"You've selected: {database_names[choice]}\n")
         else:
             print("Must enter a digit. Try again.\n")
     else:
-        mydb = myclient["aws_inventories"]
-        mydb_name = "aws_inventories"
-        insert_coll = "ec2_list_" + today
-        insert_coll = mydb[insert_coll]
+        if myclient != None:
+            mydb = myclient["aws_inventories"]
+            mydb_name = "aws_inventories"
+            insert_coll = "ec2_list_" + today
+            insert_coll = mydb[insert_coll]
     return mydb, mydb_name, insert_coll
 
 ### Utility Functions
@@ -117,7 +119,7 @@ def is_digit(check_input):
         return True
     return False
 
-def initialize(interactive, aws_account):
+def initialize():
     # Set the date
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
@@ -221,11 +223,12 @@ def create_mongodb(mydict):
         main()
     else:
         try:
-            mydb = myclient[newdb]
-            mycol = mydb["testColumn"]
-            mycol.insert_one(mydict)
-            message = f"Succeeded in creating: {newdb}"
-            banner(message)
+            if myclient != None:
+                mydb = myclient[newdb]
+                mycol = mydb["testColumn"]
+                mycol.insert_one(mydict)
+                message = f"Succeeded in creating: {newdb}"
+                banner(message)
         except Exception as e:
             print(f"MongoDB Database creation failed with: {e}")
 
@@ -244,34 +247,34 @@ def drop_mongodb():
             message = str(counter) + ". " + db
             print(message)
             counter = counter + 1
-    print ("There are", len(database_names), "databases.\n")
-    db_names_before_drop = myclient.list_database_names()
-    print ("db count BEFORE drop:", len(db_names_before_drop))
-    print(f"Please select a database. Enter a number 1 through {len(database_names)}.")
-    choice = input("Enter a number: ")
-    if is_digit(choice) == True:
-        if int(choice) > counter:
-            print("Wrong selection.")
-            set_db()
-        choice = int(choice)
-        choice = choice - 1
-        dropdb = myclient[database_names[choice]]
-        insert_coll = "ec2_list_" + today
-        insert_coll = dropdb[insert_coll]
-        print(f"You've selected: {database_names[choice]}\n")
-    else:
-        print("Must enter a digit. Try again.\n")
-    # check if a collection exists
-    col_exists = insert_coll in dropdb.list_collection_names()
-    print ("Some Collection exists:", col_exists) # will print True or False
-    # call MongoDB client object"s drop_database() method to delete a db
-    myclient.drop_database(dropdb) # pass db name as string
-    time.sleep(5)
-    # get all of the database names
-    db_names_after_drop = myclient.list_database_names()
-    print ("db count AFTER drop:", len(db_names_before_drop))
-    diff = len(db_names_before_drop) - len(db_names_after_drop)
-    print ("difference:", diff)
+        print ("There are", len(database_names), "databases.\n")
+        db_names_before_drop = myclient.list_database_names()
+        print ("db count BEFORE drop:", len(db_names_before_drop))
+        print(f"Please select a database. Enter a number 1 through {len(database_names)}.")
+        choice = input("Enter a number: ")
+        if is_digit(choice) == True:
+            if int(choice) > counter:
+                print("Wrong selection.")
+                set_db()
+            choice = int(choice)
+            choice = choice - 1
+            dropdb = myclient[database_names[choice]]
+            insert_coll = "ec2_list_" + today
+            insert_coll = dropdb[insert_coll]
+            print(f"You've selected: {database_names[choice]}\n")
+        else:
+            print("Must enter a digit. Try again.\n")
+        # check if a collection exists
+        col_exists = insert_coll in dropdb.list_collection_names()
+        print ("Some Collection exists:", col_exists) # will print True or False
+        # call MongoDB client object"s drop_database() method to delete a db
+        myclient.drop_database(dropdb) # pass db name as string
+        time.sleep(5)
+        # get all of the database names
+        db_names_after_drop = myclient.list_database_names()
+        print ("db count AFTER drop:", len(db_names_before_drop))
+        diff = len(db_names_before_drop) - len(db_names_after_drop)
+        print ("difference:", diff)
 
 # 3. Insert MongoDB Collection
 def insert_coll(mydict):
@@ -411,7 +414,11 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
             output_file = os.path.join(output_dir, "aws-instance-master-list-" + date +".csv")
 
         # export MongoDB documents to a CSV file, leaving out the row "labels" (row numbers)
-        docs.to_csv(output_file, ",", index=False) # CSV delimited by commas
+        try:
+            docs.to_csv(output_file, ",", index=False) # CSV delimited by commas
+        except Exception as e:
+            print(f"An exception has occurred: {e}.\nClose the file and try again!")
+            mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll=None,date=None)
     elif choice == 2:
         if __name__ == "__main__":
             json_export = docs.to_json() # return JSON data
@@ -423,7 +430,11 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
         else:
             output_file = os.path.join(output_dir, "aws-instance-master-list-" + date +".json")
         # export MongoDB documents to a CSV file, leaving out the row "labels" (row numbers)
-        docs.to_json(output_file)
+        try:
+            docs.to_json(output_file)
+        except Exception as e:
+            print(f"An exception has occurred: {e}.\nClose the file and try again!")
+            mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll=None,date=None)
     elif choice == 3:
         html_str = io.StringIO()
         # export as HTML
@@ -441,7 +452,11 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
         else:
             output_file = os.path.join(output_dir, "aws-instance-master-list-" + date + ".html")
         # save the MongoDB documents as an HTML table
-        docs.to_html(output_file)
+        try:
+            docs.to_html(output_file)
+        except Exception as e:
+            print(f"An exception has occurred: {e}.\nClose the file and try again!")
+            mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll=None,date=None)
     elif choice == 4:
         # Set the Excel output directory
         output_dir = os.path.join("..", "..", "output_files", "aws_instance_list", "excel", "")
@@ -451,10 +466,14 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
         else:
             output_file = os.path.join(output_dir, "aws-instance-master-list-" + date + ".xlsx")
         # export MongoDB documents to a Excel file, leaving out the row "labels" (row numbers)
-        writer = ExcelWriter(output_file)
-        docs.to_excel(writer,"EC2 List",index=False)
-        writer.save()
-        writer.close()
+        try:
+            writer = ExcelWriter(output_file)
+            docs.to_excel(writer,"EC2 List",index=False)
+            writer.save()
+            writer.close()
+        except Exception as e:
+            print(f"An exception has occurred: {e}.\nClose the file and try again!")
+            mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll=None,date=None)
     if __name__ == "__main__":
         exit = input("Exit program (y/n): ")
         if exit.lower() == "y" or exit.lower() == "yes":
@@ -485,17 +504,28 @@ def print_reports(interactive,aws_account,aws_account_number):
     myclient = connect_db()
     if myclient != None:
         mydb = myclient["aws_inventories"]
-        try:
-            insert_coll = "ec2_list_" + inputDate
-            collection_names = mydb.list_collection_names()
-            if insert_coll not in collection_names:
-                print(f"Collection name: {insert_coll} does not exist in DB. Try again!")
-                print_reports(interactive,aws_account,aws_account_number)
-            else:
-                insert_coll = mydb[insert_coll]
-        except Exception as e:
-            print(f"An error has occurred: {e}")
-    mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll,date=inputDate)
+        instance_col = "ec2_list_" + inputDate
+        instance_col = mydb[instance_col]
+    mongo_export_to_file(interactive, aws_account, aws_account_number,instance_col,date=inputDate)
+
+# Choice 11. Exit ec2 Mongo
+
+def menu():
+    message = "Main Menu"
+    banner(message)
+    print(Fore.CYAN + "Your available actions: ")
+    print("1. Create new MongoDB Database")
+    print("2. Drop MongoDB Database")
+    print("3. Do a test insert to the DB")
+    print("4. Clear the DB")
+    print("5. Remove accounts from the DB.")
+    print("6. Print the DB")
+    print("7. Print DB Names")
+    print("8. Print collections")
+    print("9. Export MongoDB to file")
+    print("10. Print Reports")
+    print("11. Exit ec2 mongo")
+    print("\n")
 
 ### Main Function
 def main():
@@ -512,7 +542,7 @@ def main():
         else:
             interactive = 0
         aws_account = ''
-        _, aws_env_list = initialize(interactive, aws_account)
+        _, aws_env_list = initialize()
         menu()
         option = input("Enter the option: ")
         option = int(option)
