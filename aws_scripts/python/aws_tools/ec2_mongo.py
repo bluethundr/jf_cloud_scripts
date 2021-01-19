@@ -223,11 +223,12 @@ def create_mongodb(mydict):
         main()
     else:
         try:
-            mydb = myclient[newdb]
-            mycol = mydb["testColumn"]
-            mycol.insert_one(mydict)
-            message = f"Succeeded in creating: {newdb}"
-            banner(message)
+            if myclient != None:
+                mydb = myclient[newdb]
+                mycol = mydb["testColumn"]
+                mycol.insert_one(mydict)
+                message = f"Succeeded in creating: {newdb}"
+                banner(message)
         except Exception as e:
             print(f"MongoDB Database creation failed with: {e}")
 
@@ -246,34 +247,34 @@ def drop_mongodb():
             message = str(counter) + ". " + db
             print(message)
             counter = counter + 1
-    print ("There are", len(database_names), "databases.\n")
-    db_names_before_drop = myclient.list_database_names()
-    print ("db count BEFORE drop:", len(db_names_before_drop))
-    print(f"Please select a database. Enter a number 1 through {len(database_names)}.")
-    choice = input("Enter a number: ")
-    if is_digit(choice) == True:
-        if int(choice) > counter:
-            print("Wrong selection.")
-            set_db()
-        choice = int(choice)
-        choice = choice - 1
-        dropdb = myclient[database_names[choice]]
-        insert_coll = "ec2_list_" + today
-        insert_coll = dropdb[insert_coll]
-        print(f"You've selected: {database_names[choice]}\n")
-    else:
-        print("Must enter a digit. Try again.\n")
-    # check if a collection exists
-    col_exists = insert_coll in dropdb.list_collection_names()
-    print ("Some Collection exists:", col_exists) # will print True or False
-    # call MongoDB client object"s drop_database() method to delete a db
-    myclient.drop_database(dropdb) # pass db name as string
-    time.sleep(5)
-    # get all of the database names
-    db_names_after_drop = myclient.list_database_names()
-    print ("db count AFTER drop:", len(db_names_before_drop))
-    diff = len(db_names_before_drop) - len(db_names_after_drop)
-    print ("difference:", diff)
+        print ("There are", len(database_names), "databases.\n")
+        db_names_before_drop = myclient.list_database_names()
+        print ("db count BEFORE drop:", len(db_names_before_drop))
+        print(f"Please select a database. Enter a number 1 through {len(database_names)}.")
+        choice = input("Enter a number: ")
+        if is_digit(choice) == True:
+            if int(choice) > counter:
+                print("Wrong selection.")
+                set_db()
+            choice = int(choice)
+            choice = choice - 1
+            dropdb = myclient[database_names[choice]]
+            insert_coll = "ec2_list_" + today
+            insert_coll = dropdb[insert_coll]
+            print(f"You've selected: {database_names[choice]}\n")
+        else:
+            print("Must enter a digit. Try again.\n")
+        # check if a collection exists
+        col_exists = insert_coll in dropdb.list_collection_names()
+        print ("Some Collection exists:", col_exists) # will print True or False
+        # call MongoDB client object"s drop_database() method to delete a db
+        myclient.drop_database(dropdb) # pass db name as string
+        time.sleep(5)
+        # get all of the database names
+        db_names_after_drop = myclient.list_database_names()
+        print ("db count AFTER drop:", len(db_names_before_drop))
+        diff = len(db_names_before_drop) - len(db_names_after_drop)
+        print ("difference:", diff)
 
 # 3. Insert MongoDB Collection
 def insert_coll(mydict):
