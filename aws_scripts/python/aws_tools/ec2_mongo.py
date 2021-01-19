@@ -57,18 +57,20 @@ def set_db(insert_coll=None):
                 set_db()
             choice = int(choice)
             choice = choice - 1
-            mydb = myclient[database_names[choice]]
-            mydb_name = database_names[choice]
+            if myclient != None:
+                mydb = myclient[database_names[choice]]
+                mydb_name = database_names[choice]
             insert_coll = "ec2_list_" + today
             insert_coll = mydb[insert_coll]
             print(f"You've selected: {database_names[choice]}\n")
         else:
             print("Must enter a digit. Try again.\n")
     else:
-        mydb = myclient["aws_inventories"]
-        mydb_name = "aws_inventories"
-        insert_coll = "ec2_list_" + today
-        insert_coll = mydb[insert_coll]
+        if myclient != None:
+            mydb = myclient["aws_inventories"]
+            mydb_name = "aws_inventories"
+            insert_coll = "ec2_list_" + today
+            insert_coll = mydb[insert_coll]
     return mydb, mydb_name, insert_coll
 
 ### Utility Functions
@@ -117,7 +119,7 @@ def is_digit(check_input):
         return True
     return False
 
-def initialize(interactive, aws_account):
+def initialize():
     # Set the date
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
@@ -411,7 +413,11 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
             output_file = os.path.join(output_dir, "aws-instance-master-list-" + date +".csv")
 
         # export MongoDB documents to a CSV file, leaving out the row "labels" (row numbers)
-        docs.to_csv(output_file, ",", index=False) # CSV delimited by commas
+        try:
+            docs.to_csv(output_file, ",", index=False) # CSV delimited by commas
+        except Exception as e:
+            print(f"An exception has occurred: {e}.\nClose the file and try again!")
+            mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll=None,date=None)
     elif choice == 2:
         if __name__ == "__main__":
             json_export = docs.to_json() # return JSON data
@@ -423,7 +429,11 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
         else:
             output_file = os.path.join(output_dir, "aws-instance-master-list-" + date +".json")
         # export MongoDB documents to a CSV file, leaving out the row "labels" (row numbers)
-        docs.to_json(output_file)
+        try:
+            docs.to_json(output_file)
+        except Exception as e:
+            print(f"An exception has occurred: {e}.\nClose the file and try again!")
+            mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll=None,date=None)
     elif choice == 3:
         html_str = io.StringIO()
         # export as HTML
@@ -441,7 +451,11 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
         else:
             output_file = os.path.join(output_dir, "aws-instance-master-list-" + date + ".html")
         # save the MongoDB documents as an HTML table
-        docs.to_html(output_file)
+        try:
+            docs.to_html(output_file)
+        except Exception as e:
+            print(f"An exception has occurred: {e}.\nClose the file and try again!")
+            mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll=None,date=None)
     elif choice == 4:
         # Set the Excel output directory
         output_dir = os.path.join("..", "..", "output_files", "aws_instance_list", "excel", "")
@@ -451,10 +465,14 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
         else:
             output_file = os.path.join(output_dir, "aws-instance-master-list-" + date + ".xlsx")
         # export MongoDB documents to a Excel file, leaving out the row "labels" (row numbers)
-        writer = ExcelWriter(output_file)
-        docs.to_excel(writer,"EC2 List",index=False)
-        writer.save()
-        writer.close()
+        try:
+            writer = ExcelWriter(output_file)
+            docs.to_excel(writer,"EC2 List",index=False)
+            writer.save()
+            writer.close()
+        except Exception as e:
+            print(f"An exception has occurred: {e}.\nClose the file and try again!")
+            mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll=None,date=None)
     if __name__ == "__main__":
         exit = input("Exit program (y/n): ")
         if exit.lower() == "y" or exit.lower() == "yes":
@@ -512,7 +530,7 @@ def main():
         else:
             interactive = 0
         aws_account = ''
-        _, aws_env_list = initialize(interactive, aws_account)
+        _, aws_env_list = initialize()
         menu()
         option = input("Enter the option: ")
         option = int(option)
