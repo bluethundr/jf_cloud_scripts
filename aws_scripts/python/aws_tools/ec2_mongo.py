@@ -7,11 +7,12 @@ import time
 import pandas
 import argparse
 import csv
+import pathlib
+from pathlib import Path
 from pandas import ExcelWriter
 from pymongo import MongoClient, errors
 from bson.objectid import ObjectId
 from datetime import datetime
-from pathlib import Path
 from colorama import init, Fore
 init()
 
@@ -29,48 +30,50 @@ def connect_db():
         print ("pymongo ERROR:", e)
     return myclient
 
-def set_db(insert_coll=None):
-    if __name__ == "__main__":
-        message = "* Select a MongoDB Database *"
-        print(Fore.CYAN)
-        banner(message, "*")
-        print(Fore.RESET)
+def set_db():
     myclient = connect_db()
     today = datetime.today()
     today = today.strftime("%m%d%Y")
+    if myclient != None:
+        mydb = myclient["aws_inventories"]
+        mydb_name = "aws_inventories"
+        insert_coll = "ec2_list_" + today
+        insert_coll = mydb[insert_coll]
+    return mydb, mydb_name, insert_coll
+
+def choose_db():
+    myclient = connect_db()
     if __name__ == "__main__":
-        print(Fore.CYAN + "Available MongoDB Databases:")
-        if myclient != None:
-            # the list_database_names() method returns a list of strings
-            database_names = myclient.list_database_names()
-            counter = 1
-            for db in database_names:
-                message = str(counter) + ". " + db
-                print(message)
-                counter = counter + 1
-        print ("There are", len(database_names), "databases.\n")
-        print(f"Please select a database. Enter a number 1 through {len(database_names)}.")
-        choice = input("Enter a number: ")
-        if is_digit(choice) == True:
-            if int(choice) > counter:
-                print("Wrong selection.")
-                set_db()
-            choice = int(choice)
-            choice = choice - 1
-            if myclient != None:
-                mydb = myclient[database_names[choice]]
-                mydb_name = database_names[choice]
-            insert_coll = "ec2_list_" + today
-            insert_coll = mydb[insert_coll]
-            print(f"You've selected: {database_names[choice]}\n")
-        else:
-            print("Must enter a digit. Try again.\n")
+        message = "* Choose a MongoDB Database *"
+        print(Fore.CYAN)
+        banner(message, "*")
+        print(Fore.RESET)
+    print(Fore.CYAN + "Available MongoDB Databases:")
+    if myclient != None:
+		# the list_database_names() method returns a list of strings
+	    database_names = myclient.list_database_names()
+	    counter = 1
+	    for db in database_names:
+		    message = str(counter) + ". " + db
+		    print(message)
+		    counter = counter + 1
+    print ("There are", len(database_names), "databases.\n")
+    print(f"Please select a database. Enter a number 1 through {len(database_names)}.")
+    choice = input("Enter a number: ")
+    if is_digit(choice) == True:
+	    if int(choice) > counter:
+		    print("Wrong selection.")
+		    choose_db()
+	    choice = int(choice)
+	    choice = choice - 1
+	    if myclient != None:
+		    mydb = myclient[database_names[choice]]
+		    mydb_name = database_names[choice]
+	    insert_coll = "ec2_list_" + today
+	    insert_coll = mydb[insert_coll]
+	    print(f"You've selected: {database_names[choice]}\n")
     else:
-        if myclient != None:
-            mydb = myclient["aws_inventories"]
-            mydb_name = "aws_inventories"
-            insert_coll = "ec2_list_" + today
-            insert_coll = mydb[insert_coll]
+	    print("Must enter a digit. Try again.\n")
     return mydb, mydb_name, insert_coll
 
 ### Utility Functions
@@ -370,6 +373,7 @@ def print_collections():
 
 # 9. Export Mongo DB to File
 def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll=None,date=None):
+    print(Fore.CYAN)
     if __name__ == "__main__":
         message = "* Export MongoDB to File *"
         banner(message, "*")
@@ -405,27 +409,37 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
     else:
         choice = 1
     if choice == 1:
-        if __name__ == "__main__":
+        #if __name__ == "__main__":
             # export MongoDB documents to CSV
-            csv_export = docs.to_csv(sep=",") # CSV delimited by commas
-            print ("\nCSV data:", csv_export)
+            #csv_export = docs.to_csv(sep=",") # CSV delimited by commas
+            #print ("\nCSV data:", csv_export)
         # Set the CSV output directory
         output_dir = os.path.join("..", "..", "output_files", "aws_instance_list", "csv", "")
         if interactive == 1:
             output_file = os.path.join(output_dir, "aws-instance-list-" + aws_account + "-" + date +".csv")
+            output_file_name = "aws-instance-list-" + aws_account + "-" + date +".csv"
         else:
             output_file = os.path.join(output_dir, "aws-instance-master-list-" + date +".csv")
-
         # export MongoDB documents to a CSV file, leaving out the row "labels" (row numbers)
         try:
             docs.to_csv(output_file, ",", index=False) # CSV delimited by commas
         except Exception as e:
             print(f"An exception has occurred: {e}.\nClose the file and try again!")
             mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll=None,date=None)
+        path = pathlib.Path(output_file)
+        if path.exists():
+            if interactive == 1:
+                output_file_name = "aws-instance-list-" + aws_account + "-" + date +".csv"
+            else:
+                output_file_name = "aws-instance-list-" + "-" + date +".csv"
+            message = f"A CSV file has been created as: {output_file_name}"
+            banner(message)
+        else:
+            print("The CSV file has not been created.")
     elif choice == 2:
-        if __name__ == "__main__":
-            json_export = docs.to_json() # return JSON data
-            print ("\nJSON data:", json_export)
+        #if __name__ == "__main__":
+            #json_export = docs.to_json() # return JSON data
+            #print ("\nJSON data:", json_export)
         # Set the JSON output directory
         output_dir = os.path.join("..", "..", "output_files", "aws_instance_list", "json", "")
         if interactive == 1:
@@ -438,6 +452,16 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
         except Exception as e:
             print(f"An exception has occurred: {e}.\nClose the file and try again!")
             mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll=None,date=None)
+        path = pathlib.Path(output_file)
+        if path.exists():
+            if interactive == 1:
+                output_file_name = "aws-instance-list-" + aws_account + "-" + date +".json"
+            else:
+                output_file_name = "aws-instance-list-" + "-" + date +".json"
+            message = f"A JSON file has been created as: {output_file_name}"
+            banner(message)
+        else:
+            print("The JSON file has not been created.")
     elif choice == 3:
         html_str = io.StringIO()
         # export as HTML
@@ -445,9 +469,9 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
         buf=html_str,
         classes="table table-striped"
         )
-        if __name__ == "__main__":
+        #if __name__ == "__main__":
             # print out the HTML table
-            print (html_str.getvalue())
+            #print (html_str.getvalue())
         # Set the HTML output directory
         output_dir = os.path.join("..", "..", "output_files", "aws_instance_list", "html", "")
         if interactive == 1:
@@ -460,6 +484,16 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
         except Exception as e:
             print(f"An exception has occurred: {e}.\nClose the file and try again!")
             mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll=None,date=None)
+        path = pathlib.Path(output_file)
+        if path.exists():
+            if interactive == 1:
+                output_file_name = "aws-instance-list-" + aws_account + "-" + date +".html"
+            else:
+                output_file_name = "aws-instance-list-" + "-" + date +".html"
+            message = f"An HTML file has been created as: {output_file_name}"
+            banner(message)
+        else:
+            print("The HTML file has not been created.")
     elif choice == 4:
         # Set the Excel output directory
         output_dir = os.path.join("..", "..", "output_files", "aws_instance_list", "excel", "")
@@ -477,6 +511,16 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
         except Exception as e:
             print(f"An exception has occurred: {e}.\nClose the file and try again!")
             mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll=None,date=None)
+        path = pathlib.Path(output_file)
+        if path.exists():
+            if interactive == 1:
+                output_file_name = "aws-instance-list-" + aws_account + "-" + date +".xlsx"
+            else:
+                output_file_name = "aws-instance-list-" + "-" + date +".xlsx"
+            message = f"An Excel file has been created as: {output_file_name}"
+            banner(message)
+        else:
+            print("The Excel file has not been created.")
     if __name__ == "__main__":
         exit = input("Exit program (y/n): ")
         if exit.lower() == "y" or exit.lower() == "yes":
@@ -498,7 +542,7 @@ def print_reports(interactive,aws_account,aws_account_number):
         datetime(int(year),int(month),int(day))
     except ValueError :
         isValidDate = False
-        print("Invalid date")
+        print("Invalid date. Try")
         print_reports(interactive,aws_account,aws_account_number)
 
     if(isValidDate) :
@@ -522,7 +566,7 @@ def print_reports(interactive,aws_account,aws_account_number):
                 insert_coll = mydb[insert_coll]
         except Exception as e:
             print(f"An error has occurred: {e}")
-    mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll,date=inputDate)
+    mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll,inputDate)
 
 # Choice 11. Exit ec2 Mongo
 
