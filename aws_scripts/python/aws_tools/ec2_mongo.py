@@ -431,7 +431,7 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
             if interactive == 1:
                 output_file_name = "aws-instance-list-" + aws_account + "-" + date +".csv"
             else:
-                output_file_name = "aws-instance-list-" + "-" + date +".csv"
+                output_file_name = "aws-instance-master-list-" + date +".csv"
             message = f"A CSV file has been created as: {output_file_name}"
             banner(message)
         else:
@@ -457,7 +457,7 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
             if interactive == 1:
                 output_file_name = "aws-instance-list-" + aws_account + "-" + date +".json"
             else:
-                output_file_name = "aws-instance-list-" + "-" + date +".json"
+                output_file_name = "aws-instance-master-list-" + date +".json"
             message = f"A JSON file has been created as: {output_file_name}"
             banner(message)
         else:
@@ -489,7 +489,7 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
             if interactive == 1:
                 output_file_name = "aws-instance-list-" + aws_account + "-" + date +".html"
             else:
-                output_file_name = "aws-instance-list-" + "-" + date +".html"
+                output_file_name = "aws-instance-master-list-" + date +".html"
             message = f"An HTML file has been created as: {output_file_name}"
             banner(message)
         else:
@@ -516,7 +516,7 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
             if interactive == 1:
                 output_file_name = "aws-instance-list-" + aws_account + "-" + date +".xlsx"
             else:
-                output_file_name = "aws-instance-list-" + "-" + date +".xlsx"
+                output_file_name = "aws-instance-master-list-" + date +".xlsx"
             message = f"An Excel file has been created as: {output_file_name}"
             banner(message)
         else:
