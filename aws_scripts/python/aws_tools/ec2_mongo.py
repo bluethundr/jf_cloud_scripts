@@ -96,10 +96,6 @@ def banner(message, border="-"):
     print(message)
     print(line)
 
-def exit_program():
-    endbanner()
-    exit()
-
 def menu():
     message = "Main Menu"
     banner(message)
@@ -569,23 +565,9 @@ def print_reports(interactive,aws_account,aws_account_number):
     mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll,inputDate)
 
 # Choice 11. Exit ec2 Mongo
-
-def menu():
-    message = "Main Menu"
-    banner(message)
-    print(Fore.CYAN + "Your available actions: ")
-    print("1. Create new MongoDB Database")
-    print("2. Drop MongoDB Database")
-    print("3. Do a test insert to the DB")
-    print("4. Clear the DB")
-    print("5. Remove accounts from the DB.")
-    print("6. Print the DB")
-    print("7. Print DB Names")
-    print("8. Print collections")
-    print("9. Export MongoDB to file")
-    print("10. Print Reports")
-    print("11. Exit ec2 mongo")
-    print("\n")
+def exit_program():
+    endbanner()
+    exit()
 
 ### Main Function
 def main():
