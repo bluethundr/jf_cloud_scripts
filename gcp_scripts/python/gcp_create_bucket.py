@@ -15,6 +15,31 @@
 # limitations under the License.
 
 import sys
+from colorama import init, Fore
+
+# Initialize the color ouput with colorama
+init()
+
+
+### Utility Functions
+def welcomebanner():
+    # Print the welcome banner
+    print(Fore.CYAN)
+    message = "*             Create GCP Buckets                    *"
+    banner(message, "*")
+    print(Fore.RESET)
+
+def endbanner():
+    print(Fore.CYAN)
+    message = "*  Create GCP Buckets Operations Are Complete   *"
+    banner(message, "*")
+    print(Fore.RESET)
+
+def banner(message, border='-'):
+    line = border * len(message)
+    print(line)
+    print(message)
+    print(line)
 
 # [START storage_create_bucket_class_location]
 from google.cloud import storage
@@ -43,4 +68,5 @@ def create_bucket_class_location(bucket_name):
 # [END storage_create_bucket_class_location]
 
 if __name__ == "__main__":
-    create_bucket_class_location(bucket_name=sys.argv[1])
+    welcomebanner()
+    create_bucket_class_location(bucket_name=None)

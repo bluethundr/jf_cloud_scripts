@@ -1,10 +1,20 @@
 from google.cloud import storage
+from colorama import init, Fore
+
+# Initialize the color ouput with colorama
+init()
 
 ### Utility Functions
 def welcomebanner():
     # Print the welcome banner
     print(Fore.CYAN)
-    message = "*             List AWS EC2 Instances                     *"
+    message = "*             List GCP Buckets                    *"
+    banner(message, "*")
+    print(Fore.RESET)
+
+def endbanner():
+    print(Fore.CYAN)
+    message = "*  List GCP Buckets Operations Are Complete   *"
     banner(message, "*")
     print(Fore.RESET)
 
@@ -26,4 +36,6 @@ def list_buckets():
 
 # Main function
 if __name__ == "__main__":
+    welcomebanner()
     list_buckets()
+    endbanner()
