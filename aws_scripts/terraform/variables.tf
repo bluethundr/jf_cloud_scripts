@@ -9,10 +9,14 @@ variable "region" {
 variable "amis" {
   type = map(string)
   default = {
-    "us-east-1"     = "ami-0885b1f6bd170450c"
-    "us-west-2"     = "ami-07dd19a7900a1f049"
-    "us-gov-west-1" = "ami-84556de5"
-    "us-gov-east-1" = "ami-dee008af"
+    "us-east-1-ubuntu"      = "ami-0885b1f6bd170450c"
+    "us-east-1-centos8"     = "ami-05954d92f270b425a"
+    "us-west-2-ubuntu"      = "ami-07dd19a7900a1f049"
+    "us-west-2-centos8"     = "ami-053c57d20f2a08858"
+    "us-gov-west-1-ubuntu"  = "ami-84556de5"
+    "us-gov-west-1-centos8" = "ami-27b29a46"
+    "us-gov-east-1-ubuntu"  = "ami-dee008af"
+    "us-gov-east-1-centos8" = "ami-016bec6924268abc8"
   }
 }
 
