@@ -17,10 +17,10 @@ variable "amis" {
 }
 
 variable "vpc_security_group_ids" {
-  type = map(string)
+  type = map(list(string))
   default = {
-    "jf-master-pd"     = "sg-0333d9eaaeb3ab1b0"
-    "jf-master-pd-gov" = "sg-7f051404"
+    "jf-master-pd"     = ["sg-0333d9eaaeb3ab1b0"]
+    "jf-master-pd-gov" = ["sg-7f051404"]
   }
 }
 
