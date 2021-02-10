@@ -8,15 +8,15 @@ terraform {
 }
 
 provider "aws" {
-  profile = "jf-master-pd-gov"
-  region  = var.region["jf-master-pd-gov"]
+  profile = "jf-master-pd"
+  region  = var.region["jf-master-pd"]
 }
 
-resource "aws_instance" "jf-aws" {
-  ami                    = var.amis["us-gov-west-1"]
-  instance_type          = "t2.micro"
-  vpc_security_group_ids = var.vpc_security_group_ids["jf-master-pd-gov"]
-  subnet_id              = var.subnet_id["jf-master-pd-gov"]
+resource "aws_instance" "jf-aws-instance" {
+  ami                    = var.amis["us-east-1-ubuntu"]
+  instance_type          = "t3.micro"
+  vpc_security_group_ids = var.vpc_security_group_ids["jf-master-pd"]
+  subnet_id              = var.subnet_id["jf-master-pd"]
   key_name               = "jf-timd-keypair"
   tags = {
     Name = "jf-web1"
