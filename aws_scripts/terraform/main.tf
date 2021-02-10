@@ -9,14 +9,14 @@ terraform {
 
 provider "aws" {
   profile = "jf-master-pd"
-  region  = var.region
+  region  = var.region["jf-master-pd"]
 }
 
 resource "aws_instance" "example" {
   ami                    = var.amis["us-east-1"]
   instance_type          = "t2.micro"
   vpc_security_group_ids = ["sg-0333d9eaaeb3ab1b0"]
-  subnet_id              = "subnet-3ab1835d"
+  subnet_id              = var.subnet_id["jf-master-pd"]
   key_name               = "jf-timd-keypair"
 }
 
