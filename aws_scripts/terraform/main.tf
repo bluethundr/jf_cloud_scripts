@@ -13,7 +13,7 @@ provider "aws" {
 }
 
 resource "aws_instance" "jf-aws-instance" {
-  ami                    = var.amis["us-east-1-ubuntu"]
+  ami                    = var.amis["us-east-1"]
   instance_type          = "t3.micro"
   vpc_security_group_ids = var.vpc_security_group_ids["jf-master-pd"]
   subnet_id              = var.subnet_id["jf-master-pd"]
