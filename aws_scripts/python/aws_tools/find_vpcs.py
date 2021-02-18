@@ -1,5 +1,14 @@
 import re
-from banners import *
+from colorama import init, Fore
+
+# Initialize the color ouput with colorama
+init()
+
+def banner(message, border='-'):
+    line = border * len(message)
+    print(line)
+    print(message)
+    print(line)
 
 def find_vpcs(ec2_client):
     vpc = ''
@@ -16,4 +25,4 @@ def find_vpcs(ec2_client):
     #while not match:
     #    vpc_id = input('vpc id:')
     #    match = pattern.match(vpc_id)
-    #return vpc_id
+    return vpc_id

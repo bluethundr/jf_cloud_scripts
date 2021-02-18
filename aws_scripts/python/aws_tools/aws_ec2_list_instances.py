@@ -245,7 +245,7 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
     else:
         to_addr = input("Enter the recipient's email address: ")
 
-    from_addr = 'jkfr.noreply@gmail.com'
+    from_addr = 'sncr.noreply@gmail.com'
     if aws_accounts_answer == 'one':
         subject = "AWS Instance List: " + aws_account + " (" + aws_account_number + ") " + today
         content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The SD Team</font>"
@@ -489,7 +489,10 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
                         'Launch Date': launch_time_friendly
                     }
                     mongo_instance_dict = {'_id': '', 'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly}
-                    insert_coll(mongo_instance_dict)
+                    if mongo_instance_dict:
+                        insert_coll(mongo_instance_dict)
+                    else:
+                        print("No instances in this account.")
                     ec2_info_items = ec2info.items
                     if show_details == 'y' or show_details == 'yes':
                         for instance_id, instance in ec2_info_items():
