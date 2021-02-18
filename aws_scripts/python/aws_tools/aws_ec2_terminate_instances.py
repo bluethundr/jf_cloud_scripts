@@ -1,5 +1,10 @@
 #!/usr/bin/env python
-from modules import *
+import boto3
+import botocore
+import objectpath
+import time
+from collections import defaultdict
+from colorama import init, deinit, Fore
 
 init()
 
@@ -39,7 +44,7 @@ def terminate_instances():
     try:
         session = boto3.Session(profile_name=aws_account,region_name=aws_region)
         ec2_client = session.client("ec2")
-    except botocore.exceptions.ProfileNotFound as e:
+    except Exception as e:
         print(f"An exception has occurred: {e}")
 
     print(Fore.YELLOW)
