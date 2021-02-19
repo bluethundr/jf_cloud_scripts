@@ -278,8 +278,11 @@ def drop_mongodb():
 # 3. Insert MongoDB Collection
 def insert_coll(mydict):
     _, _, insert_coll = set_db()
-    mydict["_id"] = ObjectId()
-    instance_doc = insert_coll.insert_one(mydict)
+    try:
+        mydict["_id"] = ObjectId()
+        instance_doc = insert_coll.insert_one(mydict)
+    except Exception as e:
+        print(f"An error occurred: {e}")
     if __name__ == "__main__":
         message = "* MongoDB Insert Document *"
         banner(message, "*")
@@ -393,7 +396,10 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
     # Convert the mongo docs to a DataFrame
     docs = pandas.DataFrame(mongo_docs)
     # Discard the Mongo ID for the documents
-    docs.pop("_id")
+    try:
+        docs.pop("_id")
+    except Exception as e:
+        pass
     if __name__ == "__main__":
         print("Choose a file format")
         print("1. CSV")
@@ -405,10 +411,6 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
     else:
         choice = 1
     if choice == 1:
-        #if __name__ == "__main__":
-            # export MongoDB documents to CSV
-            #csv_export = docs.to_csv(sep=",") # CSV delimited by commas
-            #print ("\nCSV data:", csv_export)
         # Set the CSV output directory
         output_dir = os.path.join("..", "..", "output_files", "aws_instance_list", "csv", "")
         if interactive == 1:
@@ -433,9 +435,6 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
         else:
             print("The CSV file has not been created.")
     elif choice == 2:
-        #if __name__ == "__main__":
-            #json_export = docs.to_json() # return JSON data
-            #print ("\nJSON data:", json_export)
         # Set the JSON output directory
         output_dir = os.path.join("..", "..", "output_files", "aws_instance_list", "json", "")
         if interactive == 1:
@@ -465,9 +464,6 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
         buf=html_str,
         classes="table table-striped"
         )
-        #if __name__ == "__main__":
-            # print out the HTML table
-            #print (html_str.getvalue())
         # Set the HTML output directory
         output_dir = os.path.join("..", "..", "output_files", "aws_instance_list", "html", "")
         if interactive == 1:
