@@ -1,6 +1,7 @@
 from colorama import init, deinit, Fore
 from banners import *
 from find_vpcs import *
+from init import *
 
 
 # Initialize the color ouput with colorama
