@@ -23,6 +23,5 @@ from find_vpcs import find_vpcs
 from aws_add_sg_list import attach_sg_list
 from choose_accounts import choose_accounts
 
-
 # Initialize the color ouput with colorama
 init()
