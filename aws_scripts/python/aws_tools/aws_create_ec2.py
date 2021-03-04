@@ -120,6 +120,7 @@ def create_instances(aws_account, ec2_client, ec2_resource, region, max_count, i
                     }
                 ]
                 )
+            instances_list = list(instances)
         except Exception as e:
             message = Fore.YELLOW + f"An error has occurred: {e} Instance(s) have not been created." + Fore.RESET
             print(message)
@@ -128,7 +129,7 @@ def create_instances(aws_account, ec2_client, ec2_resource, region, max_count, i
     if private_ip_list is not None:
         instance_list, root_volumes_list = list_new_instances(ec2_client, instances_list, private_ip_list)
     else:
-        instance_list, root_volumes_list = list_new_instances(ec2_client, instances, private_ip_list)
+        instance_list, root_volumes_list = list_new_instances(ec2_client, instances_list, private_ip_list)
 
     return instance_list, root_volumes_list
 
