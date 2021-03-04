@@ -151,7 +151,6 @@ def main():
         for instance_id in instance_list:
             attach_sg_list(ec2_client, sg_list, instance_id)
 
-
     # Print the instance list
     print(Fore.CYAN)
     if instance_list and root_volumes_list:
