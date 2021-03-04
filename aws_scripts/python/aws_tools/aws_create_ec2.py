@@ -46,40 +46,6 @@ def arguments():
     options = parser.parse_args()
     return options
 
-def init_create_ec2(aws_account, region):
-    # Set the date
-    today = datetime.today()
-    today = today.strftime("%m-%d-%Y")
-    # Set the input file
-    aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_confluence_page.csv')
-    # Create the session
-    if 'gov' in aws_account and not 'admin' in aws_account:
-        try:
-            session = boto3.Session(profile_name=aws_account, region_name=region)
-        except botocore.exceptions.ProfileNotFound as e:
-            profile_missing_message = f"An exception has occurred: {e}. Please try again!"
-            banner(profile_missing_message)
-            ec2_client = None
-            ec2_resource = None
-            
-    else:
-        try:
-            session = boto3.Session(profile_name=aws_account, region_name=region)
-            account_found = 'yes'
-        except botocore.exceptions.ProfileNotFound as e:
-            profile_missing_message = f"An exception has occurred: {e}. Please try again!"
-            banner(profile_missing_message)
-
-
-    try:
-        ec2_client = session.client("ec2")
-        ec2_resource = session.resource("ec2")
-    except Exception as e:
-        print(f"An exception has occurred: {e}")
-        ec2_client = None
-        ec2_resource = None
-    return today, aws_env_list, ec2_client, ec2_resource
-
 def create_instances(aws_account, ec2_client, ec2_resource, region, max_count, image_id, key_name, instance_type, vpc_id, subnet_id, sg_id, sg_list, subnet_ids, public_ip, private_ip_list, tenancy, monitoring_enabled, user_data, name_tags):
     print(Fore.CYAN)
     message = "Creating the instance(s)"
@@ -154,6 +120,7 @@ def create_instances(aws_account, ec2_client, ec2_resource, region, max_count, i
                     }
                 ]
                 )
+            instances_list = list(instances)
         except Exception as e:
             message = Fore.YELLOW + f"An error has occurred: {e} Instance(s) have not been created." + Fore.RESET
             print(message)
@@ -162,7 +129,7 @@ def create_instances(aws_account, ec2_client, ec2_resource, region, max_count, i
     if private_ip_list is not None:
         instance_list, root_volumes_list = list_new_instances(ec2_client, instances_list, private_ip_list)
     else:
-        instance_list, root_volumes_list = list_new_instances(ec2_client, instances, private_ip_list)
+        instance_list, root_volumes_list = list_new_instances(ec2_client, instances_list, private_ip_list)
 
     return instance_list, root_volumes_list
 
@@ -184,7 +151,6 @@ def main():
     if instance_list:
         for instance_id in instance_list:
             attach_sg_list(ec2_client, sg_list, instance_id)
-
 
     # Print the instance list
     print(Fore.CYAN)
