@@ -65,6 +65,7 @@ def start_instances():
     print(Fore.YELLOW)
     instance_id_list = input("Enter instance IDs separated by commas: ")
     instance_ids = instance_id_list.split(",")
+    instance_ids = [instance_id.strip(' ') for instance_id in instance_ids]
     check_state = input("Check the server state (y/n): ")
     print("\n")
     print(Fore.RESET + "-------------------------------------")
