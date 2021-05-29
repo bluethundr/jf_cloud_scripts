@@ -145,8 +145,8 @@ def main():
     _, insert_coll = set_db(date)
     project_ids = read_project_info(gcp_env_list)
     gcp_zones = read_zone_info(gcp_zones_list)
-    pageid = 1164580700 # <-- Main page
-    #pageid = 1166025346 # <-- Test page
+    pageid = xxxxxxxx # <-- Main page
+    #pageid = xxxxxxxx # <-- Test page
     title = 'GCP Compute Instance Inventory'
     #title = 'GCP Compute Instance Inventory - Test'
     ### End variables
