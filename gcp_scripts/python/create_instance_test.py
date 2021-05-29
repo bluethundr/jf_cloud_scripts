@@ -13,9 +13,6 @@
 
 import os
 import uuid
-
-import pytest
-
 from create_instance import main
 
 PROJECT = os.environ['GOOGLE_CLOUD_PROJECT']
