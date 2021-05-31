@@ -433,6 +433,10 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
             for reservation in instance_list["Reservations"]:
                 for instance in reservation.get("Instances", []):
                     instance_count = instance_count + 1
+                    instance_state = instance['State']['Name']
+                    instance_type = instance['InstanceType']
+                    instance_id = instance['InstanceId']
+                    ami_id = instance['ImageId']
                     launch_time = instance["LaunchTime"]
                     launch_time_friendly = launch_time.strftime("%B %d %Y")
                     tree = objectpath.Tree(instance)
@@ -456,14 +460,14 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
                         public_ips_list = str(public_ips_list).replace('[','').replace(']','').replace('\'','')
                     else:
                         public_ips_list = None
-                    name = None
+                    instance_name = None
                     if 'Tags' in instance:
                         try:
                             tags = instance['Tags']
-                            name = None
+                            #name = None
                             for tag in tags:
                                 if tag["Key"] == "Name":
-                                    name = tag["Value"]
+                                    instance_name = tag["Value"]
                                 if tag["Key"] == "Engagement" or tag["Key"] == "Engagement Code":
                                     engagement = tag["Value"]
                         except ValueError:
@@ -471,24 +475,25 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
                     key_name = instance['KeyName'] if instance['KeyName'] else None
                     vpc_id = instance.get('VpcId') if instance.get('VpcId') else None
                     private_dns = instance['PrivateDnsName'] if instance['PrivateDnsName'] else None
+                    availability_zone = instance['Placement']['AvailabilityZone']
                     ec2info[instance['InstanceId']] = {
                         'AWS Account': aws_account,
                         'Account Number': aws_account_number,
-                        'Name': name,
-                        'Instance ID': instance['InstanceId'],
-                        'AMI ID': instance['ImageId'],
+                        'Instance Name': instance_name,
+                        'Instance ID': instance_id,
+                        'AMI ID': ami_id,
                         'Volumes': block_devices,
                         'Private IP': private_ips_list,
                         'Public IP': public_ips_list,
                         'Private DNS': private_dns,
-                        'Availability Zone': instance['Placement']['AvailabilityZone'],
+                        'Availability Zone': availability_zone,
                         'VPC ID': vpc_id,
-                        'Type': instance['InstanceType'],
+                        'Instance Type': instance_type,
                         'Key Pair Name': key_name,
-                        'State': instance['State']['Name'],
+                        'Instance State': instance_state,
                         'Launch Date': launch_time_friendly
                     }
-                    mongo_instance_dict = {'_id': '', 'AWS Account': aws_account, "Account Number": aws_account_number, 'Name': name, 'Instance ID': instance["InstanceId"], 'AMI ID': instance['ImageId'], 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': instance['Placement']['AvailabilityZone'], 'VPC ID': vpc_id, 'Type': instance["InstanceType"], 'Key Pair Name': key_name, 'State': instance["State"]["Name"], 'Launch Date': launch_time_friendly}
+                    mongo_instance_dict = {'_id': '', 'AWS Account': aws_account, "Account Number": aws_account_number, 'Instance Name': instance_name, 'Instance ID': instance_id, 'AMI ID': ami_id, 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': availability_zone, 'VPC ID': vpc_id, 'Instance Type': instance_type, 'Key Pair Name': key_name, 'Instance State': instance_state, 'Launch Date': launch_time_friendly}
                     if mongo_instance_dict:
                         insert_coll(mongo_instance_dict)
                     else:
