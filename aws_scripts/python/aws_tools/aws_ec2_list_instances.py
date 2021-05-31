@@ -238,7 +238,7 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
         first_name = options.first_name
         print(Fore.RESET)
     else:
-        first_name = str(input("Enter the recipient's first name: "))
+        first_name = input("Enter the recipient's first name: ")
 
     if options.email_recipient:
         to_addr = options.email_recipient
