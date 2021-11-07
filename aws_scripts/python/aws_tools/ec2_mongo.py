@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
 #-*- coding: utf-8 -*-
 # Import modules
-import io
-import os
-import time
-import pandas
-import argparse
-import csv
-import pathlib
+import io, os, time, pandas, argparse, csv, pathlib
 from pathlib import Path
 from pandas import ExcelWriter
 from pymongo import MongoClient, errors
@@ -16,11 +10,14 @@ from datetime import datetime
 from colorama import init, Fore
 init()
 
+user_name = os.environ.get('MONGO_USER_NAME')
+user_pass = os.environ.get('MONGO_USER_PASS')
+
 ### DB Functions
 def connect_db():
     try:
         myclient = MongoClient(
-                host = "mongodb://localhost:27017/",
+                host = f"mongodb://{user_name}:{user_pass}@localhost:27017/admin",
                 serverSelectionTimeoutMS = 3000 # 3 second timeout
             )
     except errors.ServerSelectionTimeoutError as e:
@@ -278,6 +275,7 @@ def drop_mongodb():
 # 3. Insert MongoDB Collection
 def insert_coll(mydict):
     _, _, insert_coll = set_db()
+    instance_doc = ''
     try:
         mydict["_id"] = ObjectId()
         instance_doc = insert_coll.insert_one(mydict)
