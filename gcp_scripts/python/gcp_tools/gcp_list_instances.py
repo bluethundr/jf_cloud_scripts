@@ -1,13 +1,13 @@
 #-------------------------------------------------------------------------------------------------------------------
 # Import Block                                                                                                     #
 #-------------------------------------------------------------------------------------------------------------------
-import os,time,datetime,dateutil.parser,csv,googleapiclient.discovery
+import os,time,datetime,csv,googleapiclient.discovery
 from datetime import datetime
 from colorama import init, Fore
 from os.path import basename
 from pathlib import Path
 from gcp_mongo import create_directories,set_db,insert_coll,delete_from_collection,mongo_export_to_file
-from write_confluence import authenticate,write_data_to_confluence
+#from write_confluence import authenticate,write_data_to_confluence
 #-------------------------------------------------------------------------------------------------------------------
 # End Import Block                                                                                                 #
 #-------------------------------------------------------------------------------------------------------------------
@@ -74,7 +74,10 @@ def banner(message, border='-'):
 def read_project_info(gcp_env_list):
     project_ids = []
     with open(gcp_env_list) as csv_file:
-        csv_reader = csv.reader(csv_file)
+        try:
+            csv_reader = csv.reader(csv_file)
+        except Exception as e:
+            print(f"A CSV error has occurred:")
         next(csv_reader)
         for row in csv_reader:
             project_id = str(row[0])
@@ -88,10 +91,13 @@ def read_project_info(gcp_env_list):
 #-------------------------------------------------------------------------------------------------------------------
 def read_zone_info(gcp_zones_list):
     gcp_zones = []
-    with open(gcp_zones_list) as text_file:
-        zones = text_file.readlines()
-        for zone in zones:
-            gcp_zones.append(zone.strip())
+    try:
+        with open(gcp_zones_list) as text_file:
+            zones = text_file.readlines()
+            for zone in zones:
+                gcp_zones.append(zone.strip())
+    except Exception as e:
+        print(f"A CSV error has occurred: {e} ")
     return gcp_zones
 #-------------------------------------------------------------------------------------------------------------------
 #  End Read Zone Info                                                                                              #
@@ -115,8 +121,7 @@ def list_instances(compute,project_ids,gcp_zones,date):
                         instance_id = item['id']
                         name = item['name']
                         timestamp = item['creationTimestamp']
-                        dt = dateutil.parser.parse(timestamp)
-                        pretty_dt = dt.date().isoformat()
+                        pretty_dt = timestamp
                         private_ip = item['networkInterfaces'][0]['networkIP']
                         machine_type = item['machineType']
                         machine_type = machine_type.split("/")[-1]
@@ -138,12 +143,16 @@ def list_instances(compute,project_ids,gcp_zones,date):
 def main():
     welcomebanner()
     ### Begin variables
-    auth = authenticate()
+    #auth = authenticate()
+    project_ids = ''
     compute = googleapiclient.discovery.build('compute', 'v1')
     choice = 3 # <- File format HTML
     today,date,gcp_env_list,gcp_zones_list = initialize()
     _, insert_coll = set_db(date)
-    project_ids = read_project_info(gcp_env_list)
+    try:
+        project_ids = read_project_info(gcp_env_list)
+    except Exception as e:
+        print(f"A CSV error has occurred: {e}")
     gcp_zones = read_zone_info(gcp_zones_list)
     pageid = xxxxxxxx # <-- Main page
     #pageid = xxxxxxxx # <-- Test page
@@ -154,7 +163,7 @@ def main():
     create_directories()
     list_instances(compute,project_ids,gcp_zones,date)
     output_file = mongo_export_to_file(choice,insert_coll,date,today)
-    write_data_to_confluence(auth,pageid,output_file,title)
+    #write_data_to_confluence(auth,pageid,output_file,title)
     time.sleep(5) # <-- Time delay is necessary or the file is deleted before it's written to confluence
     delete_file(output_file)
     endbanner()
