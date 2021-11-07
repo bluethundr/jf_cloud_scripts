@@ -1,17 +1,7 @@
 #!/usr/bin/env python3
 #-*- coding: utf-8 -*-
 # Import modules
-import boto3
-import botocore
-import objectpath
-import csv
-import smtplib
-import os
-import argparse
-import getpass
-import json
-import keyring
-import requests
+import boto3, botocore, objectpath, csv, smtplib, os, argparse, getpass, json, keyring, requests
 from html import escape
 from requests.auth import HTTPBasicAuth
 from datetime import datetime
@@ -28,6 +18,9 @@ init()
 ### Confluence URLs
 BASE_URL = "https://confluence.company.net:8443/rest/api/content"
 VIEW_URL = "https://confluence.company.net:8443/pages/viewpage.action?pageId="
+
+gmail_user = os.environ.get('EMAIL_USER')
+gmail_password = os.environ.get('EMAIL_PASSWORD')
 
 ### Utility Functions
 def welcomebanner():
@@ -267,8 +260,6 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.ehlo()
         server.starttls()
-        gmail_user = 'jokefire.noreply@gmail.com'
-        gmail_password = 'ehhloWorld12345'
         server.login(gmail_user, gmail_password)
         server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
         message = f"Email was sent to: {to_addr}"
@@ -282,32 +273,35 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
 def convert_csv_to_html_table(output_file, today, interactive, aws_account):
     output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html')
     ### Interactive == 1  - user specifies an account
-    if interactive == 1:
-        htmlfile = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.html')
-        htmlfile_name = 'aws-instance-list-' + aws_account + '-' + today + '.html'
-    else:
-        htmlfile = os.path.join(output_dir, 'aws-instance-master-list-' + today + '.html')
-        htmlfile_name = 'aws-instance-master-list-' + today +'.html'
-    count = 0
-    html = ''
-    with open(output_file,'r') as CSVFILE:
-        reader = csv.reader(CSVFILE)
-        html += "<table><tbody>"
-        for row in reader:
-            html += "<tr>"
-            # Process the headers
-            if count == 0:
-                for column in row:
-                    html += "<th>%s</th>" % escape(column)
-            else:
-                # Process the data
-                for column in row:
-                    html += "<td>%s</td>" % escape(column)
-            html += "</tr>"
-            count += 1
-        html += "</tbody></table>"
-    with open(htmlfile,'w+') as HTMLFILE:
-        HTMLFILE.write(html)
+    try:
+        if interactive == 1:
+            htmlfile = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.html')
+            htmlfile_name = 'aws-instance-list-' + aws_account + '-' + today + '.html'
+        else:
+            htmlfile = os.path.join(output_dir, 'aws-instance-master-list-' + today + '.html')
+            htmlfile_name = 'aws-instance-master-list-' + today +'.html'
+        count = 0
+        html = ''
+        with open(output_file,'r') as CSVFILE:
+            reader = csv.reader(CSVFILE)
+            html += "<table><tbody>"
+            for row in reader:
+                html += "<tr>"
+                # Process the headers
+                if count == 0:
+                    for column in row:
+                        html += "<th>%s</th>" % escape(column)
+                else:
+                    # Process the data
+                    for column in row:
+                        html += "<td>%s</td>" % escape(column)
+                html += "</tr>"
+                count += 1
+            html += "</tbody></table>"
+        with open(htmlfile,'w+') as HTMLFILE:
+            HTMLFILE.write(html)
+    except Exception as e:
+        print(f"A convert_csv_to_html_table exception has occurred: {e}")
     return htmlfile, htmlfile_name
 
 def get_page_ancestors(auth, pageid):
@@ -495,7 +489,10 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
                     }
                     mongo_instance_dict = {'_id': '', 'AWS Account': aws_account, "Account Number": aws_account_number, 'Instance Name': instance_name, 'Instance ID': instance_id, 'AMI ID': ami_id, 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': availability_zone, 'VPC ID': vpc_id, 'Instance Type': instance_type, 'Key Pair Name': key_name, 'Instance State': instance_state, 'Launch Date': launch_time_friendly}
                     if mongo_instance_dict:
-                        insert_coll(mongo_instance_dict)
+                        try:
+                            insert_coll(mongo_instance_dict)
+                        except Exception as e:
+                            print(f"An error has occurred: {e}")
                     else:
                         print("No instances in this account.")
                     ec2_info_items = ec2info.items
@@ -622,7 +619,10 @@ def main():
         regions = set_regions(aws_account)
         output_file = list_instances(aws_account,aws_account_number, interactive, regions, show_details)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
-            mongo_export_to_file(interactive, aws_account, aws_account_number)
+            try:
+                 mongo_export_to_file(interactive, aws_account, aws_account_number)
+            except Exception as e:
+                print(f"A mongo exception has occurred: {e}")
             htmlfile, _ = convert_csv_to_html_table(output_file, today, interactive, aws_account)
             print(Fore.YELLOW)
             message = "Send an Email"
@@ -640,9 +640,12 @@ def main():
                 print(Fore.YELLOW)
                 banner(message)
             print(Fore.RESET)
-
-            with open(htmlfile, 'r') as htmlfile:
-                html = htmlfile.read()
+           
+            try:
+                with open(htmlfile, 'r') as htmlfile:
+                    html = htmlfile.read()
+            except Exception as e:
+                print(f"Open file exception: {e}")
 
             message = "* Write to Confluence *"
             print(Fore.CYAN)
