@@ -19,6 +19,7 @@ init()
 BASE_URL = "https://confluence.company.net:8443/rest/api/content"
 VIEW_URL = "https://confluence.company.net:8443/pages/viewpage.action?pageId="
 
+## Get gmail username and pass from environment variables
 gmail_user = os.environ.get('EMAIL_USER')
 gmail_password = os.environ.get('EMAIL_PASSWORD')
 
