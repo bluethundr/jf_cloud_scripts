@@ -8,8 +8,12 @@ from pymongo import MongoClient, errors
 from bson.objectid import ObjectId
 from datetime import datetime
 from colorama import init, Fore
+
+
+## Initialize Colorama
 init()
 
+## Get MongoDB username and pass from environment variables
 user_name = os.environ.get('MONGO_USER_NAME')
 user_pass = os.environ.get('MONGO_USER_PASS')
 
