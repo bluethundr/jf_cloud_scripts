@@ -19,7 +19,7 @@ idna==2.10
 jdcal==1.4.1
 jmespath==0.10.0
 keyring==22.0.1
-numpy==1.20.1
+numpy==1.22.0
 objectpath==0.6.1
 openpyxl==3.0.6
 pandas==1.2.1
