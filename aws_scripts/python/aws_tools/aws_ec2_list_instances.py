@@ -394,11 +394,11 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
     print(Fore.CYAN)
     report_gov_or_comm(aws_account, account_found)
     print(Fore.RESET)
-    account_found = 'yes'
     for region in regions:
         if 'gov' in aws_account and not 'admin' in aws_account:
             try:
                 session = boto3.Session(profile_name=aws_account, region_name=region)
+                account_found = 'yes'
             except botocore.exceptions.ProfileNotFound as e:
                 profile_missing_message = f"An exception has occurred: {e}"
                 account_found = 'no'
@@ -528,7 +528,7 @@ def list_instances(aws_account,aws_account_number, interactive, regions, show_de
                     ec2info = {}
         except Exception as e:
             print(f"An exception has occurred: {e}")
-    if profile_missing_message == '*':
+    if '*' in profile_missing_message:
         banner(profile_missing_message)
     print(Fore.GREEN)
     report_instance_stats(instance_count, aws_account, account_found)
@@ -562,7 +562,7 @@ def main():
         print(Fore.RESET)
 
     # Set interacive variable to indicate one or many accounts
-    if aws_accounts_answer.lower() == "one" or aws_accounts_answer.lower() == "1":
+    if '1' in aws_accounts_answer.lower() or 'one' in aws_accounts_answer.lower():
         interactive = 1
     else:
         interactive = 0
@@ -603,7 +603,7 @@ def main():
         print(Fore.YELLOW)
         message = "Work in one or all accounts"
         banner(message)
-        if aws_accounts_answer.lower() == 'one':
+        if 'one' in aws_accounts_answer.lower():
             message = f"Working in {aws_accounts_answer} account."
         else:
             message = f"Working in {aws_accounts_answer} accounts."
@@ -634,7 +634,7 @@ def main():
                 print(Fore.YELLOW)
                 email_answer = input("Send an email (y/n): ")
 
-            if email_answer.lower() == 'y' or email_answer == 'yes':
+            if 'yes' in email_answer or 'y' in email_answer:
                 send_email(aws_accounts_answer,aws_account,aws_account_number, interactive)
             else:
                 message = "Okay. Not sending an email."
