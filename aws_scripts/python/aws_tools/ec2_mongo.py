@@ -2,6 +2,7 @@
 #-*- coding: utf-8 -*-
 # Import modules
 import io, os, time, pandas, argparse, csv, pathlib
+from socket import TCP_NODELAY
 from pathlib import Path
 from pandas import ExcelWriter
 from pymongo import MongoClient, errors
@@ -44,6 +45,8 @@ def set_db():
 
 def choose_db():
     myclient = connect_db()
+    today = datetime.today()
+    today = today.strftime("%m%d%Y")
     if __name__ == "__main__":
         message = "* Choose a MongoDB Database *"
         print(Fore.CYAN)
@@ -52,29 +55,28 @@ def choose_db():
     print(Fore.CYAN + "Available MongoDB Databases:")
     if myclient != None:
 		# the list_database_names() method returns a list of strings
-	    database_names = myclient.list_database_names()
-	    counter = 1
-	    for db in database_names:
-		    message = str(counter) + ". " + db
-		    print(message)
-		    counter = counter + 1
-    print ("There are", len(database_names), "databases.\n")
+        database_names = myclient.list_database_names()
+        counter  = 1
+        for db in database_names:
+            message = str(counter) + ". " + db
+            print(message)
+    print(f"There are {len(database_names)} databases.\n")
     print(f"Please select a database. Enter a number 1 through {len(database_names)}.")
     choice = input("Enter a number: ")
     if is_digit(choice) == True:
-	    if int(choice) > counter:
-		    print("Wrong selection.")
-		    choose_db()
-	    choice = int(choice)
-	    choice = choice - 1
-	    if myclient != None:
-		    mydb = myclient[database_names[choice]]
-		    mydb_name = database_names[choice]
-	    insert_coll = "ec2_list_" + today
-	    insert_coll = mydb[insert_coll]
-	    print(f"You've selected: {database_names[choice]}\n")
-    else:
-	    print("Must enter a digit. Try again.\n")
+        if int(choice) > counter:
+            print("Wrong selction.")
+            choose_db()
+        choice = int(choice)
+        choice = choice - 1
+        if myclient != None:
+            mydb = myclient[database_names[choice]]
+            mydb_name = database_names[choice]
+            insert_coll = "ec2_list_" + today
+            insert_coll = mydb[insert_coll]
+            print(f"You've selected: {database_names[choice]}\n")
+        else:
+            print("Must enter a digit. Try again.\n")
     return mydb, mydb_name, insert_coll
 
 ### Utility Functions
@@ -156,6 +158,8 @@ def find_account_number(aws_account,aws_env_list):
     for (my_aws_account, my_aws_account_number) in zip(account_names, account_numbers):
         if my_aws_account == aws_account:
             aws_account_number = my_aws_account_number
+        else:
+            aws_account_number = None
     if aws_account ==  "all":
         aws_account_number = '1234567891011'
     return aws_account_number
@@ -357,6 +361,8 @@ def print_db_names():
 # 8 Print Collections
 def print_collections():
     myclient = connect_db()
+    print(myclient)
+    time.sleep(10)
     message = f"* Print DB Collections *"
     banner(message, border="*")
     print(f"This command prints the database collection names.\n")
