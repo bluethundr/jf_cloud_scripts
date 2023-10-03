@@ -35,6 +35,6 @@ requests==2.31.0
 rsa==4.7
 s3transfer==0.3.4
 six==1.15.0
-urllib3==1.26.5
+urllib3==1.26.17
 virtualenv==20.4.2
 zope.interface==5.2.0
