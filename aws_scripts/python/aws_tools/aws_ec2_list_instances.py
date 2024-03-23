@@ -27,13 +27,13 @@ gmail_password = os.environ.get('EMAIL_PASSWORD')
 def welcomebanner():
     # Print the welcome banner
     print(Fore.CYAN)
-    message = "*             List AWS EC2 Instances                     *"
+    message = "*                     List AWS EC2 Instances                     *"
     banner(message, "*")
     print(Fore.RESET)
 
 def endbanner():
     print(Fore.CYAN)
-    message = "* List AWS Instance Operations Are Complete   *"
+    message = "*   List AWS Instance Operations Are Complete   *"
     banner(message, "*")
     print(Fore.RESET)
 
@@ -93,7 +93,7 @@ def report_instance_stats(instance_count, aws_account, account_found):
             message = f"There are: {instance_count} EC2 instances in AWS Account: {aws_account}."
             banner(message)
 
-def report_gov_or_comm(aws_account, account_found):
+def report_gov_or_comm(aws_account, messge):
     if 'gov' in aws_account and not 'admin' in aws_account:
         message = "This is a Govcloud account."
         banner(message)
