@@ -428,7 +428,7 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
             output_file = os.path.join(output_dir, "aws-instance-master-list-" + date +".csv")
         # export MongoDB documents to a CSV file, leaving out the row "labels" (row numbers)
         try:
-            docs.to_csv(output_file, ",", index=False) # CSV delimited by commas
+            docs.to_csv(output_file, sep=",", index=False) # CSV delimited by commas
         except Exception as e:
             print(f"An exception has occurred: {e}.\nClose the file and try again!")
             mongo_export_to_file(interactive, aws_account, aws_account_number,insert_coll=None,date=None)
