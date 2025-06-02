@@ -1,6 +1,7 @@
 #-------------------------------------------------------------------------------------------------------------------
 # Import Block                                                                                                     #
 #-------------------------------------------------------------------------------------------------------------------
+import os
 from pymongo import MongoClient, errors
 from bson.objectid import ObjectId
 from datetime import datetime
@@ -15,6 +16,18 @@ from gcp_list_instances import initialize
 # Initialize the output with Colorama                                                                              #
 #-------------------------------------------------------------------------------------------------------------------
 init()
+#-------------------------------------------------------------------------------------------------------------------
+# End Colorama Init Block                                                                                          #
+#-------------------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------------
+#  Import Environment Variables                                                                                    #
+#-------------------------------------------------------------------------------------------------------------------
+## Get MongoDB username and pass from environment variables
+user_name = os.environ.get('MONGO_USER_NAME')
+user_pass = os.environ.get('MONGO_USER_PASS')
+#-------------------------------------------------------------------------------------------------------------------
+#  End Import Environment Variables                                                                                #
+#-------------------------------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------------------------------
 #  Banner Functions                                                                                                #
 #-------------------------------------------------------------------------------------------------------------------
@@ -42,14 +55,37 @@ def banner(message, border='-'):
 #  End Banner                                                                                                      #
 #-------------------------------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------------------------------
-# Print Reports Function                                                                                           #
+#  DB Functions                                                                                                    #
+#-------------------------------------------------------------------------------------------------------------------
+def connect_db():
+    try:
+        myclient = MongoClient(
+                host = f"mongodb://{user_name}:{user_pass}@localhost:27017/admin",
+                serverSelectionTimeoutMS = 3000 # 3 second timeout
+            )
+    except errors.ServerSelectionTimeoutError as e:
+        # set the client instance to 'None' if exception
+        myclient = None
+        # catch pymongo.errors.ServerSelectionTimeoutError
+        print ("pymongo ERROR:", e)
+    return myclient
+#-------------------------------------------------------------------------------------------------------------------
+#  End DB Functions                                                                                                #
+#-------------------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------------
+# Print Reports Functions                                                                                          #
 #-------------------------------------------------------------------------------------------------------------------
 def print_reports():
-    print(Fore.CYAN)
-    if __name__ == "__main__":
-        message = "* Print Reports *"
-        banner(message, "*")
-    choice = 4 # <-- Output to Excel
+    inputDate = input("Enter the date in format 'mm/dd/yyyy': ")
+    myclient = connect_db()
+    today = datetime.strptime(inputDate, "%m/%d/%Y")
+    today = today.strftime("%m%d%Y")
+    if myclient != None:
+        mydb = myclient["gcp_inventories"]
+        mydb_name = "gcp_inventories"
+        insert_coll = "gcp_compute_list_" + inputDate
+        insert_coll = mydb[insert_coll]
+        choice = 4 # <-- Output to Excel
     inputDate = input("Enter the date in format 'mm/dd/yyyy': ")
     today = datetime.strptime(inputDate, "%m/%d/%Y")
     month,day,year = inputDate.split('/')
@@ -79,9 +115,11 @@ def print_reports():
     else:
         insert_coll = mydb[insert_coll]
         mongo_export_to_file(choice,insert_coll,inputDate,today)
+    return mydb, mydb_name, insert_coll
 #-------------------------------------------------------------------------------------------------------------------
-# End Print Reports Function                                                                                       #
+#  End Print Reports Functions                                                                                     #
 #-------------------------------------------------------------------------------------------------------------------
+
 #-------------------------------------------------------------------------------------------------------------------
 # Main Funcion                                                                                                     #
 #-------------------------------------------------------------------------------------------------------------------
