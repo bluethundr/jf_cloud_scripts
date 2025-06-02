@@ -37,11 +37,11 @@ def connect_to_db():
 def initialize():
     print(Fore.YELLOW)
     print("Selecting company-bill or company-master will produce a report for all accounts.")
-    aws_account = input("Enter the name of the GCP account you'll be working in: ")
-    if aws_account.lower() == 'all':
-        aws_account_number = ''
+    gcp_account = input("Enter the name of the GCP account you'll be working in: ")
+    if gcp_account.lower() == 'all':
+        gcp_account_number = ''
     else:
-        aws_account_number = gcp_accounts_to_account_numbers(gcp_account)
+        gcp_account_number = gcp_accounts_to_account_numbers(gcp_account)
     print(Fore.GREEN, "\n")
     print("**************************************************************")
     print("          Okay. Working in GCP account: %s                    " % gcp_account)
@@ -49,7 +49,7 @@ def initialize():
     # Set the date
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
-    return gcp_account, aws_account_number, today
+    return gcp_account, gcp_account_number, today
 
 ## Standard functions
 def exit_program():
@@ -77,7 +77,7 @@ def choose_action():
     print("*         Choose an Action                  *")
     print("*********************************************")
     print(Fore.YELLOW)
-    print("These are the actions possible in AWS: ")
+    print("These are the actions possible in gcp: ")
     print("1. Run the Report")
     print("2. Read GCP Bill")
     print("3. Read the CUR File")
@@ -119,13 +119,13 @@ def table_name():
     print(f"Table name: {table_name}")
     return table_name
 
-def aws_accounts_to_account_numbers(aws_account):
+def gcp_accounts_to_account_numbers(gcp_account):
     switcher = {
         'company-lab': '1234567890101',
         'company-bill': '1234567890102',
         'company-stage': '1234567890103',
     }
-    return switcher.get(aws_account, "nothing")
+    return switcher.get(gcp_account, "nothing")
 
 def get_today():
     today = datetime.today()
@@ -134,8 +134,8 @@ def get_today():
 
 ## End Utility Functions
 
-## 2. Read AWS Billing
-def read_csv_to_sql(aws_account, aws_account_number):
+## 2. Read gcp Billing
+def read_csv_to_sql(gcp_account, gcp_account_number):
     print(Fore.CYAN)
     print("*****************************************************")
     print("*             Read the GCP Bill                     *")
@@ -144,10 +144,10 @@ def read_csv_to_sql(aws_account, aws_account_number):
     cursor, mydb = connect_to_db()
     my_table_name = table_name()
     source_file = input('Enter the name of the source file: ')
-    source = os.path.join('source_files', 'aws_bills', source_file + '.csv')
-    if aws_account.lower() == 'company-bill':
+    source = os.path.join('source_files', 'gcp_bills', source_file + '.csv')
+    if gcp_account.lower() == 'company-bill':
         insert_sql = """ INSERT INTO """ + my_table_name + """ (InvoiceId, PayerAccountId, LinkedAccountId, RecordType, RecordId, ProductName, RateId, SubscriptionId, PricingPlanId, UsageType, Operation, AvailabilityZone, ReservedInstance, ItemDescription, UsageStartDate, UsageEndDate, UsageQuantity, BlendedRate, BlendedCost, UnBlendedRate, UnBlendedCost, ResourceId, Engagement, Name, Owner, Parent) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ;"""
-    elif aws_account.lower() == 'company-master':
+    elif gcp_account.lower() == 'company-master':
         insert_sql = """ INSERT INTO """ + my_table_name + """ (InvoiceId, PayerAccountId, LinkedAccountId, RecordType, RecordId, ProductName, RateId, SubscriptionId, PricingPlanId, UsageType, Operation, AvailabilityZone, ReservedInstance, ItemDescription, UsageStartDate, UsageEndDate, UsageQuantity, BlendedRate, BlendedCost, UnBlendedRate, UnBlendedCost, ResourceId) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ;""" 
     try:
         with open(source) as csv_file:
@@ -168,7 +168,7 @@ def read_csv_to_sql(aws_account, aws_account_number):
                         print("Failed inserting" + str(cursor.rowcount) + " records into the billing_info table: {}".format(error))
                         print("Failed inserting UnBlendedCost: ")
                         print(row[20])
-                        print("Under AWS Account Number: ", row[2])
+                        print("Under gcp Account Number: ", row[2])
             if rows:
                 try:
                     cursor.executemany(insert_sql,rows)
@@ -198,8 +198,8 @@ def read_csv_to_sql(aws_account, aws_account_number):
             print("MySQL connection is closed.")
             time.sleep(5)
 
-## 3. Read AWS CUR Billing
-def read_cur_to_sql(aws_account, aws_account_number):
+## 3. Read gcp CUR Billing
+def read_cur_to_sql(gcp_account, gcp_account_number):
     print(Fore.CYAN)
     print("*****************************************************")
     print("*             Read the GCP Bill                     *")
@@ -208,7 +208,7 @@ def read_cur_to_sql(aws_account, aws_account_number):
     cursor, mydb = connect_to_db()
     my_table_name = table_name()
     source_file = input('Enter the name of the source file: ')
-    source = os.path.join('source_files', 'aws_bills', source_file + '.csv')
+    source = os.path.join('source_files', 'gcp_bills', source_file + '.csv')
     insert_sql = """ INSERT INTO """ + my_table_name + """ (identity_LineItemId, identity_TimeInterval, bill_InvoiceId, bill_BillingEntity, bill_BillType, bill_PayerAccountId, bill_BillingPeriodStartDate, bill_BillingPeriodEndDate, LinkedAccountId, lineItem_LineItemType, lineItem_UsageStartDate, lineItem_UsageEndDate, lineItem_ProductCode, lineItem_UsageType, lineItem_Operation, lineItem_AvailabilityZone, lineItem_ResourceId, lineItem_UsageAmount, lineItem_NormalizationFactor, lineItem_NormalizedUsageAmount, lineItem_CurrencyCode, lineItem_UnblendedRate, UnblendedCost, lineItem_BlendedRate, lineItem_BlendedCost, lineItem_LineItemDescription, lineItem_TaxType, lineItem_LegalEntity, product_ProductName, product_accountAssistance, product_alarmType, product_architecturalReview, product_architectureSupport, product_availability, product_bestPractices, product_brokerEngine, product_bundle, product_capacitystatus, product_caseSeverityresponseTimes, product_category, product_clockSpeed, product_computeFamily, product_computeType, product_contentType, product_currentGeneration, product_customerServiceAndCommunities, product_databaseEdition, product_databaseEngine, product_dedicatedEbsThroughput, product_deploymentOption, product_description, product_directorySize, product_directoryType, product_directoryTypeDescription, product_durability, product_ecu, product_edition, product_endpointType, product_engineCode, product_enhancedNetworkingSupport, product_enhancedNetworkingSupported, product_executionFrequency, product_executionLocation, product_feeCode, product_feeDescription, product_freeQueryTypes, product_freeTier, product_freeTrial, product_frequencyMode, product_fromLocation, product_fromLocationType, product_gpu, product_group, product_groupDescription, product_includedServices, product_instanceFamily, product_instanceType, product_instanceTypeFamily, product_io, product_launchSupport, product_license, product_licenseModel, product_location, product_locationType, product_mailboxStorage, product_maxIopsBurstPerformance, product_maxIopsvolume, product_maxThroughputvolume, product_maxVolumeSize, product_maximumExtendedStorage, product_maximumStorageVolume, product_memory, product_memoryGib, product_messageDeliveryFrequency, product_messageDeliveryOrder, product_minVolumeSize, product_minimumStorageVolume, product_networkPerformance, product_normalizationSizeFactor, product_operatingSystem, product_operation, product_operationsSupport, product_origin, product_physicalProcessor, product_planType, product_preInstalledSw, product_proactiveGuidance, product_processorArchitecture, product_processorFeatures, product_productFamily, product_programmaticCaseManagement, product_provisioned, product_queueType, product_recipient, product_region, product_requestDescription, product_requestType, product_resourceEndpoint, product_resourceType, product_rootvolume, product_routingTarget, product_routingType, product_runningMode, product_servicecode, product_servicename, product_sku, product_softwareIncluded, product_standardStorageRetentionIncluded, product_storage, product_storageClass, product_storageMedia, product_storageType, product_subscriptionType, product_technicalSupport, product_tenancy, product_thirdpartySoftwareSupport, product_toLocation, product_toLocationType, product_training, product_transferType, product_usageFamily, product_usagetype, product_uservolume, product_vcpu, product_version, product_volumeType, product_whoCanOpenCases, pricing_LeaseContractLength, pricing_OfferingClass, pricing_PurchaseOption, pricing_RateId, pricing_publicOnDemandCost, pricing_publicOnDemandRate, pricing_term, pricing_unit, reservation_AmortizedUpfrontCostForUsage, reservation_AmortizedUpfrontFeeForBillingPeriod, reservation_AvailabilityZone, reservation_EffectiveCost, reservation_EndTime, reservation_ModificationStatus, reservation_NormalizedUnitsPerReservation, reservation_NumberOfReservations, reservation_RecurringFeeForUsage, reservation_ReservationARN, reservation_StartTime, reservation_SubscriptionId, reservation_TotalReservedNormalizedUnits, reservation_TotalReservedUnits, reservation_UnitsPerReservation, reservation_UnusedAmortizedUpfrontFeeForBillingPeriod, reservation_UnusedNormalizedUnitQuantity, reservation_UnusedQuantity, reservation_UnusedRecurringFee, reservation_UpfrontValue, Engagement, Name, Owner, Parent) VALUES   (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ;"""
     try:
         with open(source) as csv_file:
@@ -227,7 +227,7 @@ def read_cur_to_sql(aws_account, aws_account_number):
                         row_count = 0
                     except mysql.connector.Error as error:
                         print("Failed inserting" + str(cursor.rowcount) + " records into the CUR table: {}".format(error))
-                        print("Under AWS Account Number: ", row[2])
+                        print("Under gcp Account Number: ", row[2])
             if rows:
                 try:
                     cursor.executemany(insert_sql,rows)
@@ -257,8 +257,8 @@ def read_cur_to_sql(aws_account, aws_account_number):
             print("MySQL connection is closed.")
             time.sleep(5)
 
-## 3. Write AWS Bill
-def write_to_csv(aws_account, aws_account_number, table_name):
+## 3. Write gcp Bill
+def write_to_csv(gcp_account, gcp_account_number, table_name):
     print(Fore.CYAN)
     print("*****************************************************")
     print("*             Write the GCP Bill                    *")
@@ -272,20 +272,20 @@ def write_to_csv(aws_account, aws_account_number, table_name):
         source = 'Cost Allocation - CUR  - ' + previous_month
     else:
         source = 'Cost Allocation - DBR - ' + previous_month
-    output_dir = os.path.join('output_files', 'aws_bills')
+    output_dir = os.path.join('output_files', 'gcp_bills')
     with contextlib.redirect_stdout(None):
         create_work_dir(output_dir)
     destination = os.path.join(output_dir, source + '.csv')
     if table_name == 'billing_info_dbr':
-        if aws_account.strip() == 'company-bill' or aws_account.strip == 'company-master' or aws_account.strip == 'all':
+        if gcp_account.strip() == 'company-bill' or gcp_account.strip == 'company-master' or gcp_account.strip == 'all':
             read_sql = """ SELECT LinkedAccountId,RecordType,Engagement,UnBlendedCost FROM """ + table_name + """ WHERE UnBlendedCost != 0 ;"""
         else:
-            read_sql = """ SELECT LinkedAccountId,RecordType,Engagement,UnBlendedCost FROM """ + table_name + """ where LinkedAccountId= """ + aws_account_number + """ AND UnBlendedCost != 0;"""
+            read_sql = """ SELECT LinkedAccountId,RecordType,Engagement,UnBlendedCost FROM """ + table_name + """ where LinkedAccountId= """ + gcp_account_number + """ AND UnBlendedCost != 0;"""
     else:
-        if aws_account.strip() == 'company-bill' or aws_account.strip == 'company-master' or aws_account.strip == 'all':
+        if gcp_account.strip() == 'company-bill' or gcp_account.strip == 'company-master' or gcp_account.strip == 'all':
             read_sql = """ SELECT LinkedAccountId,UnBlendedCost,Engagement FROM """ + table_name + """ WHERE UnBlendedCost != 0 ;"""
         else:
-            read_sql = """ SELECT LinkedAccountId,UnBlendedCost,Engagement FROM """ + table_name + """ where LinkedAccountId= """ + aws_account_number + """ AND UnBlendedCost != 0;"""
+            read_sql = """ SELECT LinkedAccountId,UnBlendedCost,Engagement FROM """ + table_name + """ where LinkedAccountId= """ + gcp_account_number + """ AND UnBlendedCost != 0;"""
         
 
     print(f"Writing the file: {source}.")
@@ -326,7 +326,7 @@ def write_to_csv(aws_account, aws_account_number, table_name):
     time.sleep
 
 ## 4. Send Email
-def send_email(aws_account, aws_account_number):
+def send_email(gcp_account, gcp_account_number):
     print(Fore.CYAN)
     print("*****************************************************")
     print("*              Send Email                           *")
@@ -340,15 +340,15 @@ def send_email(aws_account, aws_account_number):
     ## Get the address to send to
     to_addr = input("Enter the recipient's email address: ")
     destination = input("Enter the name of the report: ")
-    output_dir = os.path.join('output_files', 'aws_bills')
+    output_dir = os.path.join('output_files', 'gcp_bills')
     destination = os.path.join(output_dir, destination)
-    aws_accounts_question = input("Get billing info for one or all accounts: ")
+    gcp_accounts_question = input("Get billing info for one or all accounts: ")
     from_addr = 'cloudops@noreply.company.com'
-    subject = "company AWS Billing Info " + today
-    if aws_accounts_question == 'one':
-        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find billing info for AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>Cloud Ops</font>"
+    subject = "company gcp Billing Info " + today
+    if gcp_accounts_question == 'one':
+        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find billing info for gcp Account: " + gcp_account + " (" + gcp_account_number + ")" + ".<br><br>Regards,<br>Cloud Ops</font>"
     else:
-        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find billing info for all company AWS accounts.<br><br>Regards,<br>Cloud Ops</font>"
+        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find billing info for all company gcp accounts.<br><br>Regards,<br>Cloud Ops</font>"
     msg = MIMEMultipart()
     msg['From'] = from_addr
     msg['To'] = to_addr
@@ -678,7 +678,7 @@ def recreate_cur_table():
 
 
 ## 6. Update Database To NULL
-def update_database(aws_account, table_name):
+def update_database(gcp_account, table_name):
     print(Fore.CYAN)
     print("*****************************************************")
     print("*      Update Emtpy Cells to NULL                   *")
@@ -691,7 +691,7 @@ def update_database(aws_account, table_name):
     time.sleep(10)
     if my_table_name == 'billing_info_dbr':
         # Set all empty values to NULL
-        if aws_account.lower() == 'company-bill':   
+        if gcp_account.lower() == 'company-bill':   
             update_sql = """ UPDATE """ + my_table_name + """
                 SET InvoiceId=NULLIF(InvoiceId, ''),
                 LinkedAccountId=NULLIF(LinkedAccountId, ''),
@@ -1034,35 +1034,35 @@ def main():
         exit_program()
     # 1 Run the report
     elif choice == "1":
-        aws_account, aws_account_number, today = initialize()
+        gcp_account, gcp_account_number, today = initialize()
         recreate_sql_table()
-        read_csv_to_sql(aws_account, aws_account_number)
-        update_database(aws_account, table_name)
+        read_csv_to_sql(gcp_account, gcp_account_number)
+        update_database(gcp_account, table_name)
         set_default_engagement()
         replace_bad_enagement()
         replace_old_enagements()
-        write_to_csv(aws_account, aws_account_number)
+        write_to_csv(gcp_account, gcp_account_number)
         main()
     # 2 Read the file
     elif choice == "2":
-        aws_account, aws_account_number, today = initialize()
-        read_csv_to_sql(aws_account, aws_account_number)
+        gcp_account, gcp_account_number, today = initialize()
+        read_csv_to_sql(gcp_account, gcp_account_number)
         main()
     # 3 Read the CUR file
     elif choice == "3":
-        aws_account, aws_account_number, today = initialize()
-        read_cur_to_sql(aws_account, aws_account_number)
+        gcp_account, gcp_account_number, today = initialize()
+        read_cur_to_sql(gcp_account, gcp_account_number)
         main()
     # 4 Write the file
     elif choice == "4":
         my_table_name = table_name()
-        aws_account, aws_account_number, today = initialize()
-        write_to_csv(aws_account, aws_account_number, table_name)
+        gcp_account, gcp_account_number, today = initialize()
+        write_to_csv(gcp_account, gcp_account_number, table_name)
         main()
     # 5 Send email
     elif choice == "5":
-        aws_account, aws_account_number, today = initialize()
-        send_email(aws_account, aws_account_number)
+        gcp_account, gcp_account_number, today = initialize()
+        send_email(gcp_account, gcp_account_number)
         main()
     # 6 Recreate the table
     elif choice == "6":
@@ -1074,8 +1074,8 @@ def main():
         main()
     # 8 Update the database to NULL
     elif choice == "8":
-        aws_account, aws_account_number, today = initialize()
-        update_database(aws_account, table_name)
+        gcp_account, gcp_account_number, today = initialize()
+        update_database(gcp_account, table_name)
         main()
     # 9 Set Default Engagement
     elif choice == "9":
