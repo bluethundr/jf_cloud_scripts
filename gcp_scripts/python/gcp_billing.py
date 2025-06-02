@@ -29,27 +29,27 @@ init()
 def connect_to_db():
     mydb = mysql.connector.connect(user='admin', password='Duk30fZh0u',
                             host='127.0.0.1',
-                            database='aws_bill')
+                            database='gcp_bill')
     cursor = mydb.cursor()
     return cursor, mydb
 
-## Provide session info to the functions based on AWS account
+## Provide session info to the functions based on GC{} account
 def initialize():
     print(Fore.YELLOW)
     print("Selecting company-bill or company-master will produce a report for all accounts.")
-    aws_account = input("Enter the name of the AWS account you'll be working in: ")
+    aws_account = input("Enter the name of the GCP account you'll be working in: ")
     if aws_account.lower() == 'all':
         aws_account_number = ''
     else:
-        aws_account_number = aws_accounts_to_account_numbers(aws_account)
+        aws_account_number = gcp_accounts_to_account_numbers(gcp_account)
     print(Fore.GREEN, "\n")
     print("**************************************************************")
-    print("          Okay. Working in GCP account: %s                    " % aws_account)
+    print("          Okay. Working in GCP account: %s                    " % gcp_account)
     print("**************************************************************")
     # Set the date
     today = datetime.today()
     today = today.strftime("%m-%d-%Y")
-    return aws_account, aws_account_number, today
+    return gcp_account, aws_account_number, today
 
 ## Standard functions
 def exit_program():
