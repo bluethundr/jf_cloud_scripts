@@ -36,5 +36,5 @@ rsa==4.7
 s3transfer==0.3.4
 six==1.15.0
 urllib3==1.26.18
-virtualenv==20.26.6
+virtualenv==20.36.1
 zope.interface==5.2.0
