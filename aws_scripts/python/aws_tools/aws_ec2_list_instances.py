@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #-*- coding: utf-8 -*-
 # Import modules
-import boto3, botocore, objectpath, csv, smtplib, os, argparse, getpass, json, keyring, requests
+import boto3, botocore, objectpath, csv, smtplib, os, argparse, getpass, json, keyring, requests, time
 from html import escape
 from requests.auth import HTTPBasicAuth
 from datetime import datetime
@@ -19,9 +19,6 @@ init()
 BASE_URL = "https://confluence.company.net:8443/rest/api/content"
 VIEW_URL = "https://confluence.company.net:8443/pages/viewpage.action?pageId="
 
-## Get gmail username and pass from environment variables
-gmail_user = os.environ.get('EMAIL_USER')
-gmail_password = os.environ.get('EMAIL_PASSWORD')
 
 ### Utility Functions
 def welcomebanner():
@@ -222,6 +219,9 @@ def arguments():
 
 ### Email function
 def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
+    ## Get gmail username and pass from environment variables
+    gmail_user = os.environ.get('gmail_user')
+    gmail_password = os.environ.get('gmail_password')
     options = arguments()
     to_addr = ''
     # Get the variables from intitialize
@@ -245,7 +245,7 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
         content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in JF AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The SD Team</font>"
     else:
         subject = "AWS Instance Master List " + today
-        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all JF AWS accounts.<br><br>Regards,<br>The SD Team</font>"    
+        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all JF AWS accounts.<br><br>Regards,<br>The SD Team</font>"
     msg = MIMEMultipart()
     msg['From'] = from_addr
     msg['To'] = to_addr
@@ -253,10 +253,19 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
     body = MIMEText(content, 'html')
     msg.attach(body)
     filename = output_file
-    with open(filename, 'r') as f:
-        part = MIMEApplication(f.read(), Name=basename(filename))
-        part['Content-Disposition'] = 'attachment; filename="{}"'.format(basename(filename))
-        msg.attach(part)
+    try:
+        with open(filename, 'rb') as f:
+            file_data = f.read()
+    except Exception as e:
+        print(f"Failed to read file: {e}")
+        return
+
+    fname = basename(filename) if filename else "attachment.csv"
+
+    part = MIMEApplication(file_data, Name=basename(filename))
+    part['Content-Disposition'] = 'attachment; filename="{}"'.format(basename(filename))
+    msg.attach(part)
+
     try:
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.ehlo()
@@ -270,20 +279,27 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
         banner(message)
     print(Fore.RESET)
 
+
 ### Confluence Functions
+import os
+import csv
+from html import escape
+
 def convert_csv_to_html_table(output_file, today, interactive, aws_account):
     output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html')
-    ### Interactive == 1  - user specifies an account
+    htmlfile = None
+    htmlfile_name = None
     try:
         if interactive == 1:
-            htmlfile = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.html')
+            htmlfile = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today + '.html')
             htmlfile_name = 'aws-instance-list-' + aws_account + '-' + today + '.html'
         else:
             htmlfile = os.path.join(output_dir, 'aws-instance-master-list-' + today + '.html')
-            htmlfile_name = 'aws-instance-master-list-' + today +'.html'
+            htmlfile_name = 'aws-instance-master-list-' + today + '.html'
+        
         count = 0
         html = ''
-        with open(output_file,'r') as CSVFILE:
+        with open(output_file, 'r') as CSVFILE:
             reader = csv.reader(CSVFILE)
             html += "<table><tbody>"
             for row in reader:
@@ -299,11 +315,15 @@ def convert_csv_to_html_table(output_file, today, interactive, aws_account):
                 html += "</tr>"
                 count += 1
             html += "</tbody></table>"
-        with open(htmlfile,'w+') as HTMLFILE:
+        
+        with open(htmlfile, 'w+') as HTMLFILE:
             HTMLFILE.write(html)
     except Exception as e:
         print(f"A convert_csv_to_html_table exception has occurred: {e}")
+        return None, None  # Return None to indicate failure
+
     return htmlfile, htmlfile_name
+
 
 def get_page_ancestors(auth, pageid):
     # Get basic page information plus the ancestors property
