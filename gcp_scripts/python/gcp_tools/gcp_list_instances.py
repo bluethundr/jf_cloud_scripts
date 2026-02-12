@@ -154,8 +154,8 @@ def main():
     except Exception as e:
         print(f"A CSV error has occurred: {e}")
     gcp_zones = read_zone_info(gcp_zones_list)
-    pageid = 1164580700 # <-- Main page
-    #pageid = 1166025346 # <-- Test page
+    pageid = xxxxxxxx # <-- Main page
+    #pageid = xxxxxxxx # <-- Test page
     title = 'GCP Compute Instance Inventory'
     #title = 'GCP Compute Instance Inventory - Test'
     ### End variables
