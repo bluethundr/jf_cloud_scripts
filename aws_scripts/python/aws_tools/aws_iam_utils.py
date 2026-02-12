@@ -6,18 +6,12 @@ import boto3
 import time
 import json
 import datetime
-import dateutil
 import smtplib
 import contextlib
 import objectpath
-import subprocess
-import sys
 import random
 import string
 import csv
-import urllib3
-import certifi
-import requests
 from pysecret import AWSSecret
 from os.path import basename
 from time import gmtime
@@ -145,7 +139,7 @@ def aws_account_iterator(aws_accounts_question, aws_account, aws_account_number,
                         activate_access_key(iam_client, interactive)
                     # 6 Rotate Keys
                     elif choice == "6":
-                        rotate_access_keys(aws_account, iam_client, kms_client, secrets_client, interactive)
+                        rotate_access_keys(aws_account, iam_client, kms_client, secrets_client)
                     # 7 Create Standard Groups
                     elif choice == "7":
                         aws_account_number = aws_accounts_to_account_numbers(aws_account)
@@ -1410,9 +1404,8 @@ def send_email(subject, mail_body, attachment= None):
     #first_name = input("Enter the recipient's first name: ")
     to_addr = input("Enter the recipient's email address: ")
     from_addr = 'cloudops@noreply.jf.com'
-    cc = ['tdunphy@jf.com']
     bcc = ['bluethundr@gmail.com']
-    to_addrs = [to_addr] + cc + bcc
+    to_addrs = [to_addr] + bcc
     content = mail_body
     msg = MIMEMultipart()
     msg['From'] = from_addr
@@ -1420,12 +1413,18 @@ def send_email(subject, mail_body, attachment= None):
     msg['Subject'] = subject
     body = MIMEText(content, 'html')
     msg.attach(body)
-    server = smtplib.SMTP('smtpout.us.cworld.jf.com', 25)
+    server = smtplib.SMTP('jokefire.noreply@gmail.com', 25)
     if attachment is None:
         try:
-            server.send_message(msg, from_addr=from_addr, to_addrs=to_addrs)
-            print(f"Email was sent to: {to_addr}.")
-            time.sleep(5)
+            server = smtplib.SMTP('smtp.gmail.com', 587)
+            server.ehlo()
+            server.starttls()
+            gmail_user = 'jokefire.noreply@gmail.com'
+            gmail_password = 'ehhloWorld12345'
+            server.login(gmail_user, gmail_password)
+            server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
+            message = f"Email was sent to: {to_addr}"
+            banner(message)
         except Exception as e:
             print(f"Exception: {e}")
             print("Email was not sent.")
@@ -1685,6 +1684,7 @@ def rotate_access_keys(aws_account, iam_client, kms_client, secrets_client):
     secret_key = ''
     key1 = None
     key2 = None
+    secrets_aws_account = aws_account
     print("Secrets AWS Account:", secrets_aws_account)
     # Ask for a user name
     print(Fore.YELLOW)
@@ -2813,7 +2813,7 @@ def main():
             main()
         # 6 Rotate Keys
         elif choice == '6':
-            rotate_access_keys(aws_account, iam_client, kms_client, secrets_client, interactive)
+            rotate_access_keys(aws_account, iam_client, kms_client, secrets_client)
             main()
         # 7 Create Standard Groups
         elif choice == '7':
