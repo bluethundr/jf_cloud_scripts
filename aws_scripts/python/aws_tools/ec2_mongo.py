@@ -17,14 +17,30 @@ init()
 ## Get MongoDB username and pass from environment variables
 user_name = os.environ.get('MONGO_USER_NAME')
 user_pass = os.environ.get('MONGO_USER_PASS')
+# Using your machine's IP as the anchor for the cluster
+cluster_ip = "192.168.1.37"
 
 ### DB Functions
 def connect_db():
     try:
         myclient = MongoClient(
-                host = f"mongodb://{user_name}:{user_pass}@localhost:27017/admin",
-                serverSelectionTimeoutMS = 3000 # 3 second timeout
-            )
+            host=[
+                f"{cluster_ip}:27017",
+                f"{cluster_ip}:27018",
+                f"{cluster_ip}:27019"
+            ],
+            username=user_name,
+            password=user_pass,
+            authSource="admin",
+            replicaSet="rs0",  # This is the crucial flag!
+            serverSelectionTimeoutMS=3000)
+
+        # Check if we are actually connected
+        myclient.admin.command('ping')
+        print(Fore.YELLOW)
+        print("Replica Set connection established. The cluster is ready.")
+        print(Fore.RESET)
+
     except errors.ServerSelectionTimeoutError as e:
         # set the client instance to 'None' if exception
         myclient = None
@@ -438,7 +454,9 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
                 output_file_name = "aws-instance-list-" + aws_account + "-" + date +".csv"
             else:
                 output_file_name = "aws-instance-master-list-" + date +".csv"
+            print(Fore.GREEN)
             message = f"A CSV file has been created as: {output_file_name}"
+            print(Fore.RESET)
             banner(message)
         else:
             print("The CSV file has not been created.")
