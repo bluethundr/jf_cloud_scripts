@@ -12,7 +12,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from ec2_mongo import insert_coll,mongo_export_to_file,delete_from_collection
 
-# Initialize the color ouput with colorama
+# Initialize the color output with colorama
 init()
 
 ### Confluence URLs
