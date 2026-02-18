@@ -456,8 +456,8 @@ def mongo_export_to_file(interactive, aws_account, aws_account_number,insert_col
                 output_file_name = "aws-instance-master-list-" + date +".csv"
             print(Fore.GREEN)
             message = f"A CSV file has been created as: {output_file_name}"
-            print(Fore.RESET)
             banner(message)
+            print(Fore.RESET)
         else:
             print("The CSV file has not been created.")
     elif choice == 2:
