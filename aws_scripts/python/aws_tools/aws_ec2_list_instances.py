@@ -448,9 +448,6 @@ def main():
     # Display the welcome banner
     welcomebanner()
 
-    if options.html:
-        html = options.html
-
     if options.reports:
         reports_answer = options.reports
     else:
@@ -471,16 +468,6 @@ def main():
         interactive = 1
     else:
         interactive = 0
-
-    if options.pageid:
-        pageid = options.pageid
-    else:
-        pageid = 222389323  # AWS EC2 Instances page
-
-    if options.title:
-        title = options.title
-    else:
-        title = 'AWS EC2 Instances - CCMI'
 
     aws_account_number = ''
     ### Interactive == 1  - user specifies an account
@@ -591,17 +578,6 @@ def main():
 
             with open(htmlfile, 'r') as htmlfile:
                 html = htmlfile.read()
-
-            message = "* Write to Confluence *"
-            print(Fore.CYAN)
-            banner(message, "*")
-            print(Fore.RESET)
-            if options.write_confluence:
-                confluence_answer = options.write_confluence
-            else:
-                print(Fore.CYAN)
-                confluence_answer = input("Write the list to confluence (y/n): ")
-                print(Fore.RESET)
 
     print(Fore.GREEN)
     if options.run_again:
