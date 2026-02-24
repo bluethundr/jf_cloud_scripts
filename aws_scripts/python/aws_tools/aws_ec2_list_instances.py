@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Import modules
-import boto3, botocore, objectpath, smtplib, argparse, getpass, json, keyring, requests
+import boto3, botocore, objectpath, smtplib, argparse
+from botocore.exceptions import ClientError
 from datetime import datetime
 from os.path import basename
 from email.mime.text import MIMEText
@@ -10,6 +11,7 @@ from email.mime.application import MIMEApplication
 from banners import *
 from colorama import init, Fore
 from ec2_mongo import insert_coll, mongo_export_to_file, delete_from_collection
+from aws_partition import is_gov
 
 # Initialize the color output with colorama
 init()
@@ -79,14 +81,16 @@ def report_instance_stats(instance_count, aws_account, account_found):
             banner(message)
 
 
-def report_gov_or_comm(aws_account, messge):
-    if 'gov' in aws_account and not 'admin' in aws_account:
-        message = "This is a Govcloud account."
-        banner(message)
-    else:
-        message = "This is a commercial account."
-        banner(message)
-
+def report_gov_or_comm(aws_account, _message=None):
+    try:
+        if is_gov(aws_account):
+            banner("This is a GovCloud (aws-us-gov) account.")
+        else:
+            banner("This is a commercial (aws) account.")
+    except ClientError as e:
+        code = e.response.get("Error", {}).get("Code", "Unknown")
+        msg = e.response.get("Error", {}).get("Message", str(e))
+        banner(f"Unable to determine partition for {aws_account}: {code}: {msg}")
 
 def set_regions(aws_account):
     print(Fore.GREEN)
