@@ -1,24 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Import modules
-import boto3, botocore, objectpath, csv, smtplib, os, argparse, getpass, json, keyring, requests, time
-from html import escape
-from requests.auth import HTTPBasicAuth
+import boto3, botocore, objectpath, smtplib, argparse, getpass, json, keyring, requests
 from datetime import datetime
-from colorama import init, Fore
 from os.path import basename
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
+from banners import *
+from colorama import init, Fore
 from ec2_mongo import insert_coll, mongo_export_to_file, delete_from_collection
 
 # Initialize the color output with colorama
 init()
-
-### Confluence URLs
-BASE_URL = "https://confluence.company.net:8443/rest/api/content"
-VIEW_URL = "https://confluence.company.net:8443/pages/viewpage.action?pageId="
-
 
 ### Utility Functions
 def welcomebanner():
@@ -34,19 +28,6 @@ def endbanner():
     message = "*   List AWS Instance Operations Are Complete   *"
     banner(message, "*")
     print(Fore.RESET)
-
-
-def banner(message, border='-'):
-    line = border * len(message)
-    print(line)
-    print(message)
-    print(line)
-
-
-def authenticate():
-    auth = get_login()
-    return auth
-
 
 def initialize(interactive, aws_account):
     # Set the date
@@ -129,38 +110,6 @@ def arguments():
     parser = argparse.ArgumentParser(description='This is a program that lists the servers in EC2')
 
     parser.add_argument(
-        "-u",
-        "--user",
-        default=getpass.getuser(),
-        help="Specify the username to log into Confluence")
-
-    parser.add_argument(
-        "-d",
-        "--password",
-        help="Specify the user's password")
-
-    parser.add_argument(
-        "-t",
-        "--title",
-        default=None,
-        type=str,
-        help="Specify a new title")
-
-    parser.add_argument(
-        "-f",
-        "--file",
-        default=None,
-        type=str,
-        help="Write the contents of FILE to the confluence page")
-
-    parser.add_argument(
-        "--html",
-        type=str,
-        default=None,
-        nargs='?',
-        help="Write the immediate html string to confluence page")
-
-    parser.add_argument(
         "-n",
         "--account_name",
         type=str,
@@ -175,12 +124,6 @@ def arguments():
         default=None,
         nargs='?',
         help="Process one or all accounts")
-
-    parser.add_argument(
-        "-p",
-        "--pageid",
-        type=int,
-        help="Specify the Conflunce page id to overwrite")
 
     parser.add_argument(
         "-e",
@@ -199,12 +142,6 @@ def arguments():
         "--first_name",
         type=str,
         help="First (given) name of the person receving the email")
-
-    parser.add_argument(
-        "-w",
-        "--write_confluence",
-        type=str,
-        help="Write to confluence")
 
     parser.add_argument(
         "-i",
@@ -335,81 +272,6 @@ def convert_csv_to_html_table(output_file, today, interactive, aws_account):
         return None, None  # Return None to indicate failure
 
     return htmlfile, htmlfile_name
-
-
-def get_page_ancestors(auth, pageid):
-    # Get basic page information plus the ancestors property
-    url = '{base}/{pageid}?expand=ancestors'.format(
-        base=BASE_URL,
-        pageid=pageid)
-    r = requests.get(url, auth=auth)
-    r.raise_for_status()
-    return r.json()['ancestors']
-
-
-def get_page_info(auth, pageid):
-    url = '{base}/{pageid}'.format(
-        base=BASE_URL,
-        pageid=pageid)
-    r = requests.get(url, auth=auth)
-    r.raise_for_status()
-    return r.json()
-
-
-def write_data_to_confluence(auth, html, pageid, title=None):
-    info = get_page_info(auth, pageid)
-    ver = int(info['version']['number']) + 1
-    ancestors = get_page_ancestors(auth, pageid)
-    anc = ancestors[-1]
-    del anc['_links']
-    del anc['_expandable']
-    del anc['extensions']
-    if title is not None:
-        info['title'] = title
-    data = {
-        'id': str(pageid),
-        'type': 'page',
-        'title': info['title'],
-        'version': {'number': ver},
-        'ancestors': [anc],
-        'body': {
-            'storage':
-                {
-                    'representation': 'storage',
-                    'value': str(html)
-                }
-        }
-    }
-    data = json.dumps(data)
-    url = '{base}/{pageid}'.format(base=BASE_URL, pageid=pageid)
-    try:
-        r = requests.put(
-            url,
-            data=data,
-            auth=auth,
-            headers={'Content-Type': 'application/json'}
-        )
-    except Exception as e:
-        print(f"An exception has occurred: {e}")
-    if r.status_code >= 400:
-        print(f"HTTP Status Code: {r.status_code}")
-        raise RuntimeError(r.content)
-    else:
-        message = f"Wrote {info['title']} version {ver}\nURL: {VIEW_URL}{pageid}"
-        print(Fore.CYAN)
-        banner(message, '*')
-        print(Fore.RESET)
-
-
-def get_login(username=None):
-    if username is None:
-        username = getpass.getuser()
-    passwd = None
-    if passwd is None:
-        passwd = getpass.getpass()
-        keyring.set_password('confluence_script', username, passwd)
-    return (username, passwd)
-
 
 ### AWS List Instances
 def list_instances(aws_account, aws_account_number, interactive, regions, show_details):
@@ -586,9 +448,6 @@ def main():
     # Display the welcome banner
     welcomebanner()
 
-    if options.html:
-        html = options.html
-
     if options.reports:
         reports_answer = options.reports
     else:
@@ -609,16 +468,6 @@ def main():
         interactive = 1
     else:
         interactive = 0
-
-    if options.pageid:
-        pageid = options.pageid
-    else:
-        pageid = 222389323  # AWS EC2 Instances page
-
-    if options.title:
-        title = options.title
-    else:
-        title = 'AWS EC2 Instances - CCMI'
 
     aws_account_number = ''
     ### Interactive == 1  - user specifies an account
@@ -685,36 +534,7 @@ def main():
                 banner(message)
             print(Fore.RESET)
 
-            try:
-                with open(htmlfile, 'r') as htmlfile:
-                    html = htmlfile.read()
-            except Exception as e:
-                print(f"Open file exception: {e}")
 
-            message = "* Write to Confluence *"
-            print(Fore.CYAN)
-            banner(message, "*")
-            print(Fore.RESET)
-            if options.write_confluence:
-                confluence_answer = options.write_confluence
-            else:
-                print(Fore.CYAN)
-                confluence_answer = input("Write the list to confluence (y/n): ")
-                print(Fore.RESET)
-
-            if options.user and options.password:
-                user = options.user
-                password = options.password
-                auth = (user, password)
-                write_data_to_confluence(auth, html, pageid, title)
-            elif confluence_answer.lower() == 'yes' or confluence_answer.lower() == 'y':
-                auth = authenticate()
-                write_data_to_confluence(auth, html, pageid, title)
-            else:
-                message = "Okay. Not writing to confluence."
-                print(Fore.CYAN)
-                banner(message)
-                print(Fore.RESET)
     ### Interactive == 0 - cycling through all acounts.
     else:
         if options.verbose:
@@ -758,31 +578,6 @@ def main():
 
             with open(htmlfile, 'r') as htmlfile:
                 html = htmlfile.read()
-
-            message = "* Write to Confluence *"
-            print(Fore.CYAN)
-            banner(message, "*")
-            print(Fore.RESET)
-            if options.write_confluence:
-                confluence_answer = options.write_confluence
-            else:
-                print(Fore.CYAN)
-                confluence_answer = input("Write the list to confluence (y/n): ")
-                print(Fore.RESET)
-
-            if options.user and options.password:
-                user = options.user
-                password = options.password
-                auth = (user, password)
-                write_data_to_confluence(auth, html, pageid, title)
-            elif confluence_answer.lower() == 'yes' or confluence_answer.lower() == 'y':
-                auth = authenticate()
-                write_data_to_confluence(auth, html, pageid, title)
-            else:
-                message = "Okay. Not writing to confluence."
-                print(Fore.CYAN)
-                banner(message)
-                print(Fore.RESET)
 
     print(Fore.GREEN)
     if options.run_again:
