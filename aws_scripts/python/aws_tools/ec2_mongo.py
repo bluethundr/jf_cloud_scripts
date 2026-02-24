@@ -2,7 +2,6 @@
 #-*- coding: utf-8 -*-
 # Import modules
 import io, os, time, pandas, argparse, csv, pathlib
-from socket import TCP_NODELAY
 from pathlib import Path
 from pandas import ExcelWriter
 from pymongo import MongoClient, errors
@@ -17,29 +16,21 @@ init()
 ## Get MongoDB username and pass from environment variables
 user_name = os.environ.get('MONGO_USER_NAME')
 user_pass = os.environ.get('MONGO_USER_PASS')
-# Using your machine's IP as the anchor for the cluster
-cluster_ip = "192.168.1.37"
+cluster_hosts = os.environ.get('MONGO_REPLICA_CLUSTER')
+
 
 ### DB Functions
 def connect_db():
     try:
         myclient = MongoClient(
-            host=[
-                f"{cluster_ip}:27017",
-                f"{cluster_ip}:27018",
-                f"{cluster_ip}:27019"
-            ],
+
+            cluster_hosts,
             username=user_name,
             password=user_pass,
             authSource="admin",
             replicaSet="rs0",  # This is the crucial flag!
             serverSelectionTimeoutMS=3000)
 
-        # Check if we are actually connected
-        myclient.admin.command('ping')
-        print(Fore.YELLOW)
-        print("Replica Set connection established. The cluster is ready.")
-        print(Fore.RESET)
 
     except errors.ServerSelectionTimeoutError as e:
         # set the client instance to 'None' if exception
