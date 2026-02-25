@@ -1,109 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Import modules
-import boto3, botocore, objectpath, smtplib, argparse, getpass, json, keyring, requests
+import boto3, botocore, objectpath, csv, smtplib, os, argparse, getpass, json, keyring, requests
 from datetime import datetime
+from colorama import init, Fore
 from os.path import basename
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
-from banners import *
-from colorama import init, Fore
+from html import escape
+from banners import banner
 from ec2_mongo import insert_coll, mongo_export_to_file, delete_from_collection
 
 # Initialize the color output with colorama
 init()
-
-### Utility Functions
-def welcomebanner():
-    # Print the welcome banner
-    print(Fore.CYAN)
-    message = "*                     List AWS EC2 Instances                     *"
-    banner(message, "*")
-    print(Fore.RESET)
-
-
-def endbanner():
-    print(Fore.CYAN)
-    message = "*   List AWS Instance Operations Are Complete   *"
-    banner(message, "*")
-    print(Fore.RESET)
-
-def initialize(interactive, aws_account):
-    # Set the date
-    today = datetime.today()
-    today = today.strftime("%m-%d-%Y")
-    # Set the input file
-    aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_accounts_list.csv')
-    # Set the output file
-    output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
-    ### Interactive == 1  - user specifies an account
-    if interactive == 1:
-        output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today + '.csv')
-        output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.csv'
-    else:
-        output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today + '.csv')
-        output_file_name = 'aws-instance-master-list-' + today + '.csv'
-    return today, aws_env_list, output_file, output_file_name
-
-
-def exit_program():
-    endbanner()
-    exit()
-
-
-def read_account_info(aws_env_list):
-    account_names = []
-    account_numbers = []
-    with open(aws_env_list) as csv_file:
-        csv_reader = csv.reader(csv_file, delimiter=',')
-        next(csv_reader)
-        for row in csv_reader:
-            account_name = str(row[0])
-            account_number = str(row[1])
-            account_names.append(account_name)
-            account_numbers.append(account_number)
-    return account_names, account_numbers
-
-
-def report_instance_stats(instance_count, aws_account, account_found):
-    if account_found == 'yes':
-        if instance_count == 0:
-            message = f"There are no EC2 instances in AWS Account: {aws_account}."
-            banner(message)
-        elif instance_count == 1:
-            message = f"There is: {instance_count} EC2 instance in AWS Account: {aws_account}."
-            banner(message)
-        else:
-            message = f"There are: {instance_count} EC2 instances in AWS Account: {aws_account}."
-            banner(message)
-
-
-def report_gov_or_comm(aws_account, messge):
-    if 'gov' in aws_account and not 'admin' in aws_account:
-        message = "This is a Govcloud account."
-        banner(message)
-    else:
-        message = "This is a commercial account."
-        banner(message)
-
-
-def set_regions(aws_account):
-    print(Fore.GREEN)
-    message = f"Getting the regions in {aws_account} "
-    banner(message, "*")
-    print(Fore.RESET)
-    regions = []
-    if 'gov' in aws_account and not 'admin' in aws_account:
-        session = boto3.Session(profile_name=aws_account, region_name='us-gov-west-1')
-        ec2_client = session.client('ec2')
-        regions = [reg['RegionName'] for reg in ec2_client.describe_regions()['Regions']]
-    else:
-        session = boto3.Session(profile_name=aws_account, region_name='us-east-1')
-        ec2_client = session.client('ec2')
-        regions = [reg['RegionName'] for reg in ec2_client.describe_regions()['Regions']]
-    return regions
-
 
 ### Cli arguments
 def arguments():
@@ -124,6 +34,12 @@ def arguments():
         default=None,
         nargs='?',
         help="Process one or all accounts")
+
+    parser.add_argument(
+        "-p",
+        "--pageid",
+        type=int,
+        help="Specify the Conflunce page id to overwrite")
 
     parser.add_argument(
         "-e",
@@ -163,6 +79,93 @@ def arguments():
 
     options = parser.parse_args()
     return options
+
+### Utility Functions
+def welcomebanner():
+    # Print the welcome banner
+    print(Fore.CYAN)
+    message = "*                     List AWS EC2 Instances                     *"
+    banner(message, "*")
+    print(Fore.RESET)
+
+
+def endbanner():
+    print(Fore.CYAN)
+    message = "*   List AWS Instance Operations Are Complete   *"
+    banner(message, "*")
+    print(Fore.RESET)
+
+
+def initialize(interactive, aws_account):
+    # Set the date
+    today = datetime.today()
+    today = today.strftime("%m-%d-%Y")
+    # Set the input file
+    aws_env_list = os.path.join('..', '..', 'source_files', 'aws_accounts_list', 'aws_accounts_list.csv')
+    # Set the output file
+    output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
+    ### Interactive == 1  - user specifies an account
+    if interactive == 1:
+        output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today + '.csv')
+        output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.csv'
+    else:
+        output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today + '.csv')
+        output_file_name = 'aws-instance-master-list-' + today + '.csv'
+    return today, aws_env_list, output_file, output_file_name
+
+
+def exit_program():
+    endbanner()
+    exit()
+
+
+def read_account_info(aws_env_list):
+    account_names = []
+    account_numbers = []
+    with open(aws_env_list) as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=',')
+        next(csv_reader)
+        for row in csv_reader:
+            account_name = str(row[0])
+            account_number = str(row[1])
+            account_names.append(account_name)
+            account_numbers.append(account_number)
+    return account_names, account_numbers
+
+
+def report_instance_stats(instance_count, aws_account, account_found):
+    if account_found != "yes":
+        return
+
+    noun = "instance" if instance_count == 1 else "instances"
+    verb = "is" if instance_count == 1 else "are"
+    none = "no" if instance_count == 0 else str(instance_count)
+
+    banner(f"There {verb} {none} EC2 {noun} in AWS Account: {aws_account}.")
+
+def report_gov_or_comm(aws_account, messge):
+    if 'gov' in aws_account and not 'admin' in aws_account:
+        message = "This is a Govcloud account."
+        banner(message)
+    else:
+        message = "This is a commercial account."
+        banner(message)
+
+
+def set_regions(aws_account):
+    print(Fore.GREEN)
+    message = f"Getting the regions in {aws_account} "
+    banner(message, "*")
+    print(Fore.RESET)
+    if 'gov' in aws_account and not 'admin' in aws_account:
+        session = boto3.Session(profile_name=aws_account, region_name='us-gov-west-1')
+        ec2_client = session.client('ec2')
+        regions = [reg['RegionName'] for reg in ec2_client.describe_regions()['Regions']]
+    else:
+        session = boto3.Session(profile_name=aws_account, region_name='us-east-1')
+        ec2_client = session.client('ec2')
+        regions = [reg['RegionName'] for reg in ec2_client.describe_regions()['Regions']]
+    return regions
 
 
 ### Email function
@@ -228,16 +231,8 @@ def send_email(aws_accounts_answer, aws_account, aws_account_number, interactive
     print(Fore.RESET)
 
 
-### Confluence Functions
-import os
-import csv
-from html import escape
-
-
 def convert_csv_to_html_table(output_file, today, interactive, aws_account):
     output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html')
-    htmlfile = None
-    htmlfile_name = None
     try:
         if interactive == 1:
             htmlfile = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today + '.html')
@@ -534,6 +529,11 @@ def main():
                 banner(message)
             print(Fore.RESET)
 
+            try:
+                with open(htmlfile, 'r') as htmlfile:
+                    html = htmlfile.read()
+            except Exception as e:
+                print(f"Open file exception: {e}")
 
     ### Interactive == 0 - cycling through all acounts.
     else:
@@ -579,11 +579,12 @@ def main():
             with open(htmlfile, 'r') as htmlfile:
                 html = htmlfile.read()
 
-    print(Fore.GREEN)
     if options.run_again:
         list_again = options.run_again
     else:
+        print(Fore.GREEN)
         list_again = input("List EC2 instances again (y/n): ")
+        print(Fore.RESET)
     if list_again.lower() == 'y' or list_again.lower() == 'yes':
         main()
     else:
