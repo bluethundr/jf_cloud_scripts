@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from functools import lru_cache
 from typing import Literal
 
@@ -23,16 +21,11 @@ def _sts_region_for_profile(profile_name: str) -> str:
     return "us-east-1"
 
 @lru_cache(maxsize=256)
-def get_partition(profile_name: str) -> Partition:
-    sts_region = _sts_region_for_profile(profile_name)
-
-    s = boto3.Session(profile_name=profile_name, region_name=sts_region)
-    arn = s.client("sts", region_name=sts_region).get_caller_identity()["Arn"]
-
-    parts = arn.split(":")
-    if len(parts) >= 2 and parts[0] == "arn":
-        return parts[1]  # aws / aws-us-gov / aws-cn
-    return "unknown"
+def get_partition(profile_name: str) -> str:
+    session = boto3.Session(profile_name=profile_name)
+    sts = session.client("sts")
+    arn = sts.get_caller_identity()["Arn"]
+    return arn.split(":")[1]
 
 def is_gov(profile_name: str) -> bool:
     return get_partition(profile_name) == "aws-us-gov"
