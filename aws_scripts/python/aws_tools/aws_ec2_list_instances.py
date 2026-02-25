@@ -86,17 +86,14 @@ def read_account_info(aws_env_list):
 
 
 def report_instance_stats(instance_count, aws_account, account_found):
-    if account_found == 'yes':
-        if instance_count == 0:
-            message = f"There are no EC2 instances in AWS Account: {aws_account}."
-            banner(message)
-        elif instance_count == 1:
-            message = f"There is: {instance_count} EC2 instance in AWS Account: {aws_account}."
-            banner(message)
-        else:
-            message = f"There are: {instance_count} EC2 instances in AWS Account: {aws_account}."
-            banner(message)
+    if account_found != "yes":
+        return
 
+    noun = "instance" if instance_count == 1 else "instances"
+    verb = "is" if instance_count == 1 else "are"
+    none = "no" if instance_count == 0 else str(instance_count)
+
+    banner(f"There {verb} {none} EC2 {noun} in AWS Account: {aws_account}.")
 
 def report_gov_or_comm(aws_account, messge):
     if 'gov' in aws_account and not 'admin' in aws_account:
@@ -112,7 +109,6 @@ def set_regions(aws_account):
     message = f"Getting the regions in {aws_account} "
     banner(message, "*")
     print(Fore.RESET)
-    regions = []
     if 'gov' in aws_account and not 'admin' in aws_account:
         session = boto3.Session(profile_name=aws_account, region_name='us-gov-west-1')
         ec2_client = session.client('ec2')
@@ -291,16 +287,8 @@ def send_email(aws_accounts_answer, aws_account, aws_account_number, interactive
     print(Fore.RESET)
 
 
-### Confluence Functions
-import os
-import csv
-from html import escape
-
-
 def convert_csv_to_html_table(output_file, today, interactive, aws_account):
     output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html')
-    htmlfile = None
-    htmlfile_name = None
     try:
         if interactive == 1:
             htmlfile = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today + '.html')
@@ -788,7 +776,9 @@ def main():
     if options.run_again:
         list_again = options.run_again
     else:
+        print(Fore.GREEN)
         list_again = input("List EC2 instances again (y/n): ")
+        print(Fore.RESET)
     if list_again.lower() == 'y' or list_again.lower() == 'yes':
         main()
     else:
