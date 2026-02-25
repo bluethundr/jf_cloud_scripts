@@ -10,6 +10,7 @@ from os.path import basename
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
+from banners import banner
 from ec2_mongo import insert_coll, mongo_export_to_file, delete_from_collection
 
 # Initialize the color output with colorama
@@ -82,25 +83,13 @@ def welcomebanner():
     banner(message, "*")
     print(Fore.RESET)
 
-
 def endbanner():
     print(Fore.CYAN)
     message = "*   List AWS Instance Operations Are Complete   *"
     banner(message, "*")
     print(Fore.RESET)
 
-
-def banner(message, border='-'):
-    line = border * len(message)
-    print(line)
-    print(message)
-    print(line)
-
-def authenticate():
-    auth = get_login()
-    return auth
-
-
+# Initialize the main body of the script
 def initialize(interactive, aws_account):
     # Set the date
     today = datetime.today()
@@ -136,16 +125,14 @@ def read_account_info(aws_env_list):
             account_numbers.append(account_number)
     return account_names, account_numbers
 
-
 def report_instance_stats(instance_count, aws_account, account_found):
     if account_found != "yes":
         return
-
     noun = "instance" if instance_count == 1 else "instances"
     verb = "is" if instance_count == 1 else "are"
     none = "no" if instance_count == 0 else str(instance_count)
-
     banner(f"There {verb} {none} EC2 {noun} in AWS Account: {aws_account}.")
+
 
 def report_gov_or_comm(aws_account, messge):
     if 'gov' in aws_account and not 'admin' in aws_account:
@@ -273,25 +260,6 @@ def convert_csv_to_html_table(output_file, today, interactive, aws_account):
     return htmlfile, htmlfile_name
 
 
-def get_page_ancestors(auth, pageid):
-    # Get basic page information plus the ancestors property
-    url = '{base}/{pageid}?expand=ancestors'.format(
-        base=BASE_URL,
-        pageid=pageid)
-    r = requests.get(url, auth=auth)
-    r.raise_for_status()
-    return r.json()['ancestors']
-
-
-def get_page_info(auth, pageid):
-    url = '{base}/{pageid}'.format(
-        base=BASE_URL,
-        pageid=pageid)
-    r = requests.get(url, auth=auth)
-    r.raise_for_status()
-    return r.json()
-
-
 ### AWS List Instances
 def list_instances(aws_account, aws_account_number, interactive, regions, show_details):
     _, _, output_file, _ = initialize(interactive, aws_account)
@@ -300,8 +268,6 @@ def list_instances(aws_account, aws_account_number, interactive, regions, show_d
     session = ''
     ec2 = ''
     account_found = ''
-    # PrivateDNS = None
-    # block_device_list = None
     instance_count = 0
     # account_type_message = ''
     profile_missing_message = ''
@@ -453,7 +419,7 @@ def list_instances(aws_account, aws_account_number, interactive, regions, show_d
             print(f"An exception has occurred: {e}")
     if '*' in profile_missing_message:
         banner(profile_missing_message)
-    print(Fore.GREEN)
+    print(Fore.CYAN)
     report_instance_stats(instance_count, aws_account, account_found)
     print(Fore.RESET + '\n')
     return output_file
