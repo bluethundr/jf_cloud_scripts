@@ -16,7 +16,8 @@ def endbanner():
     banner(message, "*")
     print(Fore.RESET)
 
-def banner(message, border="*"):
+def banner(message):
+    border = "*"
     line = border * (len(message) + 4)
     print(line)
     print(f"{border} {message} {border}")
