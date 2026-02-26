@@ -3,7 +3,6 @@
 # Import modules
 import boto3, botocore, objectpath, csv, smtplib, os, argparse, getpass, json, keyring, requests, time
 from html import escape
-from requests.auth import HTTPBasicAuth
 from datetime import datetime
 from colorama import init, Fore
 from os.path import basename
@@ -77,6 +76,7 @@ def arguments():
     return options
 
 ### Utility Functions
+#Banners
 def welcomebanner():
     # Print the welcome banner
     print(Fore.CYAN)
