@@ -264,14 +264,13 @@ def convert_csv_to_html_table(output_file, today, interactive, aws_account):
 def list_instances(aws_account, aws_account_number, interactive, regions, show_details):
     _, _, output_file, _ = initialize(interactive, aws_account)
     delete_from_collection(aws_account_number)
-    instance_list = ''
-    session = ''
-    ec2 = ''
-    account_found = ''
+    instance_list = None
+    session = None
+    ec2 = None
+    account_found = None
     instance_count = 0
-    # account_type_message = ''
-    profile_missing_message = ''
-    region = ''
+    profile_missing_message = None
+    region = None
     # Set the ec2 dictionary
     ec2info = {}
     print(Fore.CYAN)
@@ -417,7 +416,7 @@ def list_instances(aws_account, aws_account_number, interactive, regions, show_d
                     ec2info = {}
         except Exception as e:
             print(f"An exception has occurred: {e}")
-    if '*' in profile_missing_message:
+    if profile_missing_message:
         banner(profile_missing_message)
     print(Fore.CYAN)
     report_instance_stats(instance_count, aws_account, account_found)
