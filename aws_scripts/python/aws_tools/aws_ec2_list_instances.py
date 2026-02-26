@@ -11,6 +11,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from banners import banner
+from aws_partition import get_partition, is_gov
 from ec2_mongo import insert_coll, mongo_export_to_file, delete_from_collection
 
 # Initialize the color output with colorama
@@ -80,13 +81,13 @@ def welcomebanner():
     # Print the welcome banner
     print(Fore.CYAN)
     message = "*                     List AWS EC2 Instances                     *"
-    banner(message, "*")
+    banner(message)
     print(Fore.RESET)
 
 def endbanner():
     print(Fore.CYAN)
     message = "*   List AWS Instance Operations Are Complete   *"
-    banner(message, "*")
+    banner(message)
     print(Fore.RESET)
 
 # Initialize the main body of the script
@@ -107,11 +108,12 @@ def initialize(interactive, aws_account):
         output_file_name = 'aws-instance-master-list-' + today + '.csv'
     return today, aws_env_list, output_file, output_file_name
 
-
+# Exit the program
 def exit_program():
     endbanner()
     exit()
 
+# Read acccount info
 def read_account_info(aws_env_list):
     account_names = []
     account_numbers = []
@@ -125,6 +127,7 @@ def read_account_info(aws_env_list):
             account_numbers.append(account_number)
     return account_names, account_numbers
 
+# Report number of instances in an account
 def report_instance_stats(instance_count, aws_account, account_found):
     if account_found != "yes":
         return
@@ -133,30 +136,32 @@ def report_instance_stats(instance_count, aws_account, account_found):
     none = "no" if instance_count == 0 else str(instance_count)
     banner(f"There {verb} {none} EC2 {noun} in AWS Account: {aws_account}.")
 
-
-def report_gov_or_comm(aws_account, messge):
-    if 'gov' in aws_account and not 'admin' in aws_account:
-        message = "This is a Govcloud account."
+# Distinguish between gov and commercial accounts
+def report_gov_or_comm(aws_account):
+    if is_gov(aws_account):
+        message = "Verified: This is a GovCloud account."
         banner(message)
     else:
-        message = "This is a commercial account."
+        message = "Verified: This is a commercial account."
         banner(message)
 
-
+# Set the regions
 def set_regions(aws_account):
     print(Fore.GREEN)
-    message = f"Getting the regions in {aws_account} "
-    banner(message, "*")
+    banner(f"Getting the regions in {aws_account} ")
     print(Fore.RESET)
-    if 'gov' in aws_account and not 'admin' in aws_account:
-        session = boto3.Session(profile_name=aws_account, region_name='us-gov-west-1')
+
+    # Use your new logic to determine the starting point
+    probe_region = 'us-gov-west-1' if is_gov(aws_account) else 'us-east-1'
+
+    try:
+        session = boto3.Session(profile_name=aws_account, region_name=probe_region)
         ec2_client = session.client('ec2')
         regions = [reg['RegionName'] for reg in ec2_client.describe_regions()['Regions']]
-    else:
-        session = boto3.Session(profile_name=aws_account, region_name='us-east-1')
-        ec2_client = session.client('ec2')
-        regions = [reg['RegionName'] for reg in ec2_client.describe_regions()['Regions']]
-    return regions
+        return regions
+    except Exception as e:
+        print(f"Auth failure or profile missing for {aws_account}: {e}")
+        return []
 
 
 ### Email function
@@ -221,7 +226,7 @@ def send_email(aws_accounts_answer, aws_account, aws_account_number, interactive
         banner(message)
     print(Fore.RESET)
 
-
+# Convert CSV to HTML
 def convert_csv_to_html_table(output_file, today, interactive, aws_account):
     output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html')
     try:
@@ -274,33 +279,27 @@ def list_instances(aws_account, aws_account_number, interactive, regions, show_d
     # Set the ec2 dictionary
     ec2info = {}
     print(Fore.CYAN)
-    report_gov_or_comm(aws_account, account_found)
+    report_gov_or_comm(aws_account)
     print(Fore.RESET)
     for region in regions:
-        if 'gov' in aws_account and not 'admin' in aws_account:
-            try:
-                session = boto3.Session(profile_name=aws_account, region_name=region)
-                account_found = 'yes'
-            except botocore.exceptions.ProfileNotFound as e:
-                profile_missing_message = f"An exception has occurred: {e}"
-                account_found = 'no'
-                pass
-        else:
-            try:
-                session = boto3.Session(profile_name=aws_account, region_name=region)
-                account_found = 'yes'
-            except botocore.exceptions.ProfileNotFound as e:
-                profile_missing_message = f"An exception has occurred: {e}"
-                pass
         try:
+            # Simple, one-line session creation
+            session = boto3.Session(profile_name=aws_account, region_name=region)
             ec2 = session.client("ec2")
+            account_found = 'yes'
+        except botocore.exceptions.ProfileNotFound as e:
+            profile_missing_message = f"Profile not found: {e}"
+            account_found = 'no'
+            continue  # Skip to next region/account
         except Exception as e:
-            print(f"An exception has occurred: {e}")
+            print(f"Connection error in {region}: {e}")
+            continue
+
         print(Fore.GREEN)
         message = f"* Region: {region} in {aws_account}: ({aws_account_number}) *"
-        banner(message, "*")
-
+        banner(message)
         print(Fore.RESET)
+
         # Loop through the instances
         try:
             instance_list = ec2.describe_instances()
@@ -384,7 +383,7 @@ def list_instances(aws_account, aws_account_number, interactive, regions, show_d
                             print(f"An error has occurred: {e}")
                     else:
                         print("No instances in this account.")
-                    ec2_info_items = ec2info.items
+                    ec2_info_items = ec2info.items()
                     if show_details == 'y' or show_details == 'yes':
                         for instance_id, instance in ec2_info_items():
                             if account_found == 'yes':
