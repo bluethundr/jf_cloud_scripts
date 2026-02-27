@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 # Import modules
 import boto3, botocore, objectpath, csv, smtplib, os, argparse, getpass, json, keyring, requests, time
-from botocore.exceptions import ClientError
 from html import escape
 from datetime import datetime
 from colorama import init, Fore
@@ -13,6 +12,14 @@ from email.mime.application import MIMEApplication
 from banners import banner
 from aws_partition import get_partition, is_gov
 from ec2_mongo import insert_coll, mongo_export_to_file, delete_from_collection
+from botocore.exceptions import (
+    ClientError,
+    ProfileNotFound,
+    NoCredentialsError,
+    UnauthorizedSSOTokenError,
+    SSOTokenLoadError,
+    TokenRetrievalError,
+)
 
 # Initialize the color output with colorama
 init()
@@ -91,6 +98,96 @@ def endbanner():
     banner(message)
     print(Fore.RESET)
 
+# Fail gracefully on import errors
+def fatal(msg: str, code: int = 1) -> None:
+    print(Fore.RED)
+    banner(msg)
+    print(Fore.RESET)
+    raise SystemExit(code)
+
+
+def friendly_aws_auth_error(e: Exception, profile: str) -> str:
+    """
+    Convert common boto/botocore auth problems (especially SSO expiry) into a human message.
+    """
+    # SSO token / login problems
+    if isinstance(e, (UnauthorizedSSOTokenError, SSOTokenLoadError, TokenRetrievalError)):
+        return (
+            f"AWS SSO credentials are missing/expired for profile '{profile}'.\n"
+            f"Fix: run `aws sso login --profile {profile}` and re-run the script."
+        )
+
+    # No credentials found at all
+    if isinstance(e, NoCredentialsError):
+        return (
+            f"No AWS credentials found for profile '{profile}'.\n"
+            f"If this is SSO, run `aws sso login --profile {profile}`."
+        )
+
+    # STS/SDK says “no auth / expired”
+    if isinstance(e, ClientError):
+        code = e.response.get("Error", {}).get("Code", "")
+        msg = e.response.get("Error", {}).get("Message", "")
+        if code in {"ExpiredToken", "InvalidClientTokenId", "UnrecognizedClientException"}:
+            return (
+                f"AWS credentials are expired/invalid for profile '{profile}'. ({code})\n"
+                f"Fix: run `aws sso login --profile {profile}`.\n"
+                f"Details: {msg}"
+            )
+        if code in {"AccessDenied", "AccessDeniedException"}:
+            return (
+                f"Access denied for profile '{profile}'. ({code})\n"
+                f"Details: {msg}"
+            )
+
+    # Fallback
+    return f"AWS error for profile '{profile}': {e}"
+
+
+def make_session_or_fail(profile: str) -> boto3.Session:
+    """
+    (a) Handles misspelled profile (ProfileNotFound)
+    (b) Handles expired SSO / creds by probing STS once
+    """
+    try:
+        s = boto3.Session(profile_name=profile)
+    except ProfileNotFound as e:
+        fatal(
+            f"Profile '{profile}' was not found (misspelled account name / missing AWS config).\n"
+            f"Fix: check your aws_accounts_list.csv and `aws configure list-profiles`.\n"
+            f"Details: {e}"
+        )
+
+    # Probe STS to force credential resolution now (instead of failing later in random places)
+    try:
+        s.client("sts").get_caller_identity()
+    except Exception as e:
+        fatal(friendly_aws_auth_error(e, profile))
+
+    return s
+
+
+def make_session_or_skip(profile: str) -> boto3.Session | None:
+    """
+    Same as above, but returns None so caller can skip this account (useful for 'all accounts' mode).
+    """
+    try:
+        s = boto3.Session(profile_name=profile)
+    except ProfileNotFound as e:
+        banner(
+            f"Skipping '{profile}': profile not found (misspelled / missing config).\n"
+            f"Details: {e}"
+        )
+        return None
+
+    try:
+        s.client("sts").get_caller_identity()
+    except Exception as e:
+        banner(f"Skipping '{profile}': {friendly_aws_auth_error(e, profile)}")
+        return None
+
+    return s
+
 # Initialize the main body of the script
 def initialize(interactive, aws_account):
     # Set the date
@@ -122,15 +219,15 @@ def read_account_info(aws_env_list):
         csv_reader = csv.reader(csv_file, delimiter=',')
         next(csv_reader)
         for row in csv_reader:
-            account_name = str(row[0])
-            account_number = str(row[1])
+            account_name = str(row[0]).strip()
+            account_number = str(row[1]).strip()
             account_names.append(account_name)
             account_numbers.append(account_number)
     return account_names, account_numbers
 
 # Report number of instances in an account
-def report_instance_stats(instance_count, aws_account, account_found):
-    if account_found != "yes":
+def report_instance_stats(instance_count: int, aws_account: str, account_found: bool) -> None:
+    if not account_found:
         return
     noun = "instance" if instance_count == 1 else "instances"
     verb = "is" if instance_count == 1 else "are"
@@ -148,14 +245,12 @@ def report_gov_or_comm(aws_account):
 
 # Set the regions
 def set_regions(active_session_object):
-    sts_info = active_session_object.client('sts').get_caller_identity()# Renamed for clarity
-    print(Fore.GREEN)
-    banner("Getting the regions dynamically...")
-    print(Fore.RESET)
-
     # This will now work because 'active_session_object' is a Session, not a string
     sts_info = active_session_object.client('sts').get_caller_identity()
     partition = sts_info['Arn'].split(':')[1]
+    print(Fore.GREEN)
+    banner("Getting the regions dynamically...")
+    print(Fore.RESET)
 
     home = 'us-gov-west-1' if partition == 'aws-us-gov' else 'us-east-1'
 
@@ -190,10 +285,10 @@ def send_email(aws_accounts_answer, aws_account, aws_account_number, interactive
     from_addr = 'jokefire.noreply@gmail.com'
     if aws_accounts_answer == 'one':
         subject = "AWS Instance List: " + aws_account + " (" + aws_account_number + ") " + today
-        content = "<font size=2 face=Verdana color=black>Hello " + first_name + ", <br><br>Enclosed, please find a list of instances in JF AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The SD Team</font>"
+        content = "<font size=2 face=Verdana color=black>Hello " + first_name + ", <br><br>Enclosed, please find a list of instances in JF AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The Jokefire Systems Team</font>"
     else:
         subject = "AWS Instance Master List " + today
-        content = "<font size=2 face=Verdana color=black>Hello " + first_name + ", <br><br>Enclosed, please find a list of instances in all JF AWS accounts.<br><br>Regards,<br>The SD Team</font>"
+        content = "<font size=2 face=Verdana color=black>Hello " + first_name + ", <br><br>Enclosed, please find a list of instances in all JF AWS accounts.<br><br>Regards,<br>The Jokefire Systems Team</font>"
     msg = MIMEMultipart()
     msg['From'] = from_addr
     msg['To'] = to_addr
@@ -267,160 +362,141 @@ def convert_csv_to_html_table(output_file, today, interactive, aws_account):
 
 
 ### AWS List Instances
-def list_instances(aws_account, aws_account_number, interactive, regions, show_details):
+def list_instances(session_obj, aws_account, aws_account_number, interactive, regions, show_details):
     _, _, output_file, _ = initialize(interactive, aws_account)
     delete_from_collection(aws_account_number)
-    instance_list = None
-    session = None
-    ec2 = None
-    account_found = None
+
     instance_count = 0
-    profile_missing_message = None
-    region = None
-    # Set the ec2 dictionary
+    account_found = False
     ec2info = {}
+
     print(Fore.CYAN)
     report_gov_or_comm(aws_account)
     print(Fore.RESET)
+
     for region in regions:
+        # Create the regional EC2 client from the *validated* session_obj
         try:
-            # Simple, one-line session creation
-            session = boto3.Session(profile_name=aws_account, region_name=region)
-            ec2 = session.client("ec2")
-            account_found = 'yes'
-        except botocore.exceptions.ProfileNotFound as e:
-            profile_missing_message = f"Profile not found: {e}"
-            account_found = 'no'
-            continue  # Skip to next region/account
+            ec2 = session_obj.client("ec2", region_name=region)
+            account_found = True
         except Exception as e:
-            print(f"Connection error in {region}: {e}")
-            continue
+            # Fail immediately (expired SSO, bad creds, etc.)
+            fatal(f"Failed to create EC2 client in {aws_account}/{region}:\n{friendly_aws_auth_error(e, aws_account)}")
 
         print(Fore.GREEN)
-        message = f"* Region: {region} in {aws_account}: ({aws_account_number}) *"
-        banner(message)
+        banner(f"* Region: {region} in {aws_account}: ({aws_account_number}) *")
         print(Fore.RESET)
 
-        # Loop through the instances
+        # Call describe_instances (fail immediately if it errors)
         try:
             instance_list = ec2.describe_instances()
         except Exception as e:
-            print(f"An exception has occurred: {e}")
+            fatal(f"describe_instances failed in {aws_account}/{region}:\n{friendly_aws_auth_error(e, aws_account)}")
+
+        # Process instances (don’t hide errors; fail with banner)
         try:
-            for reservation in instance_list["Reservations"]:
-                for instance in reservation.get("Instances", []):
-                    instance_count = instance_count + 1
-                    instance_state = instance['State']['Name']
-                    instance_type = instance['InstanceType']
-                    instance_id = instance['InstanceId']
-                    ami_id = instance['ImageId']
-                    launch_time = instance["LaunchTime"]
-                    launch_time_friendly = launch_time.strftime("%B %d %Y")
-                    tree = objectpath.Tree(instance)
+            for reservation in instance_list.get("Reservations", []):
+                for inst in reservation.get("Instances", []):
+                    instance_count += 1
+
+                    instance_state = inst.get("State", {}).get("Name")
+                    instance_type = inst.get("InstanceType")
+                    instance_id = inst.get("InstanceId")
+                    ami_id = inst.get("ImageId")
+
+                    launch_time = inst.get("LaunchTime")
+                    launch_time_friendly = launch_time.strftime("%B %d %Y") if launch_time else None
+
+                    tree = objectpath.Tree(inst)
+
                     block_devices = set(tree.execute('$..BlockDeviceMappings[\'Ebs\'][\'VolumeId\']'))
-                    if block_devices:
-                        block_devices = list(block_devices)
-                        block_devices = str(block_devices).replace('[', '').replace(']', '').replace('\'', '')
-                    else:
-                        block_devices = None
-                    private_ips = set(tree.execute('$..PrivateIpAddress'))
-                    if private_ips:
-                        private_ips_list = list(private_ips)
-                        private_ips_list = str(private_ips_list).replace('[', '').replace(']', '').replace('\'', '')
-                    else:
-                        private_ips_list = None
-                    public_ips = set(tree.execute('$..PublicIp'))
-                    if len(public_ips) == 0:
-                        public_ips = None
-                    if public_ips:
-                        public_ips_list = list(public_ips)
-                        public_ips_list = str(public_ips_list).replace('[', '').replace(']', '').replace('\'', '')
-                    else:
-                        public_ips_list = None
+                    volumes = (
+                        str(list(block_devices)).replace("[", "").replace("]", "").replace("'", "")
+                        if block_devices else None
+                    )
+
+                    private_ips = set(tree.execute("$..PrivateIpAddress"))
+                    private_ips_list = (
+                        str(list(private_ips)).replace("[", "").replace("]", "").replace("'", "")
+                        if private_ips else None
+                    )
+
+                    public_ips = set(tree.execute("$..PublicIp"))
+                    public_ips_list = (
+                        str(list(public_ips)).replace("[", "").replace("]", "").replace("'", "")
+                        if public_ips else None
+                    )
+
                     instance_name = None
-                    if 'Tags' in instance:
-                        try:
-                            tags = instance['Tags']
-                            # name = None
-                            for tag in tags:
-                                if tag["Key"] == "Name":
-                                    instance_name = tag["Value"]
-                                if tag["Key"] == "Engagement" or tag["Key"] == "Engagement Code":
-                                    engagement = tag["Value"]
-                        except ValueError:
-                            pass
-                    key_name = instance['KeyName'] if instance['KeyName'] else None
-                    vpc_id = instance.get('VpcId') if instance.get('VpcId') else None
-                    private_dns = instance['PrivateDnsName'] if instance['PrivateDnsName'] else None
-                    availability_zone = instance['Placement']['AvailabilityZone']
-                    ec2info[instance['InstanceId']] = {
-                        'AWS Account': aws_account,
-                        'Account Number': aws_account_number,
-                        'Instance Name': instance_name,
-                        'Instance ID': instance_id,
-                        'AMI ID': ami_id,
-                        'Volumes': block_devices,
-                        'Private IP': private_ips_list,
-                        'Public IP': public_ips_list,
-                        'Private DNS': private_dns,
-                        'Availability Zone': availability_zone,
-                        'VPC ID': vpc_id,
-                        'Instance Type': instance_type,
-                        'Key Pair Name': key_name,
-                        'Instance State': instance_state,
-                        'Launch Date': launch_time_friendly
+                    engagement = None
+                    for tag in inst.get("Tags", []) or []:
+                        if tag.get("Key") == "Name":
+                            instance_name = tag.get("Value")
+                        if tag.get("Key") in {"Engagement", "Engagement Code"}:
+                            engagement = tag.get("Value")
+
+                    key_name = inst.get("KeyName")  # safe
+                    vpc_id = inst.get("VpcId")
+                    private_dns = inst.get("PrivateDnsName")
+                    availability_zone = inst.get("Placement", {}).get("AvailabilityZone")
+
+                    row = {
+                        "AWS Account": aws_account,
+                        "Account Number": aws_account_number,
+                        "Instance Name": instance_name,
+                        "Instance ID": instance_id,
+                        "AMI ID": ami_id,
+                        "Volumes": volumes,
+                        "Private IP": private_ips_list,
+                        "Public IP": public_ips_list,
+                        "Private DNS": private_dns,
+                        "Availability Zone": availability_zone,
+                        "VPC ID": vpc_id,
+                        "Instance Type": instance_type,
+                        "Key Pair Name": key_name,
+                        "Instance State": instance_state,
+                        "Launch Date": launch_time_friendly,
                     }
-                    mongo_instance_dict = {'_id': '', 'AWS Account': aws_account, "Account Number": aws_account_number,
-                                           'Instance Name': instance_name, 'Instance ID': instance_id, 'AMI ID': ami_id,
-                                           'Volumes': block_devices, 'Private IP': private_ips_list,
-                                           'Public IP': public_ips_list, 'Private DNS': private_dns,
-                                           'Availability Zone': availability_zone, 'VPC ID': vpc_id,
-                                           'Instance Type': instance_type, 'Key Pair Name': key_name,
-                                           'Instance State': instance_state, 'Launch Date': launch_time_friendly}
-                    if mongo_instance_dict:
-                        try:
-                            insert_coll(mongo_instance_dict)
-                        except Exception as e:
-                            print(f"An error has occurred: {e}")
-                    else:
-                        print("No instances in this account.")
-                    ec2_info_items = ec2info.items()
-                    if show_details == 'y' or show_details == 'yes':
-                        for instance_id, instance in ec2_info_items:
-                            if account_found == 'yes':
-                                print(Fore.RESET + "-------------------------------------")
-                                for key in [
-                                    'AWS Account',
-                                    'Account Number',
-                                    'Name',
-                                    'Instance ID',
-                                    'AMI ID',
-                                    'Volumes',
-                                    'Private IP',
-                                    'Public IP',
-                                    'Private DNS',
-                                    'Availability Zone',
-                                    'VPC ID',
-                                    'Type',
-                                    'Key Pair Name',
-                                    'State',
-                                    'Launch Date'
-                                ]:
-                                    print(Fore.GREEN + f"{key}: {instance.get(key)}")
-                                print(Fore.RESET + "-------------------------------------")
-                        else:
-                            pass
-                    reservation = {}
-                    instance = {}
-                    ec2_info_items = {}
-                    ec2info = {}
+
+                    ec2info[instance_id] = row
+                    insert_coll({"_id": "", **row})
+
         except Exception as e:
-            print(f"An exception has occurred: {e}")
-    if profile_missing_message:
-        banner(profile_missing_message)
+            fatal(f"Error processing instances in {aws_account}/{region}: {e}")
+
+        # Optional verbose printing (fixes your key mismatches)
+        if show_details in {"y", "yes"}:
+            for _, instrow in ec2info.items():
+                print(Fore.RESET + "-------------------------------------")
+                for key in [
+                    "AWS Account",
+                    "Account Number",
+                    "Instance Name",
+                    "Instance ID",
+                    "AMI ID",
+                    "Volumes",
+                    "Private IP",
+                    "Public IP",
+                    "Private DNS",
+                    "Availability Zone",
+                    "VPC ID",
+                    "Instance Type",
+                    "Key Pair Name",
+                    "Instance State",
+                    "Launch Date",
+                ]:
+                    print(Fore.GREEN + f"{key}: {instrow.get(key)}")
+                print(Fore.RESET + "-------------------------------------")
+
+        ec2info.clear()
+
     print(Fore.CYAN)
-    report_instance_stats(instance_count, aws_account, account_found)
-    print(Fore.RESET + '\n')
+    noun = "instance" if instance_count == 1 else "instances"
+    verb = "is" if instance_count == 1 else "are"
+    none = "no" if instance_count == 0 else str(instance_count)
+    banner(f"There {verb} {none} EC2 {noun} in AWS Account: {aws_account}.")
+    print(Fore.RESET + "\n")
+
     return output_file
 
 
@@ -453,7 +529,7 @@ def main():
     else:
         interactive = 0
 
-    aws_account_number = ''
+    aws_account_number = None
     ### Interactive == 1  - user specifies an account
     if interactive == 1:
         ## Select the account
@@ -491,11 +567,15 @@ def main():
         for (my_aws_account, my_aws_account_number) in zip(account_names, account_numbers):
             if my_aws_account == aws_account:
                 aws_account_number = my_aws_account_number
+        # Fail gracefully on misspelled profile
+        if not aws_account_number:
+            banner(f"Account '{aws_account}' not found in aws_accounts_list.csv. Check spelling.")
+            exit_program()
 
         # Set the regions and run the program
-        current_session = boto3.Session(profile_name=aws_account)
-        regions = set_regions(current_session)
-        output_file = list_instances(aws_account, aws_account_number, interactive, regions, show_details)
+        session_obj = make_session_or_fail(aws_account)  # validates profile + STS auth once
+        regions = set_regions(session_obj)
+        output_file = list_instances(session_obj, aws_account, aws_account_number, interactive, regions, show_details)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
             try:
                 mongo_export_to_file(interactive, aws_account, aws_account_number)
@@ -538,18 +618,23 @@ def main():
         today, aws_env_list, output_file, _ = initialize(interactive, aws_account)
         account_names, account_numbers = read_account_info(aws_env_list)
         for (aws_account, aws_account_number) in zip(account_names, account_numbers):
-            aws_account = aws_account.split()[0]
             message = f"Working in AWS Account: {aws_account}."
             print(Fore.YELLOW)
             banner(message)
             print(Fore.RESET)
             # Set the regions
-            session_obj = boto3.Session(profile_name=aws_account)
-            regions = set_regions(session_obj)
-            output_file = list_instances(aws_account, aws_account_number, interactive, regions, show_details)
+            session_obj = make_session_or_skip(aws_account)
+            if not session_obj:
+                continue
+            try:
+                regions = set_regions(session_obj)
+            except Exception as e:
+                banner(f"Skipping {aws_account}: unable to list regions:\n{friendly_aws_auth_error(e, aws_account)}")
+                continue
+            output_file = list_instances(session_obj, aws_account, aws_account_number, interactive, regions, show_details)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
-            mongo_export_to_file(interactive, aws_account, aws_account_number)
-            htmlfile, _ = convert_csv_to_html_table(output_file, today, interactive, aws_account)
+            mongo_export_to_file(interactive, "all", None)
+            htmlfile, _ = convert_csv_to_html_table(output_file, today, interactive, "all")
             print(Fore.YELLOW)
             message = "Send an Email"
             banner(message)
@@ -582,12 +667,6 @@ def main():
     else:
         exit_program()
     print(Fore.RESET)
-
-# Create a session for your spoke account
-test_session = boto3.Session(profile_name='jf-spoke1')
-
-# Run your new function
-my_regions = set_regions(test_session)
 
 
 ### Run locally
