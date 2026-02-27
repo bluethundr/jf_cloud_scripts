@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # Import modules
 import boto3, botocore, objectpath, csv, smtplib, os, argparse, getpass, json, keyring, requests, time
+from botocore.exceptions import ClientError
 from html import escape
 from datetime import datetime
 from colorama import init, Fore
@@ -146,22 +147,22 @@ def report_gov_or_comm(aws_account):
         banner(message)
 
 # Set the regions
-def set_regions(aws_account):
+def set_regions(active_session_object):
+    sts_info = active_session_object.client('sts').get_caller_identity()# Renamed for clarity
     print(Fore.GREEN)
-    banner(f"Getting the regions in {aws_account} ")
+    banner("Getting the regions dynamically...")
     print(Fore.RESET)
 
-    # Use your new logic to determine the starting point
-    probe_region = 'us-gov-west-1' if is_gov(aws_account) else 'us-east-1'
+    # This will now work because 'active_session_object' is a Session, not a string
+    sts_info = active_session_object.client('sts').get_caller_identity()
+    partition = sts_info['Arn'].split(':')[1]
 
-    try:
-        session = boto3.Session(profile_name=aws_account, region_name=probe_region)
-        ec2_client = session.client('ec2')
-        regions = [reg['RegionName'] for reg in ec2_client.describe_regions()['Regions']]
-        return regions
-    except Exception as e:
-        print(f"Auth failure or profile missing for {aws_account}: {e}")
-        return []
+    home = 'us-gov-west-1' if partition == 'aws-us-gov' else 'us-east-1'
+
+    ec2_discovery = active_session_object.client('ec2', region_name=home)
+    active_regions = [r['RegionName'] for r in ec2_discovery.describe_regions(AllRegions=False)['Regions']]
+
+    return active_regions
 
 
 ### Email function
@@ -385,7 +386,7 @@ def list_instances(aws_account, aws_account_number, interactive, regions, show_d
                         print("No instances in this account.")
                     ec2_info_items = ec2info.items()
                     if show_details == 'y' or show_details == 'yes':
-                        for instance_id, instance in ec2_info_items():
+                        for instance_id, instance in ec2_info_items:
                             if account_found == 'yes':
                                 print(Fore.RESET + "-------------------------------------")
                                 for key in [
@@ -492,7 +493,8 @@ def main():
                 aws_account_number = my_aws_account_number
 
         # Set the regions and run the program
-        regions = set_regions(aws_account)
+        current_session = boto3.Session(profile_name=aws_account)
+        regions = set_regions(current_session)
         output_file = list_instances(aws_account, aws_account_number, interactive, regions, show_details)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
             try:
@@ -542,7 +544,8 @@ def main():
             banner(message)
             print(Fore.RESET)
             # Set the regions
-            regions = set_regions(aws_account)
+            session_obj = boto3.Session(profile_name=aws_account)
+            regions = set_regions(session_obj)
             output_file = list_instances(aws_account, aws_account_number, interactive, regions, show_details)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
             mongo_export_to_file(interactive, aws_account, aws_account_number)
@@ -579,6 +582,12 @@ def main():
     else:
         exit_program()
     print(Fore.RESET)
+
+# Create a session for your spoke account
+test_session = boto3.Session(profile_name='jf-spoke1')
+
+# Run your new function
+my_regions = set_regions(test_session)
 
 
 ### Run locally
