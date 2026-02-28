@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Import modules
-import boto3, botocore, objectpath, csv, smtplib, os, argparse, getpass, json, keyring, requests, time
+import boto3, botocore, objectpath, csv, smtplib, os, argparse, getpass, json, keyring, requests, time, signal
 from html import escape
 from datetime import datetime
 from colorama import init, Fore
@@ -23,6 +23,16 @@ from botocore.exceptions import (
 
 # Initialize the color output with colorama
 init()
+
+# Handles ctl+c anywhere
+def _handle_sigint(sig, frame):
+    print(Fore.YELLOW)
+    banner("Interrupted (Ctrl+C). Exiting cleanly.")
+    print(Fore.RESET)
+    raise SystemExit(130)
+
+# Call the sigint function
+signal.signal(signal.SIGINT, _handle_sigint)
 
 ### Cli arguments
 def arguments():
@@ -104,6 +114,46 @@ def fatal(msg: str, code: int = 1) -> None:
     banner(msg)
     print(Fore.RESET)
     raise SystemExit(code)
+
+# Check all logins before the loop
+def preflight_all_sso_or_fail(profiles: list[str]) -> None:
+    """
+    Validate that all profiles can resolve creds (SSO) BEFORE scanning.
+    If any profile fails due to expired/missing SSO, exit with one banner.
+    """
+    bad: list[tuple[str, str]] = []
+
+    for profile in profiles:
+        p = profile.strip()
+        if not p:
+            continue
+
+        try:
+            s = boto3.Session(profile_name=p)
+        except ProfileNotFound as e:
+            # This is NOT SSO expiry; still useful to stop early if you want.
+            bad.append((p, f"Profile not found: {e}"))
+            continue
+
+        try:
+            s.client("sts").get_caller_identity()
+        except Exception as e:
+            # Keep only auth/SSO style failures (or keep all failures—your choice)
+            bad.append((p, friendly_aws_auth_error(e, p)))
+
+    if bad:
+        lines = ["SSO / credential preflight failed. Log into AWS SSO and re-run.", ""]
+        # Provide a clear command + list which profiles failed
+        lines.append("Fix (run these):")
+        for prof, _ in bad:
+            lines.append(f"  aws sso login --profile {prof}")
+
+        lines.append("")
+        lines.append("Details:")
+        for prof, msg in bad:
+            lines.append(f"- {prof}: {msg}")
+
+        fatal("\n".join(lines))
 
 
 def friendly_aws_auth_error(e: Exception, profile: str) -> str:
@@ -507,7 +557,6 @@ def main():
 
     # Display the welcome banner
     welcomebanner()
-
     if options.reports:
         reports_answer = options.reports
     else:
@@ -547,8 +596,6 @@ def main():
             show_details = input("Show server details (y/n): ")
             print(Fore.RESET)
 
-        # Grab variables from initialize
-        today, aws_env_list, output_file, _ = initialize(interactive, aws_account)
 
         # Read account info from the accounts list file
         account_names, account_numbers = read_account_info(aws_env_list)
@@ -617,6 +664,8 @@ def main():
         # Grab variables from initialize
         today, aws_env_list, output_file, _ = initialize(interactive, aws_account)
         account_names, account_numbers = read_account_info(aws_env_list)
+        # Preflight before doing any scanning
+        preflight_all_sso_or_fail(account_names)
         for (aws_account, aws_account_number) in zip(account_names, account_numbers):
             message = f"Working in AWS Account: {aws_account}."
             print(Fore.YELLOW)
