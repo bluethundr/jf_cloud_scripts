@@ -12,6 +12,7 @@ from email.mime.application import MIMEApplication
 from banners import banner
 from aws_partition import get_partition, is_gov
 from ec2_mongo import insert_coll, mongo_export_to_file, delete_from_collection
+from botocore.config import Config
 from botocore.exceptions import (
     ClientError,
     ProfileNotFound,
@@ -19,6 +20,8 @@ from botocore.exceptions import (
     UnauthorizedSSOTokenError,
     SSOTokenLoadError,
     TokenRetrievalError,
+    SSLError,
+    EndpointConnectionError
 )
 
 # Initialize the color output with colorama
@@ -30,6 +33,13 @@ def _handle_sigint(sig, frame):
     banner("Interrupted (Ctrl+C). Exiting cleanly.")
     print(Fore.RESET)
     raise SystemExit(130)
+
+# Define Config
+config = Config(
+    retries={"max_attempts": 8, "mode": "standard"},
+    connect_timeout=5,
+    read_timeout=30,
+)
 
 # Call the sigint function
 signal.signal(signal.SIGINT, _handle_sigint)
@@ -92,6 +102,37 @@ def arguments():
 
     options = parser.parse_args()
     return options
+## Define regions
+DEFAULT_REGIONS_COMMERCIAL = [
+    "us-east-1",
+    "us-east-2",
+    "us-west-1",
+    "us-west-2",
+]
+
+OPTIONAL_REGIONS_COMMERCIAL = [
+    "af-south-1",
+    "ap-east-1",
+    "ap-south-2",
+    "ap-southeast-3",
+    "ap-southeast-4",
+    "eu-central-2",
+    "eu-south-1",
+    "eu-south-2",
+    "il-central-1",
+    "me-central-1",
+    "me-south-1",
+    "mx-central-1",
+]
+
+DEFAULT_REGIONS_GOV = [
+    "us-gov-west-1",
+    "us-gov-east-1",
+]
+
+EXCLUDED_COMMERCIAL_REGIONS = {
+    "me-south-1",
+}
 
 ### Utility Functions
 #Banners
@@ -275,15 +316,6 @@ def read_account_info(aws_env_list):
             account_numbers.append(account_number)
     return account_names, account_numbers
 
-# Report number of instances in an account
-def report_instance_stats(instance_count: int, aws_account: str, account_found: bool) -> None:
-    if not account_found:
-        return
-    noun = "instance" if instance_count == 1 else "instances"
-    verb = "is" if instance_count == 1 else "are"
-    none = "no" if instance_count == 0 else str(instance_count)
-    banner(f"There {verb} {none} EC2 {noun} in AWS Account: {aws_account}.")
-
 # Distinguish between gov and commercial accounts
 def report_gov_or_comm(aws_account):
     if is_gov(aws_account):
@@ -293,19 +325,31 @@ def report_gov_or_comm(aws_account):
         message = "Verified: This is a commercial account."
         banner(message)
 
+# Report number of instances in an account
+def report_instance_stats(instance_count: int, aws_account: str, account_found: bool) -> None:
+    if not account_found:
+        return
+    noun = "instance" if instance_count == 1 else "instances"
+    verb = "is" if instance_count == 1 else "are"
+    none = "no" if instance_count == 0 else str(instance_count)
+    banner(f"There {verb} {none} EC2 {noun} in AWS Account: {aws_account}.")
+
 # Set the regions
 def set_regions(active_session_object):
-    # This will now work because 'active_session_object' is a Session, not a string
     sts_info = active_session_object.client('sts').get_caller_identity()
     partition = sts_info['Arn'].split(':')[1]
+
     print(Fore.GREEN)
-    banner("Getting the regions dynamically...")
+    banner("Getting the regions...")
     print(Fore.RESET)
 
     home = 'us-gov-west-1' if partition == 'aws-us-gov' else 'us-east-1'
 
-    ec2_discovery = active_session_object.client('ec2', region_name=home)
+    ec2_discovery = active_session_object.client('ec2', region_name=home, config=config)
     active_regions = [r['RegionName'] for r in ec2_discovery.describe_regions(AllRegions=False)['Regions']]
+
+    if partition != 'aws-us-gov':
+        active_regions = [r for r in active_regions if r not in EXCLUDED_COMMERCIAL_REGIONS]
 
     return active_regions
 
@@ -372,6 +416,7 @@ def send_email(aws_accounts_answer, aws_account, aws_account_number, interactive
         banner(message)
     print(Fore.RESET)
 
+
 # Convert CSV to HTML
 def convert_csv_to_html_table(output_file, today, interactive, aws_account):
     output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html')
@@ -423,29 +468,32 @@ def list_instances(session_obj, aws_account, aws_account_number, interactive, re
     print(Fore.CYAN)
     report_gov_or_comm(aws_account)
     print(Fore.RESET)
-
     for region in regions:
-        # Create the regional EC2 client from the *validated* session_obj
-        try:
-            ec2 = session_obj.client("ec2", region_name=region)
-            account_found = True
-        except Exception as e:
-            # Fail immediately (expired SSO, bad creds, etc.)
-            fatal(f"Failed to create EC2 client in {aws_account}/{region}:\n{friendly_aws_auth_error(e, aws_account)}")
+        response = None
 
-        print(Fore.GREEN)
-        banner(f"* Region: {region} in {aws_account}: ({aws_account_number}) *")
-        print(Fore.RESET)
+        for attempt in range(1, 4):
+            try:
+                ec2 = session_obj.client("ec2", region_name=region, config=config)
+                response = ec2.describe_instances()
+                break
+            except SSLError as e:
+                if attempt == 3:
+                    print(f"SSL/TLS failed in {aws_account}/{region}: {e}")
+                else:
+                    time.sleep(2 ** attempt)
+            except EndpointConnectionError as e:
+                print(f"Endpoint connection failed in {aws_account}/{region}: {e}")
+                break
+            except ClientError as e:
+                print(f"AWS client error in {aws_account}/{region}: {e}")
+                break
 
-        # Call describe_instances (fail immediately if it errors)
-        try:
-            instance_list = ec2.describe_instances()
-        except Exception as e:
-            fatal(f"describe_instances failed in {aws_account}/{region}:\n{friendly_aws_auth_error(e, aws_account)}")
+        if response is None:
+            continue
 
         # Process instances (don’t hide errors; fail with banner)
         try:
-            for reservation in instance_list.get("Reservations", []):
+            for reservation in response.get("Reservations", []):
                 for inst in reservation.get("Instances", []):
                     instance_count += 1
 
@@ -588,6 +636,9 @@ def main():
             print(Fore.YELLOW)
             aws_account = input("Enter the name of the AWS account you'll be working in: ")
             print(Fore.RESET)
+
+        # Set variables
+        today, aws_env_list, output_file, _ = initialize(interactive, aws_account)
 
         if options.verbose:
             show_details = options.verbose
