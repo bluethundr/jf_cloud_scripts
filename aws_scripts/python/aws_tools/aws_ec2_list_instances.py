@@ -102,6 +102,7 @@ def arguments():
 
     options = parser.parse_args()
     return options
+
 ## Define regions
 DEFAULT_REGIONS_COMMERCIAL = [
     "us-east-1",
