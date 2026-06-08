@@ -437,11 +437,61 @@ def domain_has_mx_record(domain: str) -> bool:
         return True
     except Exception:
         return False
-def yellow_input(prompt: str) -> str:
-    print(Fore.YELLOW + prompt, end="")
+
+def color_input(color: str, prompt: str) -> str:
+    print(color + prompt, end="")
     answer = input()
     print(Fore.RESET, end="")
     return answer
+
+def yellow_input(prompt: str) -> str:
+    return color_input(Fore.YELLOW, prompt)
+
+
+def green_input(prompt: str) -> str:
+    return color_input(Fore.GREEN, prompt)
+
+
+def color_banner(color: str, message: str) -> None:
+    print(color)
+    banner(message)
+    print(Fore.RESET)
+
+
+def yellow_banner(message: str) -> None:
+    color_banner(Fore.YELLOW, message)
+
+
+def green_banner(message: str) -> None:
+    color_banner(Fore.GREEN, message)
+
+
+def cyan_banner(message: str) -> None:
+    color_banner(Fore.CYAN, message)
+
+
+def red_banner(message: str) -> None:
+    color_banner(Fore.RED, message)
+
+
+def color_print(color: str, message: str) -> None:
+    print(color + message + Fore.RESET)
+
+
+def yellow_print(message: str) -> None:
+    color_print(Fore.YELLOW, message)
+
+
+def green_print(message: str) -> None:
+    color_print(Fore.GREEN, message)
+
+
+def cyan_print(message: str) -> None:
+    color_print(Fore.CYAN, message)
+
+
+def red_print(message: str) -> None:
+    color_print(Fore.RED, message)
 
 def validate_email_recipient(email_addr: str, interactive_confirm: bool = True) -> str | None:
     email_addr = email_addr.strip()
@@ -491,7 +541,7 @@ def validate_email_recipient(email_addr: str, interactive_confirm: bool = True) 
 
 def prompt_for_valid_email(prompt="Enter the recipient's email address: ") -> str:
     while True:
-        email_addr = input(prompt)
+        email_addr = yellow_input(prompt)
         validated_email = validate_email_recipient(email_addr, interactive_confirm=True)
 
         if validated_email:
@@ -514,7 +564,7 @@ def send_email(aws_accounts_answer, aws_account, aws_account_number, interactive
         first_name = options.first_name
         print(Fore.RESET)
     else:
-        first_name = input("Enter the recipient's first name: ")
+        first_name = yellow_input("Enter the recipient's first name: ")
 
     if options.email_recipient:
         to_addr = validate_email_recipient(
@@ -762,17 +812,13 @@ def main():
     if options.reports:
         reports_answer = options.reports
     else:
-        print(Fore.YELLOW)
-        reports_answer = input("Print reports (y/n): ")
-        print(Fore.RESET)
+        reports_answer = yellow_input("Print reports (y/n): ")
 
     if options.all_accounts:
         aws_accounts_answer = options.all_accounts
     else:
         ## Select one or many accounts
-        print(Fore.YELLOW)
-        aws_accounts_answer = input("List instances in one or all accounts: ")
-        print(Fore.RESET)
+        aws_accounts_answer = yellow_input("List instances in one or all accounts: ")
 
     # Set interacive variable to indicate one or many accounts
     if '1' in aws_accounts_answer.lower() or 'one' in aws_accounts_answer.lower():
@@ -787,9 +833,7 @@ def main():
         if options.account_name:
             aws_account = options.account_name
         else:
-            print(Fore.YELLOW)
-            aws_account = input("Enter the name of the AWS account you'll be working in: ")
-            print(Fore.RESET)
+            aws_account = yellow_input("Enter the name of the AWS account you'll be working in: ")
 
         # Set variables
         today, aws_env_list, output_file, _ = initialize(interactive, aws_account)
@@ -797,9 +841,7 @@ def main():
         if options.verbose:
             show_details = options.verbose
         else:
-            print(Fore.YELLOW)
-            show_details = input("Show server details (y/n): ")
-            print(Fore.RESET)
+            show_details = yellow_input("Show server details (y/n): ")
 
 
         # Read account info from the accounts list file
@@ -838,18 +880,14 @@ def main():
             message = "Send an Email"
             banner(message)
             if options.send_email:
-                email_answer = options.send_email
+                email_answer = yellow_input("Send an email (y/n): ")
             else:
-                print(Fore.YELLOW)
-                email_answer = input("Send an email (y/n): ")
+                email_answer = yellow_input("Send an email (y/n): ")
 
             if 'yes' in email_answer or 'y' in email_answer:
                 send_email(aws_accounts_answer, aws_account, aws_account_number, interactive)
             else:
-                message = "Okay. Not sending an email."
-                print(Fore.YELLOW)
-                banner(message)
-            print(Fore.RESET)
+                yellow_banner("Okay. Not sending an email.")
 
             try:
                 with open(htmlfile, 'r') as htmlfile:
@@ -901,9 +939,7 @@ def main():
             if email_answer.lower() == 'y' or email_answer == 'yes':
                 send_email(aws_accounts_answer, aws_account, aws_account_number, interactive)
             else:
-                message = "Okay. Not sending an email."
-                print(Fore.YELLOW)
-                banner(message)
+                yellow_banner("Okay. Not sending an email.")
             print(Fore.RESET)
 
             with open(htmlfile, 'r') as htmlfile:
