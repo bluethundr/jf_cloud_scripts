@@ -438,16 +438,60 @@ def domain_has_mx_record(domain: str) -> bool:
     except Exception:
         return False
 
-def yellow_banner(message: str) -> None:
-    print(Fore.YELLOW)
-    banner(message)
-    print(Fore.RESET)
-
-def yellow_input(prompt: str) -> str:
-    print(Fore.YELLOW + prompt, end="")
+def color_input(color: str, prompt: str) -> str:
+    print(color + prompt, end="")
     answer = input()
     print(Fore.RESET, end="")
     return answer
+
+def yellow_input(prompt: str) -> str:
+    return color_input(Fore.YELLOW, prompt)
+
+
+def green_input(prompt: str) -> str:
+    return color_input(Fore.GREEN, prompt)
+
+
+def color_banner(color: str, message: str) -> None:
+    print(color)
+    banner(message)
+    print(Fore.RESET)
+
+
+def yellow_banner(message: str) -> None:
+    color_banner(Fore.YELLOW, message)
+
+
+def green_banner(message: str) -> None:
+    color_banner(Fore.GREEN, message)
+
+
+def cyan_banner(message: str) -> None:
+    color_banner(Fore.CYAN, message)
+
+
+def red_banner(message: str) -> None:
+    color_banner(Fore.RED, message)
+
+
+def color_print(color: str, message: str) -> None:
+    print(color + message + Fore.RESET)
+
+
+def yellow_print(message: str) -> None:
+    color_print(Fore.YELLOW, message)
+
+
+def green_print(message: str) -> None:
+    color_print(Fore.GREEN, message)
+
+
+def cyan_print(message: str) -> None:
+    color_print(Fore.CYAN, message)
+
+
+def red_print(message: str) -> None:
+    color_print(Fore.RED, message)
 
 def validate_email_recipient(email_addr: str, interactive_confirm: bool = True) -> str | None:
     email_addr = email_addr.strip()
