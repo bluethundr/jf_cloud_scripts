@@ -16,7 +16,7 @@ init()
 ## Get MongoDB username and pass from environment variables
 user_name = os.environ.get('MONGO_USER_NAME')
 user_pass = os.environ.get('MONGO_USER_PASS')
-cluster_hosts = os.environ.get('MONGO_GATEWAY')
+cluster_hosts = os.environ.get('MONGO_HAPROXY')
 
 
 ### DB Functions
@@ -24,7 +24,7 @@ def connect_db():
     target = cluster_hosts
 
     if not target:
-        print("pymongo ERROR: MONGO_GATEWAY is not set.")
+        print("pymongo ERROR: MONGO_HAPROXY is not set.")
         return None
 
     if not user_name:
@@ -401,7 +401,7 @@ def insert_coll(mydict):
             insert_collection.database.client,
             mydb_name,
             insert_collection.name,
-            shard_key_field="instance_id"
+            shard_key_field="Instance ID"
         )
     except Exception as e:
         print(f"An error occurred: {e}")

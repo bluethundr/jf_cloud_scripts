@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Import modules
-import boto3, botocore, objectpath, csv, smtplib, os, argparse, getpass, json, keyring, requests, time, signal
+import boto3, botocore, objectpath, csv, smtplib, os, argparse, getpass, json, keyring, requests, time, signal, re, difflib
+import dns.resolver
 from html import escape
 from datetime import datetime
 from colorama import init, Fore
@@ -134,6 +135,15 @@ DEFAULT_REGIONS_GOV = [
 EXCLUDED_COMMERCIAL_REGIONS = {
     "me-south-1",
 }
+
+## Check email domains regex
+EMAIL_RE = re.compile(
+    r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+)
+
+
+def is_valid_email_syntax(email_addr: str) -> bool:
+    return bool(EMAIL_RE.match(email_addr.strip()))
 
 ### Utility Functions
 #Banners
@@ -354,6 +364,140 @@ def set_regions(active_session_object):
 
     return active_regions
 
+def make_session_or_skip(profile: str) -> boto3.Session | None:
+    """
+    Same as above, but returns None so caller can skip this account.
+    """
+    try:
+        s = boto3.Session(profile_name=profile)
+    except ProfileNotFound as e:
+        banner(
+            f"Skipping '{profile}': profile not found (misspelled / missing config).\n"
+            f"Details: {e}"
+        )
+        return None
+
+    try:
+        s.client("sts").get_caller_identity()
+    except Exception as e:
+        banner(f"Skipping '{profile}': {friendly_aws_auth_error(e, profile)}")
+        return None
+
+    return s
+
+COMMON_EMAIL_DOMAINS = {
+    "gmail.com",
+    "yahoo.com",
+    "outlook.com",
+    "hotmail.com",
+    "icloud.com",
+    "aol.com",
+    "proton.me",
+    "protonmail.com",
+    "comcast.net",
+    "verizon.net",
+}
+
+COMMON_EMAIL_DOMAIN_FIXES = {
+    "gmail.om": "gmail.com",
+    "gmal.com": "gmail.com",
+    "gmial.com": "gmail.com",
+    "gmail.con": "gmail.com",
+    "gmaisl.om": "gmail.com",
+    "yahoo.con": "yahoo.com",
+    "outlook.con": "outlook.com",
+    "hotmail.con": "hotmail.com",
+}
+
+EMAIL_RE = re.compile(
+    r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+)
+
+def is_valid_email_syntax(email_addr: str) -> bool:
+    return bool(EMAIL_RE.match(email_addr.strip()))
+
+
+def suggest_email_domain(domain: str) -> str | None:
+    matches = difflib.get_close_matches(
+        domain.lower().strip(),
+        COMMON_EMAIL_DOMAINS,
+        n=1,
+        cutoff=0.72
+    )
+
+    if matches:
+        return matches[0]
+
+    return None
+
+
+def domain_has_mx_record(domain: str) -> bool:
+    try:
+        dns.resolver.resolve(domain, "MX")
+        return True
+    except Exception:
+        return False
+def yellow_input(prompt: str) -> str:
+    print(Fore.YELLOW + prompt, end="")
+    answer = input()
+    print(Fore.RESET, end="")
+    return answer
+
+def validate_email_recipient(email_addr: str, interactive_confirm: bool = True) -> str | None:
+    email_addr = email_addr.strip()
+
+    if not is_valid_email_syntax(email_addr):
+        print(Fore.RED + f"Invalid email address format: {email_addr}" + Fore.RESET)
+        return None
+
+    local_part, domain = email_addr.rsplit("@", 1)
+    domain = domain.lower()
+
+    suggested_domain = suggest_email_domain(domain)
+
+    if suggested_domain and suggested_domain != domain:
+        suggested_email = f"{local_part}@{suggested_domain}"
+
+        if interactive_confirm:
+            answer = yellow_input(
+                f"Suspicious email domain '{domain}'. Did you mean {suggested_email}? (y/n): "
+            ).strip().lower()
+            if answer in {"y", "yes"}:
+                email_addr = suggested_email
+                domain = suggested_domain
+            else:
+                return None
+        else:
+            banner(f"Suspicious email domain '{domain}'. Did you mean {suggested_email}?")
+            return None
+
+    if not domain_has_mx_record(domain):
+        print(
+            Fore.RED +
+            f"The domain '{domain}' does not appear to accept email." +
+            Fore.RESET
+        )
+        return None
+
+    if interactive_confirm:
+        confirm = yellow_input(
+            f"Final recipient will be: {email_addr}. Send to this address? (y/n): "
+        ).strip().lower()
+        if confirm not in {"y", "yes"}:
+            return None
+
+    return email_addr
+
+
+def prompt_for_valid_email(prompt="Enter the recipient's email address: ") -> str:
+    while True:
+        email_addr = input(prompt)
+        validated_email = validate_email_recipient(email_addr, interactive_confirm=True)
+
+        if validated_email:
+            return validated_email
+
+        print(Fore.YELLOW + "Please enter the recipient email address again." + Fore.RESET)
 
 ### Email function
 def send_email(aws_accounts_answer, aws_account, aws_account_number, interactive):
@@ -373,9 +517,16 @@ def send_email(aws_accounts_answer, aws_account, aws_account_number, interactive
         first_name = input("Enter the recipient's first name: ")
 
     if options.email_recipient:
-        to_addr = options.email_recipient
+        to_addr = validate_email_recipient(
+            options.email_recipient,
+            interactive_confirm=True
+        )
+
+        if not to_addr:
+            banner("Invalid, suspicious, or unconfirmed email recipient. Email was not sent.")
+            return
     else:
-        to_addr = input("Enter the recipient's email address: ")
+        to_addr = prompt_for_valid_email()
 
     from_addr = 'jokefire.noreply@gmail.com'
     if aws_accounts_answer == 'one':
@@ -411,7 +562,9 @@ def send_email(aws_accounts_answer, aws_account, aws_account_number, interactive
         server.login(gmail_user, gmail_password)
         server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
         message = f"Email was sent to: {to_addr}"
+        print(Fore.YELLOW)
         banner(message)
+        print(Fore.RESET)
     except Exception as error:
         message = f"Exception: {error}\nEmail was not sent."
         banner(message)
