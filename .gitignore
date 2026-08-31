@@ -1,5 +1,9 @@
+
 *.pyc
 __pycache__/
 .vscode/
 aws_scripts/output_files/
 aws_scripts/source_files/
+.idea/jf_cloud_scripts.iml
+.idea/misc.xml
+

@@ -1,49 +1,296 @@
 #!/usr/bin/env python3
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # Import modules
-import boto3, botocore, objectpath, csv, smtplib, os, argparse, getpass, json, keyring, requests, time
+import boto3, botocore, objectpath, csv, smtplib, os, argparse, getpass, json, keyring, requests, time, signal, re, difflib
+import dns.resolver
 from html import escape
-from requests.auth import HTTPBasicAuth
 from datetime import datetime
 from colorama import init, Fore
 from os.path import basename
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
-from ec2_mongo import insert_coll,mongo_export_to_file,delete_from_collection
+from banners import banner
+from aws_partition import get_partition, is_gov
+from ec2_mongo import insert_coll, mongo_export_to_file, delete_from_collection
+from botocore.config import Config
+from botocore.exceptions import (
+    ClientError,
+    ProfileNotFound,
+    NoCredentialsError,
+    UnauthorizedSSOTokenError,
+    SSOTokenLoadError,
+    TokenRetrievalError,
+    SSLError,
+    EndpointConnectionError
+)
 
-# Initialize the color ouput with colorama
+# Initialize the color output with colorama
 init()
 
-### Confluence URLs
-BASE_URL = "https://confluence.company.net:8443/rest/api/content"
-VIEW_URL = "https://confluence.company.net:8443/pages/viewpage.action?pageId="
+# Handles ctl+c anywhere
+def _handle_sigint(sig, frame):
+    print(Fore.YELLOW)
+    banner("Interrupted (Ctrl+C). Exiting cleanly.")
+    print(Fore.RESET)
+    raise SystemExit(130)
 
+# Define Config
+config = Config(
+    retries={"max_attempts": 8, "mode": "standard"},
+    connect_timeout=5,
+    read_timeout=30,
+)
+
+# Call the sigint function
+signal.signal(signal.SIGINT, _handle_sigint)
+
+### Cli arguments
+def arguments():
+    parser = argparse.ArgumentParser(description='This is a program that lists the servers in EC2')
+
+    parser.add_argument(
+        "-n",
+        "--account_name",
+        type=str,
+        default=None,
+        nargs='?',
+        help="Name of the AWS account you'll be working in")
+
+    parser.add_argument(
+        "-c",
+        "--all_accounts",
+        type=str,
+        default=None,
+        nargs='?',
+        help="Process one or all accounts")
+
+    parser.add_argument(
+        "-e",
+        "--send_email",
+        type=str,
+        help="Send an email")
+
+    parser.add_argument(
+        "-r",
+        "--email_recipient",
+        type=str,
+        help="Who will receive the email")
+
+    parser.add_argument(
+        "-g",
+        "--first_name",
+        type=str,
+        help="First (given) name of the person receving the email")
+
+    parser.add_argument(
+        "-i",
+        "--run_again",
+        type=str,
+        help="Run again")
+
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        type=str,
+        help="Write the EC2 instances to the screen")
+
+    parser.add_argument(
+        "-o",
+        "--reports",
+        type=str,
+        help="Run reports")
+
+    options = parser.parse_args()
+    return options
+
+## Define regions
+DEFAULT_REGIONS_COMMERCIAL = [
+    "us-east-1",
+    "us-east-2",
+    "us-west-1",
+    "us-west-2",
+]
+
+OPTIONAL_REGIONS_COMMERCIAL = [
+    "af-south-1",
+    "ap-east-1",
+    "ap-south-2",
+    "ap-southeast-3",
+    "ap-southeast-4",
+    "eu-central-2",
+    "eu-south-1",
+    "eu-south-2",
+    "il-central-1",
+    "me-central-1",
+    "me-south-1",
+    "mx-central-1",
+]
+
+DEFAULT_REGIONS_GOV = [
+    "us-gov-west-1",
+    "us-gov-east-1",
+]
+
+EXCLUDED_COMMERCIAL_REGIONS = {
+    "me-south-1",
+}
+
+## Check email domains regex
+EMAIL_RE = re.compile(
+    r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+)
+
+
+def is_valid_email_syntax(email_addr: str) -> bool:
+    return bool(EMAIL_RE.match(email_addr.strip()))
 
 ### Utility Functions
+#Banners
 def welcomebanner():
     # Print the welcome banner
     print(Fore.CYAN)
     message = "*                     List AWS EC2 Instances                     *"
-    banner(message, "*")
+    banner(message)
     print(Fore.RESET)
 
 def endbanner():
     print(Fore.CYAN)
     message = "*   List AWS Instance Operations Are Complete   *"
-    banner(message, "*")
+    banner(message)
     print(Fore.RESET)
 
-def banner(message, border='-'):
-    line = border * len(message)
-    print(line)
-    print(message)
-    print(line)
+# Fail gracefully on import errors
+def fatal(msg: str, code: int = 1) -> None:
+    print(Fore.RED)
+    banner(msg)
+    print(Fore.RESET)
+    raise SystemExit(code)
 
-def authenticate():
-    auth = get_login()
-    return auth
+# Check all logins before the loop
+def preflight_all_sso_or_fail(profiles: list[str]) -> None:
+    """
+    Validate that all profiles can resolve creds (SSO) BEFORE scanning.
+    If any profile fails due to expired/missing SSO, exit with one banner.
+    """
+    bad: list[tuple[str, str]] = []
 
+    for profile in profiles:
+        p = profile.strip()
+        if not p:
+            continue
+
+        try:
+            s = boto3.Session(profile_name=p)
+        except ProfileNotFound as e:
+            # This is NOT SSO expiry; still useful to stop early if you want.
+            bad.append((p, f"Profile not found: {e}"))
+            continue
+
+        try:
+            s.client("sts").get_caller_identity()
+        except Exception as e:
+            # Keep only auth/SSO style failures (or keep all failures—your choice)
+            bad.append((p, friendly_aws_auth_error(e, p)))
+
+    if bad:
+        lines = ["SSO / credential preflight failed. Log into AWS SSO and re-run.", ""]
+        # Provide a clear command + list which profiles failed
+        lines.append("Fix (run these):")
+        for prof, _ in bad:
+            lines.append(f"  aws sso login --profile {prof}")
+
+        lines.append("")
+        lines.append("Details:")
+        for prof, msg in bad:
+            lines.append(f"- {prof}: {msg}")
+
+        fatal("\n".join(lines))
+
+
+def friendly_aws_auth_error(e: Exception, profile: str) -> str:
+    """
+    Convert common boto/botocore auth problems (especially SSO expiry) into a human message.
+    """
+    # SSO token / login problems
+    if isinstance(e, (UnauthorizedSSOTokenError, SSOTokenLoadError, TokenRetrievalError)):
+        return (
+            f"AWS SSO credentials are missing/expired for profile '{profile}'.\n"
+            f"Fix: run `aws sso login --profile {profile}` and re-run the script."
+        )
+
+    # No credentials found at all
+    if isinstance(e, NoCredentialsError):
+        return (
+            f"No AWS credentials found for profile '{profile}'.\n"
+            f"If this is SSO, run `aws sso login --profile {profile}`."
+        )
+
+    # STS/SDK says “no auth / expired”
+    if isinstance(e, ClientError):
+        code = e.response.get("Error", {}).get("Code", "")
+        msg = e.response.get("Error", {}).get("Message", "")
+        if code in {"ExpiredToken", "InvalidClientTokenId", "UnrecognizedClientException"}:
+            return (
+                f"AWS credentials are expired/invalid for profile '{profile}'. ({code})\n"
+                f"Fix: run `aws sso login --profile {profile}`.\n"
+                f"Details: {msg}"
+            )
+        if code in {"AccessDenied", "AccessDeniedException"}:
+            return (
+                f"Access denied for profile '{profile}'. ({code})\n"
+                f"Details: {msg}"
+            )
+
+    # Fallback
+    return f"AWS error for profile '{profile}': {e}"
+
+
+def make_session_or_fail(profile: str) -> boto3.Session:
+    """
+    (a) Handles misspelled profile (ProfileNotFound)
+    (b) Handles expired SSO / creds by probing STS once
+    """
+    try:
+        s = boto3.Session(profile_name=profile)
+    except ProfileNotFound as e:
+        fatal(
+            f"Profile '{profile}' was not found (misspelled account name / missing AWS config).\n"
+            f"Fix: check your aws_accounts_list.csv and `aws configure list-profiles`.\n"
+            f"Details: {e}"
+        )
+
+    # Probe STS to force credential resolution now (instead of failing later in random places)
+    try:
+        s.client("sts").get_caller_identity()
+    except Exception as e:
+        fatal(friendly_aws_auth_error(e, profile))
+
+    return s
+
+
+def make_session_or_skip(profile: str) -> boto3.Session | None:
+    """
+    Same as above, but returns None so caller can skip this account (useful for 'all accounts' mode).
+    """
+    try:
+        s = boto3.Session(profile_name=profile)
+    except ProfileNotFound as e:
+        banner(
+            f"Skipping '{profile}': profile not found (misspelled / missing config).\n"
+            f"Details: {e}"
+        )
+        return None
+
+    try:
+        s.client("sts").get_caller_identity()
+    except Exception as e:
+        banner(f"Skipping '{profile}': {friendly_aws_auth_error(e, profile)}")
+        return None
+
+    return s
+
+# Initialize the main body of the script
 def initialize(interactive, aws_account):
     # Set the date
     today = datetime.today()
@@ -54,17 +301,19 @@ def initialize(interactive, aws_account):
     output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'csv', '')
     ### Interactive == 1  - user specifies an account
     if interactive == 1:
-        output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today +'.csv')
+        output_file = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today + '.csv')
         output_file_name = 'aws-instance-list-' + aws_account + '-' + today + '.csv'
     else:
-        output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today +'.csv')
-        output_file_name = 'aws-instance-master-list-' + today +'.csv'
+        output_file = os.path.join(output_dir, 'aws-instance-master-list-' + today + '.csv')
+        output_file_name = 'aws-instance-master-list-' + today + '.csv'
     return today, aws_env_list, output_file, output_file_name
 
+# Exit the program
 def exit_program():
     endbanner()
     exit()
 
+# Read acccount info
 def read_account_info(aws_env_list):
     account_names = []
     account_numbers = []
@@ -72,153 +321,186 @@ def read_account_info(aws_env_list):
         csv_reader = csv.reader(csv_file, delimiter=',')
         next(csv_reader)
         for row in csv_reader:
-                account_name = str(row[0])
-                account_number = str(row[1])
-                account_names.append(account_name)
-                account_numbers.append(account_number)
+            account_name = str(row[0]).strip()
+            account_number = str(row[1]).strip()
+            account_names.append(account_name)
+            account_numbers.append(account_number)
     return account_names, account_numbers
 
-def report_instance_stats(instance_count, aws_account, account_found):
-    if account_found == 'yes':
-        if instance_count == 0:
-            message = f"There are no EC2 instances in AWS Account: {aws_account}."
-            banner(message)
-        elif instance_count == 1:
-            message = f"There is: {instance_count} EC2 instance in AWS Account: {aws_account}."
-            banner(message)
-        else:
-            message = f"There are: {instance_count} EC2 instances in AWS Account: {aws_account}."
-            banner(message)
-
-def report_gov_or_comm(aws_account, messge):
-    if 'gov' in aws_account and not 'admin' in aws_account:
-        message = "This is a Govcloud account."
+# Distinguish between gov and commercial accounts
+def report_gov_or_comm(aws_account):
+    if is_gov(aws_account):
+        message = "Verified: This is a GovCloud account."
         banner(message)
     else:
-        message = "This is a commercial account."
+        message = "Verified: This is a commercial account."
         banner(message)
 
-def set_regions(aws_account):
+# Report number of instances in an account
+def report_instance_stats(instance_count: int, aws_account: str, account_found: bool) -> None:
+    if not account_found:
+        return
+    noun = "instance" if instance_count == 1 else "instances"
+    verb = "is" if instance_count == 1 else "are"
+    none = "no" if instance_count == 0 else str(instance_count)
+    banner(f"There {verb} {none} EC2 {noun} in AWS Account: {aws_account}.")
+
+# Set the regions
+def set_regions(active_session_object):
+    sts_info = active_session_object.client('sts').get_caller_identity()
+    partition = sts_info['Arn'].split(':')[1]
+
     print(Fore.GREEN)
-    message = f"Getting the regions in {aws_account} "
-    banner(message, "*")
+    banner("Getting the regions...")
     print(Fore.RESET)
-    regions = []
-    if 'gov' in aws_account and not 'admin' in aws_account:
-        session = boto3.Session(profile_name=aws_account,region_name='us-gov-west-1')
-        ec2_client = session.client('ec2')
-        regions = [reg['RegionName'] for reg in ec2_client.describe_regions()['Regions']]
-    else:
-        session = boto3.Session(profile_name=aws_account,region_name='us-east-1')
-        ec2_client = session.client('ec2')
-        regions = [reg['RegionName'] for reg in ec2_client.describe_regions()['Regions']]
-    return regions
 
-### Cli arguments
-def arguments():
-    parser = argparse.ArgumentParser(description='This is a program that lists the servers in EC2')
+    home = 'us-gov-west-1' if partition == 'aws-us-gov' else 'us-east-1'
 
-    parser.add_argument(
-    "-u",
-    "--user",
-    default = getpass.getuser(),
-    help = "Specify the username to log into Confluence")
+    ec2_discovery = active_session_object.client('ec2', region_name=home, config=config)
+    active_regions = [r['RegionName'] for r in ec2_discovery.describe_regions(AllRegions=False)['Regions']]
 
-    parser.add_argument(
-    "-d",
-    "--password",
-    help = "Specify the user's password")
+    if partition != 'aws-us-gov':
+        active_regions = [r for r in active_regions if r not in EXCLUDED_COMMERCIAL_REGIONS]
 
-    parser.add_argument(
-    "-t",
-    "--title",
-    default = None,
-    type = str,
-    help = "Specify a new title")
+    return active_regions
 
-    parser.add_argument(
-    "-f",
-    "--file",
-    default = None,
-    type = str,
-    help = "Write the contents of FILE to the confluence page")
+def make_session_or_skip(profile: str) -> boto3.Session | None:
+    """
+    Same as above, but returns None so caller can skip this account.
+    """
+    try:
+        s = boto3.Session(profile_name=profile)
+    except ProfileNotFound as e:
+        banner(
+            f"Skipping '{profile}': profile not found (misspelled / missing config).\n"
+            f"Details: {e}"
+        )
+        return None
 
-    parser.add_argument(
-    "--html",
-    type = str,
-    default = None,
-    nargs = '?',
-    help = "Write the immediate html string to confluence page")
+    try:
+        s.client("sts").get_caller_identity()
+    except Exception as e:
+        banner(f"Skipping '{profile}': {friendly_aws_auth_error(e, profile)}")
+        return None
 
-    parser.add_argument(
-    "-n",
-    "--account_name",
-    type = str,
-    default = None,
-    nargs = '?',
-    help = "Name of the AWS account you'll be working in")
+    return s
 
-    parser.add_argument(
-    "-c",
-    "--all_accounts",
-    type = str,
-    default = None,
-    nargs = '?',
-    help = "Process one or all accounts")
+COMMON_EMAIL_DOMAINS = {
+    "gmail.com",
+    "yahoo.com",
+    "outlook.com",
+    "hotmail.com",
+    "icloud.com",
+    "aol.com",
+    "proton.me",
+    "protonmail.com",
+    "comcast.net",
+    "verizon.net",
+}
 
-    parser.add_argument(
-    "-p",
-    "--pageid",
-    type = int,
-    help = "Specify the Conflunce page id to overwrite")
+COMMON_EMAIL_DOMAIN_FIXES = {
+    "gmail.om": "gmail.com",
+    "gmal.com": "gmail.com",
+    "gmial.com": "gmail.com",
+    "gmail.con": "gmail.com",
+    "gmaisl.om": "gmail.com",
+    "yahoo.con": "yahoo.com",
+    "outlook.con": "outlook.com",
+    "hotmail.con": "hotmail.com",
+}
 
-    parser.add_argument(
-    "-e",
-    "--send_email",
-    type = str,
-    help = "Send an email")
+EMAIL_RE = re.compile(
+    r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+)
 
-    parser.add_argument(
-    "-r",
-    "--email_recipient",
-    type = str,
-    help = "Who will receive the email")
+def is_valid_email_syntax(email_addr: str) -> bool:
+    return bool(EMAIL_RE.match(email_addr.strip()))
 
-    parser.add_argument(
-    "-g",
-    "--first_name",
-    type = str,
-    help = "First (given) name of the person receving the email")
 
-    parser.add_argument(
-    "-w",
-    "--write_confluence",
-    type = str,
-    help = "Write to confluence")
+def suggest_email_domain(domain: str) -> str | None:
+    matches = difflib.get_close_matches(
+        domain.lower().strip(),
+        COMMON_EMAIL_DOMAINS,
+        n=1,
+        cutoff=0.72
+    )
 
-    parser.add_argument(
-    "-i",
-    "--run_again",
-    type = str,
-    help = "Run again")
+    if matches:
+        return matches[0]
 
-    parser.add_argument(
-    "-v",
-    "--verbose",
-    type = str,
-    help = "Write the EC2 instances to the screen")
+    return None
 
-    parser.add_argument(
-    "-o",
-    "--reports",
-    type = str,
-    help = "Run reports")
 
-    options = parser.parse_args()
-    return options
+def domain_has_mx_record(domain: str) -> bool:
+    try:
+        dns.resolver.resolve(domain, "MX")
+        return True
+    except Exception:
+        return False
+def yellow_input(prompt: str) -> str:
+    print(Fore.YELLOW + prompt, end="")
+    answer = input()
+    print(Fore.RESET, end="")
+    return answer
+
+def validate_email_recipient(email_addr: str, interactive_confirm: bool = True) -> str | None:
+    email_addr = email_addr.strip()
+
+    if not is_valid_email_syntax(email_addr):
+        print(Fore.RED + f"Invalid email address format: {email_addr}" + Fore.RESET)
+        return None
+
+    local_part, domain = email_addr.rsplit("@", 1)
+    domain = domain.lower()
+
+    suggested_domain = suggest_email_domain(domain)
+
+    if suggested_domain and suggested_domain != domain:
+        suggested_email = f"{local_part}@{suggested_domain}"
+
+        if interactive_confirm:
+            answer = yellow_input(
+                f"Suspicious email domain '{domain}'. Did you mean {suggested_email}? (y/n): "
+            ).strip().lower()
+            if answer in {"y", "yes"}:
+                email_addr = suggested_email
+                domain = suggested_domain
+            else:
+                return None
+        else:
+            banner(f"Suspicious email domain '{domain}'. Did you mean {suggested_email}?")
+            return None
+
+    if not domain_has_mx_record(domain):
+        print(
+            Fore.RED +
+            f"The domain '{domain}' does not appear to accept email." +
+            Fore.RESET
+        )
+        return None
+
+    if interactive_confirm:
+        confirm = yellow_input(
+            f"Final recipient will be: {email_addr}. Send to this address? (y/n): "
+        ).strip().lower()
+        if confirm not in {"y", "yes"}:
+            return None
+
+    return email_addr
+
+
+def prompt_for_valid_email(prompt="Enter the recipient's email address: ") -> str:
+    while True:
+        email_addr = input(prompt)
+        validated_email = validate_email_recipient(email_addr, interactive_confirm=True)
+
+        if validated_email:
+            return validated_email
+
+        print(Fore.YELLOW + "Please enter the recipient email address again." + Fore.RESET)
 
 ### Email function
-def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
+def send_email(aws_accounts_answer, aws_account, aws_account_number, interactive):
     ## Get gmail username and pass from environment variables
     gmail_user = os.environ.get('gmail_user')
     gmail_password = os.environ.get('gmail_password')
@@ -235,17 +517,24 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
         first_name = input("Enter the recipient's first name: ")
 
     if options.email_recipient:
-        to_addr = options.email_recipient
+        to_addr = validate_email_recipient(
+            options.email_recipient,
+            interactive_confirm=True
+        )
+
+        if not to_addr:
+            banner("Invalid, suspicious, or unconfirmed email recipient. Email was not sent.")
+            return
     else:
-        to_addr = input("Enter the recipient's email address: ")
+        to_addr = prompt_for_valid_email()
 
     from_addr = 'jokefire.noreply@gmail.com'
     if aws_accounts_answer == 'one':
         subject = "AWS Instance List: " + aws_account + " (" + aws_account_number + ") " + today
-        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in JF AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The SD Team</font>"
+        content = "<font size=2 face=Verdana color=black>Hello " + first_name + ", <br><br>Enclosed, please find a list of instances in JF AWS Account: " + aws_account + " (" + aws_account_number + ")" + ".<br><br>Regards,<br>The Jokefire Systems Team</font>"
     else:
         subject = "AWS Instance Master List " + today
-        content = "<font size=2 face=Verdana color=black>Hello " +  first_name + ", <br><br>Enclosed, please find a list of instances in all JF AWS accounts.<br><br>Regards,<br>The SD Team</font>"
+        content = "<font size=2 face=Verdana color=black>Hello " + first_name + ", <br><br>Enclosed, please find a list of instances in all JF AWS accounts.<br><br>Regards,<br>The Jokefire Systems Team</font>"
     msg = MIMEMultipart()
     msg['From'] = from_addr
     msg['To'] = to_addr
@@ -273,22 +562,18 @@ def send_email(aws_accounts_answer,aws_account,aws_account_number, interactive):
         server.login(gmail_user, gmail_password)
         server.send_message(msg, from_addr=from_addr, to_addrs=[to_addr])
         message = f"Email was sent to: {to_addr}"
+        print(Fore.YELLOW)
         banner(message)
+        print(Fore.RESET)
     except Exception as error:
         message = f"Exception: {error}\nEmail was not sent."
         banner(message)
     print(Fore.RESET)
 
 
-### Confluence Functions
-import os
-import csv
-from html import escape
-
+# Convert CSV to HTML
 def convert_csv_to_html_table(output_file, today, interactive, aws_account):
     output_dir = os.path.join('..', '..', 'output_files', 'aws_instance_list', 'html')
-    htmlfile = None
-    htmlfile_name = None
     try:
         if interactive == 1:
             htmlfile = os.path.join(output_dir, 'aws-instance-list-' + aws_account + '-' + today + '.html')
@@ -296,7 +581,7 @@ def convert_csv_to_html_table(output_file, today, interactive, aws_account):
         else:
             htmlfile = os.path.join(output_dir, 'aws-instance-master-list-' + today + '.html')
             htmlfile_name = 'aws-instance-master-list-' + today + '.html'
-        
+
         count = 0
         html = ''
         with open(output_file, 'r') as CSVFILE:
@@ -315,7 +600,7 @@ def convert_csv_to_html_table(output_file, today, interactive, aws_account):
                 html += "</tr>"
                 count += 1
             html += "</tbody></table>"
-        
+
         with open(htmlfile, 'w+') as HTMLFILE:
             HTMLFILE.write(html)
     except Exception as e:
@@ -325,235 +610,147 @@ def convert_csv_to_html_table(output_file, today, interactive, aws_account):
     return htmlfile, htmlfile_name
 
 
-def get_page_ancestors(auth, pageid):
-    # Get basic page information plus the ancestors property
-    url = '{base}/{pageid}?expand=ancestors'.format(
-        base = BASE_URL,
-        pageid = pageid)
-    r = requests.get(url, auth = auth)
-    r.raise_for_status()
-    return r.json()['ancestors']
-
-def get_page_info(auth, pageid):
-    url = '{base}/{pageid}'.format(
-        base = BASE_URL,
-        pageid = pageid)
-    r = requests.get(url, auth = auth)
-    r.raise_for_status()
-    return r.json()
-
-def write_data_to_confluence(auth, html, pageid, title = None):
-    info = get_page_info(auth, pageid)
-    ver = int(info['version']['number']) + 1
-    ancestors = get_page_ancestors(auth, pageid)
-    anc = ancestors[-1]
-    del anc['_links']
-    del anc['_expandable']
-    del anc['extensions']
-    if title is not None:
-        info['title'] = title
-    data = {
-        'id' : str(pageid),
-        'type' : 'page',
-        'title' : info['title'],
-        'version' : {'number' : ver},
-        'ancestors' : [anc],
-        'body'  : {
-            'storage' :
-            {
-                'representation' : 'storage',
-                'value' : str(html)
-            }
-        }
-    }
-    data = json.dumps(data)
-    url = '{base}/{pageid}'.format(base = BASE_URL, pageid = pageid)
-    try:
-        r = requests.put(
-            url,
-            data = data,
-            auth = auth,
-            headers = { 'Content-Type' : 'application/json' }
-        )
-    except Exception as e:
-        print(f"An exception has occurred: {e}")
-    if r.status_code >= 400:
-        print(f"HTTP Status Code: {r.status_code}")
-        raise RuntimeError(r.content)
-    else:
-        message = f"Wrote {info['title']} version {ver}\nURL: {VIEW_URL}{pageid}"
-        print(Fore.CYAN)
-        banner(message, '*')
-        print(Fore.RESET)
-
-def get_login(username = None):
-    if username is None:
-        username = getpass.getuser()
-    passwd = None
-    if passwd is None:
-        passwd = getpass.getpass()
-        keyring.set_password('confluence_script', username, passwd)
-    return (username, passwd)
-
 ### AWS List Instances
-def list_instances(aws_account,aws_account_number, interactive, regions, show_details):
+def list_instances(session_obj, aws_account, aws_account_number, interactive, regions, show_details):
     _, _, output_file, _ = initialize(interactive, aws_account)
     delete_from_collection(aws_account_number)
-    instance_list = ''
-    session = ''
-    ec2 = ''
-    account_found = ''
-    #PrivateDNS = None
-    #block_device_list = None
+
     instance_count = 0
-    #account_type_message = ''
-    profile_missing_message = ''
-    region = ''
-    # Set the ec2 dictionary
+    account_found = False
     ec2info = {}
+
     print(Fore.CYAN)
-    report_gov_or_comm(aws_account, account_found)
+    report_gov_or_comm(aws_account)
     print(Fore.RESET)
     for region in regions:
-        if 'gov' in aws_account and not 'admin' in aws_account:
-            try:
-                session = boto3.Session(profile_name=aws_account, region_name=region)
-                account_found = 'yes'
-            except botocore.exceptions.ProfileNotFound as e:
-                profile_missing_message = f"An exception has occurred: {e}"
-                account_found = 'no'
-                pass
-        else:
-            try:
-                session = boto3.Session(profile_name=aws_account, region_name=region)
-                account_found = 'yes'
-            except botocore.exceptions.ProfileNotFound as e:
-                profile_missing_message = f"An exception has occurred: {e}"
-                pass
-        try:
-            ec2 = session.client("ec2")
-        except Exception as e:
-            print(f"An exception has occurred: {e}")
-        print(Fore.GREEN)
-        message = f"* Region: {region} in {aws_account}: ({aws_account_number}) *"
-        banner(message, "*")
+        response = None
 
-        print(Fore.RESET)
-        # Loop through the instances
+        for attempt in range(1, 4):
+            try:
+                ec2 = session_obj.client("ec2", region_name=region, config=config)
+                response = ec2.describe_instances()
+                break
+            except SSLError as e:
+                if attempt == 3:
+                    print(f"SSL/TLS failed in {aws_account}/{region}: {e}")
+                else:
+                    time.sleep(2 ** attempt)
+            except EndpointConnectionError as e:
+                print(f"Endpoint connection failed in {aws_account}/{region}: {e}")
+                break
+            except ClientError as e:
+                print(f"AWS client error in {aws_account}/{region}: {e}")
+                break
+
+        if response is None:
+            continue
+
+        # Process instances (don’t hide errors; fail with banner)
         try:
-            instance_list = ec2.describe_instances()
-        except Exception as e:
-            print(f"An exception has occurred: {e}")
-        try:
-            for reservation in instance_list["Reservations"]:
-                for instance in reservation.get("Instances", []):
-                    instance_count = instance_count + 1
-                    instance_state = instance['State']['Name']
-                    instance_type = instance['InstanceType']
-                    instance_id = instance['InstanceId']
-                    ami_id = instance['ImageId']
-                    launch_time = instance["LaunchTime"]
-                    launch_time_friendly = launch_time.strftime("%B %d %Y")
-                    tree = objectpath.Tree(instance)
+            for reservation in response.get("Reservations", []):
+                for inst in reservation.get("Instances", []):
+                    instance_count += 1
+
+                    instance_state = inst.get("State", {}).get("Name")
+                    instance_type = inst.get("InstanceType")
+                    instance_id = inst.get("InstanceId")
+                    ami_id = inst.get("ImageId")
+
+                    launch_time = inst.get("LaunchTime")
+                    launch_time_friendly = launch_time.strftime("%B %d %Y") if launch_time else None
+
+                    tree = objectpath.Tree(inst)
+
                     block_devices = set(tree.execute('$..BlockDeviceMappings[\'Ebs\'][\'VolumeId\']'))
-                    if block_devices:
-                        block_devices = list(block_devices)
-                        block_devices = str(block_devices).replace('[','').replace(']','').replace('\'','')
-                    else:
-                        block_devices = None
-                    private_ips =  set(tree.execute('$..PrivateIpAddress'))
-                    if private_ips:
-                        private_ips_list = list(private_ips)
-                        private_ips_list = str(private_ips_list).replace('[','').replace(']','').replace('\'','')
-                    else:
-                        private_ips_list = None
-                    public_ips =  set(tree.execute('$..PublicIp'))
-                    if len(public_ips) == 0:
-                        public_ips = None
-                    if public_ips:
-                        public_ips_list = list(public_ips)
-                        public_ips_list = str(public_ips_list).replace('[','').replace(']','').replace('\'','')
-                    else:
-                        public_ips_list = None
+                    volumes = (
+                        str(list(block_devices)).replace("[", "").replace("]", "").replace("'", "")
+                        if block_devices else None
+                    )
+
+                    private_ips = set(tree.execute("$..PrivateIpAddress"))
+                    private_ips_list = (
+                        str(list(private_ips)).replace("[", "").replace("]", "").replace("'", "")
+                        if private_ips else None
+                    )
+
+                    public_ips = set(tree.execute("$..PublicIp"))
+                    public_ips_list = (
+                        str(list(public_ips)).replace("[", "").replace("]", "").replace("'", "")
+                        if public_ips else None
+                    )
+
                     instance_name = None
-                    if 'Tags' in instance:
-                        try:
-                            tags = instance['Tags']
-                            #name = None
-                            for tag in tags:
-                                if tag["Key"] == "Name":
-                                    instance_name = tag["Value"]
-                                if tag["Key"] == "Engagement" or tag["Key"] == "Engagement Code":
-                                    engagement = tag["Value"]
-                        except ValueError:
-                            pass
-                    key_name = instance['KeyName'] if instance['KeyName'] else None
-                    vpc_id = instance.get('VpcId') if instance.get('VpcId') else None
-                    private_dns = instance['PrivateDnsName'] if instance['PrivateDnsName'] else None
-                    availability_zone = instance['Placement']['AvailabilityZone']
-                    ec2info[instance['InstanceId']] = {
-                        'AWS Account': aws_account,
-                        'Account Number': aws_account_number,
-                        'Instance Name': instance_name,
-                        'Instance ID': instance_id,
-                        'AMI ID': ami_id,
-                        'Volumes': block_devices,
-                        'Private IP': private_ips_list,
-                        'Public IP': public_ips_list,
-                        'Private DNS': private_dns,
-                        'Availability Zone': availability_zone,
-                        'VPC ID': vpc_id,
-                        'Instance Type': instance_type,
-                        'Key Pair Name': key_name,
-                        'Instance State': instance_state,
-                        'Launch Date': launch_time_friendly
+                    engagement = None
+                    for tag in inst.get("Tags", []) or []:
+                        if tag.get("Key") == "Name":
+                            instance_name = tag.get("Value")
+                        if tag.get("Key") in {"Engagement", "Engagement Code"}:
+                            engagement = tag.get("Value")
+
+                    key_name = inst.get("KeyName")  # safe
+                    vpc_id = inst.get("VpcId")
+                    private_dns = inst.get("PrivateDnsName")
+                    availability_zone = inst.get("Placement", {}).get("AvailabilityZone")
+
+                    row = {
+                        "AWS Account": aws_account,
+                        "Account Number": aws_account_number,
+                        "Instance Name": instance_name,
+                        "Instance ID": instance_id,
+                        "AMI ID": ami_id,
+                        "Volumes": volumes,
+                        "Private IP": private_ips_list,
+                        "Public IP": public_ips_list,
+                        "Private DNS": private_dns,
+                        "Availability Zone": availability_zone,
+                        "VPC ID": vpc_id,
+                        "Instance Type": instance_type,
+                        "Key Pair Name": key_name,
+                        "Instance State": instance_state,
+                        "Launch Date": launch_time_friendly,
                     }
-                    mongo_instance_dict = {'_id': '', 'AWS Account': aws_account, "Account Number": aws_account_number, 'Instance Name': instance_name, 'Instance ID': instance_id, 'AMI ID': ami_id, 'Volumes': block_devices,  'Private IP': private_ips_list, 'Public IP': public_ips_list, 'Private DNS': private_dns, 'Availability Zone': availability_zone, 'VPC ID': vpc_id, 'Instance Type': instance_type, 'Key Pair Name': key_name, 'Instance State': instance_state, 'Launch Date': launch_time_friendly}
-                    if mongo_instance_dict:
-                        try:
-                            insert_coll(mongo_instance_dict)
-                        except Exception as e:
-                            print(f"An error has occurred: {e}")
-                    else:
-                        print("No instances in this account.")
-                    ec2_info_items = ec2info.items
-                    if show_details == 'y' or show_details == 'yes':
-                        for instance_id, instance in ec2_info_items():
-                            if account_found == 'yes':
-                                print(Fore.RESET + "-------------------------------------")
-                                for key in [
-                                    'AWS Account',
-                                    'Account Number',
-                                    'Name',
-                                    'Instance ID',
-                                    'AMI ID',
-                                    'Volumes',
-                                    'Private IP',
-                                    'Public IP',
-                                    'Private DNS',
-                                    'Availability Zone',
-                                    'VPC ID',
-                                    'Type',
-                                    'Key Pair Name',
-                                    'State',
-                                    'Launch Date'
-                                ]:
-                                    print(Fore.GREEN + f"{key}: {instance.get(key)}")
-                                print(Fore.RESET + "-------------------------------------")
-                        else:
-                            pass
-                    reservation = {}
-                    instance = {}
-                    ec2_info_items = {}
-                    ec2info = {}
+
+                    ec2info[instance_id] = row
+                    insert_coll({"_id": "", **row})
+
         except Exception as e:
-            print(f"An exception has occurred: {e}")
-    if '*' in profile_missing_message:
-        banner(profile_missing_message)
-    print(Fore.GREEN)
-    report_instance_stats(instance_count, aws_account, account_found)
-    print(Fore.RESET + '\n')
+            fatal(f"Error processing instances in {aws_account}/{region}: {e}")
+
+        # Optional verbose printing (fixes your key mismatches)
+        if show_details in {"y", "yes"}:
+            for _, instrow in ec2info.items():
+                print(Fore.RESET + "-------------------------------------")
+                for key in [
+                    "AWS Account",
+                    "Account Number",
+                    "Instance Name",
+                    "Instance ID",
+                    "AMI ID",
+                    "Volumes",
+                    "Private IP",
+                    "Public IP",
+                    "Private DNS",
+                    "Availability Zone",
+                    "VPC ID",
+                    "Instance Type",
+                    "Key Pair Name",
+                    "Instance State",
+                    "Launch Date",
+                ]:
+                    print(Fore.GREEN + f"{key}: {instrow.get(key)}")
+                print(Fore.RESET + "-------------------------------------")
+
+        ec2info.clear()
+
+    print(Fore.CYAN)
+    noun = "instance" if instance_count == 1 else "instances"
+    verb = "is" if instance_count == 1 else "are"
+    none = "no" if instance_count == 0 else str(instance_count)
+    banner(f"There {verb} {none} EC2 {noun} in AWS Account: {aws_account}.")
+    print(Fore.RESET + "\n")
+
     return output_file
+
 
 ### Main Function
 def main():
@@ -562,16 +759,12 @@ def main():
 
     # Display the welcome banner
     welcomebanner()
-
-    if options.html:
-        html = options.html
-
     if options.reports:
         reports_answer = options.reports
     else:
         print(Fore.YELLOW)
         reports_answer = input("Print reports (y/n): ")
-        print(Fore.RESET )
+        print(Fore.RESET)
 
     if options.all_accounts:
         aws_accounts_answer = options.all_accounts
@@ -587,17 +780,7 @@ def main():
     else:
         interactive = 0
 
-    if options.pageid:
-        pageid = options.pageid
-    else:
-        pageid = 222389323 # AWS EC2 Instances page
-
-    if options.title:
-        title = options.title
-    else:
-        title = 'AWS EC2 Instances - CCMI'
-
-    aws_account_number = ''
+    aws_account_number = None
     ### Interactive == 1  - user specifies an account
     if interactive == 1:
         ## Select the account
@@ -608,6 +791,9 @@ def main():
             aws_account = input("Enter the name of the AWS account you'll be working in: ")
             print(Fore.RESET)
 
+        # Set variables
+        today, aws_env_list, output_file, _ = initialize(interactive, aws_account)
+
         if options.verbose:
             show_details = options.verbose
         else:
@@ -615,8 +801,6 @@ def main():
             show_details = input("Show server details (y/n): ")
             print(Fore.RESET)
 
-        # Grab variables from initialize
-        today, aws_env_list, output_file, _ = initialize(interactive, aws_account)
 
         # Read account info from the accounts list file
         account_names, account_numbers = read_account_info(aws_env_list)
@@ -635,13 +819,18 @@ def main():
         for (my_aws_account, my_aws_account_number) in zip(account_names, account_numbers):
             if my_aws_account == aws_account:
                 aws_account_number = my_aws_account_number
+        # Fail gracefully on misspelled profile
+        if not aws_account_number:
+            banner(f"Account '{aws_account}' not found in aws_accounts_list.csv. Check spelling.")
+            exit_program()
 
         # Set the regions and run the program
-        regions = set_regions(aws_account)
-        output_file = list_instances(aws_account,aws_account_number, interactive, regions, show_details)
+        session_obj = make_session_or_fail(aws_account)  # validates profile + STS auth once
+        regions = set_regions(session_obj)
+        output_file = list_instances(session_obj, aws_account, aws_account_number, interactive, regions, show_details)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
             try:
-                 mongo_export_to_file(interactive, aws_account, aws_account_number)
+                mongo_export_to_file(interactive, aws_account, aws_account_number)
             except Exception as e:
                 print(f"A mongo exception has occurred: {e}")
             htmlfile, _ = convert_csv_to_html_table(output_file, today, interactive, aws_account)
@@ -655,43 +844,19 @@ def main():
                 email_answer = input("Send an email (y/n): ")
 
             if 'yes' in email_answer or 'y' in email_answer:
-                send_email(aws_accounts_answer,aws_account,aws_account_number, interactive)
+                send_email(aws_accounts_answer, aws_account, aws_account_number, interactive)
             else:
                 message = "Okay. Not sending an email."
                 print(Fore.YELLOW)
                 banner(message)
             print(Fore.RESET)
-           
+
             try:
                 with open(htmlfile, 'r') as htmlfile:
                     html = htmlfile.read()
             except Exception as e:
                 print(f"Open file exception: {e}")
 
-            message = "* Write to Confluence *"
-            print(Fore.CYAN)
-            banner(message, "*")
-            print(Fore.RESET)
-            if options.write_confluence:
-                confluence_answer = options.write_confluence
-            else:
-                print(Fore.CYAN)
-                confluence_answer = input("Write the list to confluence (y/n): ")
-                print(Fore.RESET)
-
-            if options.user and options.password:
-                user = options.user
-                password = options.password
-                auth = (user, password)
-                write_data_to_confluence(auth, html, pageid, title)
-            elif confluence_answer.lower() == 'yes' or confluence_answer.lower() == 'y':
-                auth = authenticate()
-                write_data_to_confluence(auth, html, pageid, title)
-            else:
-                message = "Okay. Not writing to confluence."
-                print(Fore.CYAN)
-                banner(message)
-                print(Fore.RESET)
     ### Interactive == 0 - cycling through all acounts.
     else:
         if options.verbose:
@@ -704,18 +869,26 @@ def main():
         # Grab variables from initialize
         today, aws_env_list, output_file, _ = initialize(interactive, aws_account)
         account_names, account_numbers = read_account_info(aws_env_list)
+        # Preflight before doing any scanning
+        preflight_all_sso_or_fail(account_names)
         for (aws_account, aws_account_number) in zip(account_names, account_numbers):
-            aws_account = aws_account.split()[0]
             message = f"Working in AWS Account: {aws_account}."
             print(Fore.YELLOW)
             banner(message)
             print(Fore.RESET)
             # Set the regions
-            regions = set_regions(aws_account)
-            output_file = list_instances(aws_account,aws_account_number, interactive, regions, show_details)
+            session_obj = make_session_or_skip(aws_account)
+            if not session_obj:
+                continue
+            try:
+                regions = set_regions(session_obj)
+            except Exception as e:
+                banner(f"Skipping {aws_account}: unable to list regions:\n{friendly_aws_auth_error(e, aws_account)}")
+                continue
+            output_file = list_instances(session_obj, aws_account, aws_account_number, interactive, regions, show_details)
         if reports_answer.lower() == 'yes' or reports_answer.lower() == 'y':
-            mongo_export_to_file(interactive, aws_account, aws_account_number)
-            htmlfile, _ = convert_csv_to_html_table(output_file, today, interactive, aws_account)
+            mongo_export_to_file(interactive, "all", None)
+            htmlfile, _ = convert_csv_to_html_table(output_file, today, interactive, "all")
             print(Fore.YELLOW)
             message = "Send an Email"
             banner(message)
@@ -726,7 +899,7 @@ def main():
                 email_answer = input("Send an email (y/n): ")
 
             if email_answer.lower() == 'y' or email_answer == 'yes':
-                send_email(aws_accounts_answer,aws_account,aws_account_number, interactive)
+                send_email(aws_accounts_answer, aws_account, aws_account_number, interactive)
             else:
                 message = "Okay. Not sending an email."
                 print(Fore.YELLOW)
@@ -736,41 +909,19 @@ def main():
             with open(htmlfile, 'r') as htmlfile:
                 html = htmlfile.read()
 
-            message = "* Write to Confluence *"
-            print(Fore.CYAN)
-            banner(message, "*")
-            print(Fore.RESET)
-            if options.write_confluence:
-                confluence_answer = options.write_confluence
-            else:
-                print(Fore.CYAN)
-                confluence_answer = input("Write the list to confluence (y/n): ")
-                print(Fore.RESET)
-
-            if options.user and options.password:
-                user = options.user
-                password = options.password
-                auth = (user, password)
-                write_data_to_confluence(auth, html, pageid, title)
-            elif confluence_answer.lower() == 'yes' or confluence_answer.lower() == 'y':
-                auth = authenticate()
-                write_data_to_confluence(auth, html, pageid, title)
-            else:
-                message = "Okay. Not writing to confluence."
-                print(Fore.CYAN)
-                banner(message)
-                print(Fore.RESET)
-
     print(Fore.GREEN)
     if options.run_again:
         list_again = options.run_again
     else:
+        print(Fore.GREEN)
         list_again = input("List EC2 instances again (y/n): ")
+        print(Fore.RESET)
     if list_again.lower() == 'y' or list_again.lower() == 'yes':
         main()
     else:
         exit_program()
     print(Fore.RESET)
+
 
 ### Run locally
 if __name__ == "__main__":
